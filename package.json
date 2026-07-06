@@ -1,0 +1,9 @@
+{
+  "name": "controle-financeiro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Controle Financeiro - app pessoal com leitor de notas/comprovantes via IA",
+  "engines": {
+    "node": ">=18"
+  }
+}

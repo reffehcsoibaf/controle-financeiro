@@ -1,0 +1,3401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle Financeiro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#171b26;--bg3:#1e2436;--card:#1a1f2e;
+  --border:#2a3050;--border2:#3a4568;
+  --text:#e8eaf2;--text2:#9aa3be;--text3:#6b7590;
+  --accent:#4f7cff;--accent2:#3a5fcc;
+  --green:#22c55e;--green2:#16a34a;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--teal:#14b8a6;
+  --radius:10px;--radius-sm:6px;--radius-lg:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+
+/* ── ACESSIBILIDADE ── */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:3px;}
+.skip-link{
+  position:absolute;top:-100px;left:8px;background:var(--accent);color:#fff;
+  padding:8px 16px;border-radius:var(--radius-sm);font-weight:600;
+  z-index:9999;text-decoration:none;transition:top .1s;
+}
+.skip-link:focus{top:8px;}
+
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* ── HEADER ── */
+.app-header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 24px;display:flex;align-items:center;
+  justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;
+}
+.app-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.user-email{font-size:12px;color:var(--text3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-logout{
+  background:transparent;border:1px solid var(--border);color:var(--text2);
+  padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;outline:none;
+}
+.btn-logout:hover{border-color:var(--red);color:var(--red);}
+.btn-logout:focus-visible{outline:3px solid var(--red);outline-offset:2px;}
+
+/* ── LAYOUT ── */
+.app-body{max-width:1440px;margin:0 auto;padding:24px 20px;display:flex;flex-direction:column;gap:20px;}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;}
+.card-title{
+  font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+
+/* ── SALDOS ── */
+.saldos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.saldo-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.saldo-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.saldo-valor{font-size:22px;font-weight:700;line-height:1;}
+.saldo-valor.total{color:var(--accent);}
+.saldo-valor.pago{color:var(--green);}
+.saldo-valor.pendente{color:var(--amber);}
+.saldo-valor.count{color:var(--purple);}
+
+/* ── FORMULÁRIO ── */
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group.span2{grid-column:span 2;}
+.form-group.span4{grid-column:span 4;}
+.form-group label{
+  font-size:12px;font-weight:600;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.05em;cursor:pointer;
+}
+.form-group input[type="date"],
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group textarea,
+.form-group select{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);
+  padding:9px 12px;font-size:13px;font-family:inherit;
+  width:100%;transition:border-color .15s;outline:none;
+}
+.form-group input:focus-visible,
+.form-group select:focus-visible,
+.form-group textarea:focus-visible{
+  border-color:var(--accent);outline:3px solid var(--accent);outline-offset:1px;
+}
+.form-group textarea{resize:vertical;min-height:64px;line-height:1.4;}
+.form-group select{
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7590' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+input.negativo{color:var(--red);}
+
+/* ── TIPO DE LANÇAMENTO (ENTRADA / SAÍDA) ── */
+.tipo-valor-toggle{display:flex;gap:6px;margin-bottom:6px;}
+.tipo-valor-btn{
+  flex:1;padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--bg3);color:var(--text2);font-size:12px;font-weight:600;
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.tipo-valor-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.tipo-valor-btn[aria-checked="true"].saida{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red);}
+.tipo-valor-btn[aria-checked="true"].entrada{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green);}
+
+/* ── CONTAS E CARTÕES ── */
+.conta-row{
+  display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:8px;align-items:end;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.conta-row:last-child{border-bottom:none;}
+.conta-nome{font-weight:600;font-size:13px;padding-bottom:9px;}
+.conta-resultado{grid-column:1 / -1;font-size:13px;color:var(--accent);font-weight:600;margin-top:2px;}
+.conta-resultado.alerta{color:var(--red);}
+@media (max-width:640px){.conta-row{grid-template-columns:1fr;}}
+
+/* ── ABAS ── */
+.tabs-nav{
+  display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.tabs-nav [role="tab"]{
+  background:transparent;border:none;border-bottom:3px solid transparent;
+  color:var(--text2);font-size:14px;font-weight:600;padding:10px 16px;
+  cursor:pointer;transition:all .15s;
+}
+.tabs-nav [role="tab"]:hover{color:var(--text);}
+.tabs-nav [role="tab"][aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);}
+.tabs-nav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ── GERENCIAR LISTAS ── */
+.config-lista-grupo{margin-bottom:22px;}
+.config-lista-grupo h3{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text);}
+.config-lista{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;padding:0;}
+.config-lista li{
+  display:flex;align-items:center;gap:6px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:999px;padding:5px 6px 5px 12px;
+  font-size:13px;
+}
+.config-lista li button{
+  background:transparent;border:none;color:var(--text3);cursor:pointer;
+  width:20px;height:20px;border-radius:50%;font-size:13px;line-height:1;
+}
+.config-lista li button:hover{background:rgba(239,68,68,.15);color:var(--red);}
+.config-lista-vazio{font-size:12px;color:var(--text3);margin-bottom:10px;}
+.config-lista-add{display:flex;gap:8px;max-width:420px;}
+.config-lista-add input{flex:1;}
+
+/* ── SELECT COM BOTÕES ── */
+.select-wrapper{display:flex;gap:6px;align-items:center;}
+.select-wrapper select{flex:1;min-width:0;}
+.btn-icon{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg3);color:var(--text2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;transition:all .15s;flex-shrink:0;outline:none;
+}
+.btn-icon:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+.btn-icon.remove:hover{border-color:var(--red);color:var(--red);}
+.btn-icon.remove:focus-visible{outline-color:var(--red);}
+.btn-icon:disabled,.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ── BOTÕES ── */
+.btn{
+  padding:9px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .15s;display:inline-flex;
+  align-items:center;gap:7px;outline:none;
+}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--border);}
+.btn-danger:hover{border-color:var(--red);background:rgba(239,68,68,.08);}
+.btn-danger:focus-visible{outline-color:var(--red);}
+.btn-success{background:var(--green2);color:#fff;}
+.btn-success:hover{background:var(--green);}
+.btn-teal{background:var(--teal);color:#fff;}
+.btn-teal:hover{background:#0d9488;}
+.form-actions{display:flex;gap:10px;padding-top:4px;flex-wrap:wrap;}
+.btn-full{width:100%;justify-content:center;}
+
+/* ════════════════════════════════════════
+   TELA DE LOGIN / CADASTRO
+════════════════════════════════════════ */
+.auth-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.auth-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:32px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px;
+}
+.auth-logo{
+  display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:6px;
+}
+.auth-logo .logo-icon{width:48px;height:48px;font-size:24px;}
+.auth-logo h1{font-size:18px;font-weight:700;}
+.login-guia-link{
+  display:block;text-align:center;font-size:13px;
+  color:var(--accent);text-decoration:none;font-weight:600;
+  margin-top:-8px;
+}
+.login-guia-link:hover, .login-guia-link:focus-visible{text-decoration:underline;}
+.auth-tabs{display:flex;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:4px;}
+.auth-tab{
+  flex:1;text-align:center;padding:8px 12px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;
+  border:none;background:transparent;transition:all .15s;outline:none;
+}
+.auth-tab.active{background:var(--accent);color:#fff;}
+.auth-tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.auth-form{display:flex;flex-direction:column;gap:14px;}
+.auth-error{
+  font-size:12px;color:var(--red);background:rgba(239,68,68,.1);
+  border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);
+  padding:8px 12px;display:none;
+}
+.auth-error.show{display:block;}
+.auth-success{
+  font-size:12px;color:var(--green);background:rgba(34,197,94,.1);
+  border:1px solid rgba(34,197,94,.25);border-radius:var(--radius-sm);
+  padding:8px 12px;display:none;
+}
+.auth-success.show{display:block;}
+.auth-hint{font-size:11px;color:var(--text3);text-align:center;}
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;display:inline-block;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── TELA DE MIGRAÇÃO ── */
+.migracao-banner{
+  background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.25);
+  border-radius:var(--radius-lg);padding:18px 20px;display:flex;flex-direction:column;gap:12px;
+}
+.migracao-banner-header{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--accent);}
+.migracao-actions{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ════════════════════════════════════════
+   ITENS DO LANÇAMENTO
+════════════════════════════════════════ */
+.itens-section{
+  grid-column:span 4;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.itens-header{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.itens-header-left{display:flex;align-items:center;gap:10px;}
+.itens-titulo{
+  font-size:12px;font-weight:600;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.itens-total-badge{
+  background:rgba(79,124,255,.15);color:var(--accent);
+  border:1px solid rgba(79,124,255,.3);
+  border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;
+  white-space:nowrap;
+}
+.itens-total-badge.neg{
+  background:rgba(239,68,68,.12);color:var(--red);
+  border-color:rgba(239,68,68,.3);
+}
+#lista-itens{display:flex;flex-direction:column;gap:8px;}
+
+/* Linha de item */
+.item-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 2fr auto;
+  gap:8px;align-items:end;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px;
+  position:relative;
+}
+.item-row:focus-within{border-color:var(--accent);}
+.item-numero{
+  position:absolute;top:8px;left:10px;
+  font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.08em;
+}
+.item-row .form-group{margin-top:14px;}
+.item-row .form-group:last-child{margin-top:0;align-self:end;}
+.item-row input.negativo{color:var(--red);}
+.btn-remover-item{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:transparent;
+  color:var(--text3);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all .15s;flex-shrink:0;outline:none;
+  margin-top:14px;
+}
+.btn-remover-item:hover{border-color:var(--red);color:var(--red);background:rgba(239,68,68,.08);}
+.btn-remover-item:focus-visible{outline:3px solid var(--red);outline-offset:2px;}
+
+.nota-valor{
+  font-size:11px;color:var(--text3);
+  background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.2);
+  border-radius:var(--radius-sm);padding:6px 10px;
+}
+.nota-valor span{color:var(--accent);font-weight:600;}
+
+/* ── FILTROS ── */
+.filters-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:end;}
+.filters-grid .form-group label{font-size:11px;}
+.filters-grid select,
+.filters-grid input[type="date"]{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);
+  padding:8px 10px;font-size:12px;font-family:inherit;
+  width:100%;outline:none;transition:border-color .15s;
+}
+.filters-grid select{
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7590' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;
+}
+.filters-grid select:focus-visible,
+.filters-grid input:focus-visible{border-color:var(--accent);outline:3px solid var(--accent);outline-offset:1px;}
+.filters-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap;}
+
+/* ── TABELA ── */
+.table-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.table-info{font-size:12px;color:var(--text3);}
+.table-actions{display:flex;gap:8px;}
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{background:var(--bg3);}
+thead th{
+  padding:10px 12px;text-align:left;font-weight:600;color:var(--text2);
+  font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+  white-space:nowrap;border-bottom:1px solid var(--border);
+}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--bg3);}
+tbody tr.pago-row{opacity:.65;}
+tbody tr.sub-row{background:rgba(79,124,255,.04);}
+tbody tr.sub-row:hover{background:rgba(79,124,255,.09);}
+tbody tr.sub-row td{padding:7px 12px;font-size:11px;color:var(--text2);}
+tbody tr.sub-row td:first-child{padding-left:28px;}
+tbody tr.has-subitems td{border-bottom:none;}
+tbody td{padding:10px 12px;color:var(--text);vertical-align:middle;white-space:nowrap;}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-pago{background:rgba(34,197,94,.15);color:var(--green);}
+.badge-pendente{background:rgba(245,158,11,.15);color:var(--amber);}
+.badge-multi{background:rgba(20,184,166,.15);color:var(--teal);margin-left:4px;}
+.badge-parcelado{background:rgba(167,139,250,.15);color:var(--purple);margin-left:4px;}
+.valor-cell{font-weight:700;font-size:13px;}
+.valor-pos{color:var(--text);}
+.valor-neg{color:var(--red);}
+.td-actions{display:flex;gap:6px;}
+
+/* ── CHECKBOX ── */
+.chk-wrap{display:flex;align-items:center;justify-content:center;}
+.chk-label{display:flex;align-items:center;justify-content:center;cursor:pointer;}
+input[type="checkbox"]{
+  appearance:none;width:20px;height:20px;
+  border:2px solid var(--border2);border-radius:5px;
+  cursor:pointer;transition:all .15s;position:relative;flex-shrink:0;
+}
+input[type="checkbox"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+input[type="checkbox"]:checked{background:var(--green2);border-color:var(--green2);}
+input[type="checkbox"]:checked::after{
+  content:'✓';position:absolute;top:-2px;left:2px;
+  color:#fff;font-size:13px;font-weight:700;
+}
+
+/* ── MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:200;align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:24px;
+  width:360px;max-width:calc(100vw - 32px);
+  display:flex;flex-direction:column;gap:14px;
+}
+.modal h2{font-size:16px;font-weight:600;color:var(--text);}
+.modal label{
+  font-size:12px;font-weight:600;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;
+}
+.modal input[type="text"]{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);
+  padding:9px 12px;font-size:13px;width:100%;outline:none;
+}
+.modal input[type="text"]:focus-visible{border-color:var(--accent);outline:3px solid var(--accent);outline-offset:1px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+
+/* ══ MODAL DE PARCELAMENTO ══ */
+.modal-parcelar{width:560px;}
+.parc-inputs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.parc-inputs .form-group label{
+  font-size:12px;font-weight:600;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;
+}
+.parc-inputs .form-group input,
+.parc-inputs .form-group select{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);
+  padding:9px 12px;font-size:13px;font-family:inherit;
+  width:100%;outline:none;transition:border-color .15s;
+}
+.parc-inputs .form-group input:focus-visible,
+.parc-inputs .form-group select:focus-visible{
+  border-color:var(--accent);outline:3px solid var(--accent);outline-offset:1px;
+}
+.parc-inputs .form-group select{
+  appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7590' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+.parc-preview-wrap{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);max-height:220px;overflow-y:auto;
+}
+.parc-preview-head{
+  display:grid;grid-template-columns:36px 1fr 1fr;gap:8px;
+  padding:7px 12px;background:var(--bg2);
+  font-size:11px;font-weight:600;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:1;
+}
+.parc-preview-row{
+  display:grid;grid-template-columns:36px 1fr 1fr;gap:8px;
+  padding:7px 12px;border-bottom:1px solid var(--border);
+  font-size:12px;align-items:center;
+}
+.parc-preview-row:last-child{border-bottom:none;}
+.parc-preview-row:nth-child(even){background:rgba(255,255,255,.02);}
+.parc-num{
+  width:24px;height:24px;border-radius:50%;
+  background:rgba(79,124,255,.15);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;
+}
+.parc-diff{font-size:10px;color:var(--amber);font-style:italic;margin-left:4px;}
+.parc-aviso{
+  font-size:11px;color:var(--amber);
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);
+  border-radius:var(--radius-sm);padding:7px 10px;
+  display:flex;align-items:flex-start;gap:6px;
+}
+.parc-resumo{
+  display:flex;gap:12px;flex-wrap:wrap;
+  font-size:12px;color:var(--text2);
+  background:rgba(79,124,255,.07);border:1px solid rgba(79,124,255,.18);
+  border-radius:var(--radius-sm);padding:8px 12px;
+}
+.parc-resumo strong{color:var(--accent);}
+.btn-parcelar{background:var(--purple);color:#fff;}
+.btn-parcelar:hover{background:#8b5cf6;}
+.btn-parcelar:focus-visible{outline-color:var(--purple);}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+
+/* ── TOAST DE SINCRONIZAÇÃO ── */
+.sync-toast{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:10px 16px;
+  font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);z-index:300;
+  transition:opacity .3s, transform .3s; opacity:0; transform:translateY(10px);
+  pointer-events:none;
+}
+.sync-toast.show{opacity:1;transform:translateY(0);}
+.sync-toast.error{border-color:var(--red);color:var(--red);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1200px){
+  .saldos-grid{grid-template-columns:repeat(2,1fr);}
+  .form-grid{grid-template-columns:repeat(3,1fr);}
+  .filters-grid{grid-template-columns:repeat(3,1fr);}
+  .itens-section{grid-column:span 3;}
+}
+@media(max-width:800px){
+  .form-grid{grid-template-columns:repeat(2,1fr);}
+  .itens-section{grid-column:span 2;}
+  .filters-grid{grid-template-columns:repeat(2,1fr);}
+  .item-row{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;}
+  .item-row .form-group:nth-child(3){grid-column:span 2;}
+  .btn-remover-item{grid-column:2;justify-self:end;margin-top:0;}
+}
+@media(max-width:500px){
+  .form-grid{grid-template-columns:1fr;}
+  .itens-section{grid-column:span 1;}
+  .saldos-grid{grid-template-columns:repeat(2,1fr);}
+  .filters-grid{grid-column:1fr;}
+  .item-row{grid-template-columns:1fr;}
+  .btn-remover-item{margin-top:0;width:100%;height:36px;}
+  .header-right .user-email{display:none;}
+}
+select option{background:#1e2436;}
+</style>
+</head>
+<body>
+<div id="aria-live"      aria-live="polite"    aria-atomic="true" class="sr-only"></div>
+<div id="aria-assertive" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
+<a href="#form-lancamento" class="skip-link">Pular para o formulário de lançamento</a>
+
+<!-- ══════════════════════════════════════════
+     TELA DE AUTENTICAÇÃO (login / cadastro)
+══════════════════════════════════════════ -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon" aria-hidden="true">💰</div>
+      <h1>Controle Financeiro</h1>
+    </div>
+
+    <a href="wiki.html" target="_blank" class="login-guia-link">📖 O que é o Controle Financeiro? Veja o guia de uso</a>
+
+    <div class="auth-tabs" role="tablist" aria-label="Escolha entre entrar ou criar conta">
+      <button type="button" class="auth-tab active" id="tab-login" role="tab"
+              aria-selected="true" aria-controls="form-login"
+              onclick="mostrarAbaAuth('login')">Entrar</button>
+      <button type="button" class="auth-tab" id="tab-cadastro" role="tab"
+              aria-selected="false" aria-controls="form-cadastro"
+              onclick="mostrarAbaAuth('cadastro')">Criar conta</button>
+    </div>
+
+    <div id="auth-error" class="auth-error" role="alert" aria-live="assertive"></div>
+    <div id="auth-success" class="auth-success" role="status" aria-live="polite"></div>
+
+    <!-- FORM LOGIN -->
+    <form id="form-login" class="auth-form" onsubmit="event.preventDefault(); fazerLogin();">
+      <div class="form-group">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" autocomplete="username" required placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label for="login-senha">Senha</label>
+        <input type="password" id="login-senha" autocomplete="current-password" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="btn-login">
+        <span aria-hidden="true">🔓</span> Entrar
+      </button>
+    </form>
+
+    <!-- FORM CADASTRO -->
+    <form id="form-cadastro" class="auth-form" style="display:none;" onsubmit="event.preventDefault(); fazerCadastro();">
+      <div class="form-group">
+        <label for="cadastro-email">E-mail</label>
+        <input type="email" id="cadastro-email" autocomplete="username" required placeholder="seu@email.com">
+      </div>
+      <div class="form-group">
+        <label for="cadastro-senha">Senha</label>
+        <input type="password" id="cadastro-senha" autocomplete="new-password" required minlength="6" placeholder="mínimo 6 caracteres" aria-describedby="cadastro-senha-hint">
+        <span id="cadastro-senha-hint" class="sr-only">Mínimo de 6 caracteres.</span>
+      </div>
+      <div class="form-group">
+        <label for="cadastro-senha-confirma">Confirmar Senha</label>
+        <input type="password" id="cadastro-senha-confirma" autocomplete="new-password" required placeholder="repita a senha">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="btn-cadastro">
+        <span aria-hidden="true">✨</span> Criar Conta
+      </button>
+      <p class="auth-hint">Após criar a conta você poderá ser solicitado a confirmar o e-mail, dependendo da configuração do sistema.</p>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     APP PRINCIPAL (oculto até login)
+══════════════════════════════════════════ -->
+<div id="app-principal" style="display:none;">
+
+<header class="app-header" role="banner">
+  <div class="app-logo">
+    <div class="logo-icon" aria-hidden="true">💰</div>
+    <span>Controle Financeiro</span>
+  </div>
+  <div class="header-right">
+    <div id="clock" style="font-size:12px;color:var(--text3);" aria-label="Data e hora" aria-live="off"></div>
+    <span class="user-email" id="user-email-display" aria-label="Usuário logado"></span>
+    <a href="wiki.html" id="btn-ajuda" class="btn-logout" style="text-decoration:none;" aria-label="Abrir guia de uso do app">
+      <span aria-hidden="true">📖</span> Ajuda
+    </a>
+    <button type="button" id="btn-logout" class="btn-logout" onclick="fazerLogout()" aria-label="Sair da conta">
+      <span aria-hidden="true">🚪</span> Sair
+    </button>
+  </div>
+</header>
+
+<main class="app-body" id="main-content">
+
+  <!-- ══ NAVEGAÇÃO POR ABAS ══ -->
+  <div class="tabs-nav" role="tablist" aria-label="Seções do Controle Financeiro" id="tabs-nav" onkeydown="navegarAbasTeclado(event)">
+    <button type="button" role="tab" id="tab-btn-lancamentos" aria-selected="true" aria-controls="painel-lancamentos" tabindex="0" onclick="mudarAba('lancamentos')"><span aria-hidden="true">📋</span> Lançamentos</button>
+    <button type="button" role="tab" id="tab-btn-saldos" aria-selected="false" aria-controls="painel-saldos" tabindex="-1" onclick="mudarAba('saldos')"><span aria-hidden="true">📊</span> Saldos</button>
+    <button type="button" role="tab" id="tab-btn-config" aria-selected="false" aria-controls="painel-config" tabindex="-1" onclick="mudarAba('config')"><span aria-hidden="true">⚙️</span> Configurações</button>
+  </div>
+
+  <!-- ══ BANNER DE MIGRAÇÃO (aparece só se houver dados locais) ══ -->
+  <div class="migracao-banner" id="migracao-banner" style="display:none;" role="region" aria-labelledby="migracao-titulo">
+    <div class="migracao-banner-header">
+      <span aria-hidden="true">📦</span>
+      <span id="migracao-titulo">Dados encontrados neste dispositivo</span>
+    </div>
+    <p style="font-size:13px;color:var(--text2);">
+      Encontramos <strong id="migracao-qtd">0</strong> lançamento(s) salvos neste navegador, de antes da conta.
+      Deseja migrar esses dados para a sua conta na nuvem? Eles ficarão disponíveis em qualquer dispositivo.
+    </p>
+    <div class="migracao-actions">
+      <button type="button" class="btn btn-primary" id="btn-migrar" onclick="migrarDadosLocais()">
+        <span aria-hidden="true">☁️</span> Migrar para a nuvem
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="dispensarMigracao()">
+        Ignorar e manter só na nuvem
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════ PAINEL: SALDOS ══════ -->
+  <div id="painel-saldos" role="tabpanel" aria-labelledby="tab-btn-saldos" tabindex="0" hidden>
+
+  <!-- ══ SALDOS ══ -->
+
+  <section class="card" aria-labelledby="titulo-saldos">
+    <h2 class="card-title" id="titulo-saldos"><span aria-hidden="true">📊</span> Resumo em Tempo Real</h2>
+    <div class="saldos-grid" role="list">
+      <div class="saldo-item" role="listitem">
+        <div class="saldo-label" id="lbl-total">Total Geral</div>
+        <div class="saldo-valor total" id="saldo-total" aria-labelledby="lbl-total" aria-live="polite" aria-atomic="true">R$ 0,00</div>
+      </div>
+      <div class="saldo-item" role="listitem">
+        <div class="saldo-label" id="lbl-pago">Total Pago</div>
+        <div class="saldo-valor pago" id="saldo-pago" aria-labelledby="lbl-pago" aria-live="polite" aria-atomic="true">R$ 0,00</div>
+      </div>
+      <div class="saldo-item" role="listitem">
+        <div class="saldo-label" id="lbl-pendente">Total Pendente</div>
+        <div class="saldo-valor pendente" id="saldo-pendente" aria-labelledby="lbl-pendente" aria-live="polite" aria-atomic="true">R$ 0,00</div>
+      </div>
+      <div class="saldo-item" role="listitem">
+        <div class="saldo-label" id="lbl-count">Registros visíveis</div>
+        <div class="saldo-valor count" id="saldo-count" aria-labelledby="lbl-count" aria-live="polite" aria-atomic="true">0</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CONTAS E CARTÕES ══ -->
+  <section class="card" aria-labelledby="titulo-contas">
+    <h2 class="card-title" id="titulo-contas"><span aria-hidden="true">💳</span> Contas e Cartões</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Configure cada Banco/Cartão como Conta Corrente (saldo) ou Cartão de Crédito (limite).
+      Compras no cartão devem usar Categoria "Cartão de Crédito" e Saída; pagamentos de fatura, a mesma
+      categoria com Entrada — é assim que o limite é recalculado automaticamente.
+    </p>
+    <div id="contas-config-lista"></div>
+  </section>
+
+  </div>
+  <!-- fim #painel-saldos -->
+
+  <!-- ══════ PAINEL: LANÇAMENTOS ══════ -->
+  <div id="painel-lancamentos" role="tabpanel" aria-labelledby="tab-btn-lancamentos" tabindex="0">
+
+  <!-- ══ LEITOR DE NOTAS E COMPROVANTES (IA) ══ -->
+  <section class="card" aria-labelledby="titulo-leitor">
+    <h2 class="card-title" id="titulo-leitor"><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Envie uma imagem, PDF, TXT ou XML de uma nota fiscal ou comprovante. A IA vai ler o documento e
+      pré-preencher o formulário de lançamento abaixo. Confira sempre os campos antes de salvar.
+    </p>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <label for="input-leitor-ia"
+             class="btn btn-primary"
+             role="button"
+             tabindex="0"
+             id="btn-leitor-ia"
+             aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática com IA"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+        <span aria-hidden="true">📎</span> Selecionar Documento
+      </label>
+      <input type="file" id="input-leitor-ia" accept="image/*,.pdf,.txt,.xml"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
+             aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática"
+             onchange="lerDocumentoIA(event)">
+      <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
+    </div>
+    <div id="leitor-ia-sugestoes" aria-live="polite" style="margin-top:10px;"></div>
+  </section>
+
+  <!-- ══ FORMULÁRIO ══ -->
+  <section class="card" aria-labelledby="titulo-form">
+    <h2 class="card-title" id="titulo-form"><span aria-hidden="true">➕</span> Novo Lançamento</h2>
+    <form id="form-lancamento" novalidate onsubmit="return false;" aria-label="Formulário de lançamento financeiro">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="f-data-origem">Data Origem <span aria-hidden="true" style="color:var(--red)">*</span><span class="sr-only">(obrigatório)</span></label>
+          <input type="date" id="f-data-origem" name="dataOrigem" aria-required="true" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="f-data-vencimento">Data Vencimento</label>
+          <input type="date" id="f-data-vencimento" name="dataVencimento" autocomplete="off">
+        </div>
+
+        <div class="form-group" id="grupo-valor">
+          <label for="f-valor">Entrada de Valor <span aria-hidden="true" style="color:var(--red)">*</span></label>
+          <div class="tipo-valor-toggle" role="radiogroup" aria-label="Tipo de lançamento: entrada ou saída">
+            <button type="button" id="f-tipo-saida" class="tipo-valor-btn saida"
+                    role="radio" aria-checked="true"
+                    onclick="definirTipoValor('saida')">🔻 Saída (despesa)</button>
+            <button type="button" id="f-tipo-entrada" class="tipo-valor-btn entrada"
+                    role="radio" aria-checked="false"
+                    onclick="definirTipoValor('entrada')">🔺 Entrada (receita)</button>
+          </div>
+          <input type="number" id="f-valor" name="valor"
+                 placeholder="Ex.: 150,00"
+                 step="0.01" min="0" aria-required="true"
+                 aria-describedby="f-valor-nota"
+                 autocomplete="off"
+                 oninput="colorirValor(this); atualizarNotaValor()">
+          <span id="f-valor-nota" class="nota-valor" style="display:none;" aria-live="polite"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="f-banco">Banco / Cartão</label>
+          <div class="select-wrapper">
+            <select id="f-banco" name="banco"></select>
+            <button type="button" class="btn-icon" id="btn-add-banco" onclick="openModal('banco')" aria-label="Adicionar novo banco ou cartão">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-banco" onclick="removeOption('f-banco','btn-rem-banco')" aria-label="Remover banco ou cartão selecionado">−</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="f-estabelecimento">Estabelecimento</label>
+          <div class="select-wrapper">
+            <select id="f-estabelecimento" name="estabelecimento"></select>
+            <button type="button" class="btn-icon" id="btn-add-estabelecimento" onclick="openModal('estabelecimento')" aria-label="Adicionar novo estabelecimento">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-estabelecimento" onclick="removeOption('f-estabelecimento','btn-rem-estabelecimento')" aria-label="Remover estabelecimento selecionado">−</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="f-forma">Forma de Pagamento</label>
+          <div class="select-wrapper">
+            <select id="f-forma" name="forma"></select>
+            <button type="button" class="btn-icon" id="btn-add-forma" onclick="openModal('forma')" aria-label="Adicionar nova forma de pagamento">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-forma" onclick="removeOption('f-forma','btn-rem-forma')" aria-label="Remover forma de pagamento selecionada">−</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="f-parcela">Parcela</label>
+          <div class="select-wrapper">
+            <select id="f-parcela" name="parcela"></select>
+            <button type="button" class="btn-icon" id="btn-add-parcela" onclick="openModal('parcela')" aria-label="Adicionar nova opção de parcela">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-parcela" onclick="removeOption('f-parcela','btn-rem-parcela')" aria-label="Remover parcela selecionada">−</button>
+          </div>
+        </div>
+
+        <div class="form-group" id="grupo-categoria">
+          <label for="f-categoria">Categoria</label>
+          <div class="select-wrapper">
+            <select id="f-categoria" name="categoria"></select>
+            <button type="button" class="btn-icon" id="btn-add-categoria" onclick="openModal('categoria')" aria-label="Adicionar nova categoria">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-categoria" onclick="removeOption('f-categoria','btn-rem-categoria')" aria-label="Remover categoria selecionada">−</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="f-credor">Credor</label>
+          <div class="select-wrapper">
+            <select id="f-credor" name="credor"></select>
+            <button type="button" class="btn-icon" id="btn-add-credor" onclick="openModal('credor')" aria-label="Adicionar novo credor">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-credor" onclick="removeOption('f-credor','btn-rem-credor')" aria-label="Remover credor selecionado">−</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="f-devedor">Devedor</label>
+          <div class="select-wrapper">
+            <select id="f-devedor" name="devedor"></select>
+            <button type="button" class="btn-icon" id="btn-add-devedor" onclick="openModal('devedor')" aria-label="Adicionar novo devedor">+</button>
+            <button type="button" class="btn-icon remove" id="btn-rem-devedor" onclick="removeOption('f-devedor','btn-rem-devedor')" aria-label="Remover devedor selecionado">−</button>
+          </div>
+        </div>
+
+        <div class="form-group span2" id="grupo-descricao">
+          <label for="f-descricao">Descrição</label>
+          <textarea id="f-descricao" name="descricao" rows="3" placeholder="Descreva o lançamento..." autocomplete="off"></textarea>
+        </div>
+
+        <!-- ══ SEÇÃO DE ITENS ══ -->
+        <div class="itens-section" id="secao-itens" aria-labelledby="titulo-itens">
+          <div class="itens-header">
+            <div class="itens-header-left">
+              <span class="itens-titulo" id="titulo-itens">Itens do Lançamento</span>
+              <span class="itens-total-badge" id="itens-total-badge" aria-live="polite" aria-atomic="true">
+                Total: R$ 0,00
+              </span>
+            </div>
+          </div>
+
+          <p id="itens-vazio-msg" style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">
+            Nenhum item adicionado. Use o botão abaixo para lançamentos compostos por múltiplos valores e categorias.
+          </p>
+
+          <div id="lista-itens" role="list" aria-label="Itens do lançamento"></div>
+
+          <div id="wrap-btn-add-item" style="display:flex;justify-content:flex-start;padding-top:4px;">
+            <button type="button" class="btn btn-teal" id="btn-add-item"
+                    onclick="adicionarItem()"
+                    aria-label="Adicionar novo item ao lançamento com valor, categoria e descrição próprios">
+              <span aria-hidden="true">＋</span> Adicionar Item
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /form-grid -->
+
+      <div class="form-actions" style="margin-top:16px;">
+        <button type="submit" class="btn btn-primary" id="btn-salvar" onclick="salvarLancamento()">
+          <span aria-hidden="true">💾</span> Salvar Lançamento
+        </button>
+        <button type="button" class="btn btn-parcelar" id="btn-parcelar"
+                onclick="abrirModalParcelar()"
+                aria-label="Parcelar — abre painel para informar valor total e número de parcelas, criando um lançamento por parcela">
+          <span aria-hidden="true">🗓</span> Parcelar
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="limparFormulario()">
+          <span aria-hidden="true">🗑</span> Limpar
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ══ FILTROS ══ -->
+  <section class="card" aria-labelledby="titulo-filtros">
+    <h2 class="card-title" id="titulo-filtros"><span aria-hidden="true">🔍</span> Filtros</h2>
+    <div class="filters-grid" role="group" aria-labelledby="titulo-filtros">
+      <div class="form-group"><label for="fi-origem-de">Data Origem — De</label><input type="date" id="fi-origem-de" autocomplete="off"></div>
+      <div class="form-group"><label for="fi-origem-ate">Data Origem — Até</label><input type="date" id="fi-origem-ate" autocomplete="off"></div>
+      <div class="form-group"><label for="fi-venc-de">Data Vencimento — De</label><input type="date" id="fi-venc-de" autocomplete="off"></div>
+      <div class="form-group"><label for="fi-venc-ate">Data Vencimento — Até</label><input type="date" id="fi-venc-ate" autocomplete="off"></div>
+      <div class="form-group">
+        <label for="fi-status">Status</label>
+        <select id="fi-status"><option value="">Todos</option><option value="pendente">Pendente</option><option value="pago">Pago</option></select>
+      </div>
+      <div class="form-group"><label for="fi-banco">Banco / Cartão</label><select id="fi-banco"><option value="">Todos</option></select></div>
+      <div class="form-group"><label for="fi-forma">Forma de Pagamento</label><select id="fi-forma"><option value="">Todas</option></select></div>
+      <div class="form-group"><label for="fi-estabelecimento">Estabelecimento</label><select id="fi-estabelecimento"><option value="">Todos</option></select></div>
+      <div class="form-group"><label for="fi-categoria">Categoria</label><select id="fi-categoria"><option value="">Todas</option></select></div>
+      <div class="form-group"><label for="fi-credor">Credor</label><select id="fi-credor"><option value="">Todos</option></select></div>
+      <div class="form-group"><label for="fi-devedor">Devedor</label><select id="fi-devedor"><option value="">Todos</option></select></div>
+      <div class="filters-actions" style="grid-column:span 5;">
+        <button type="button" class="btn btn-primary" onclick="aplicarFiltros()"><span aria-hidden="true">🔍</span> Filtrar</button>
+        <button type="button" class="btn btn-secondary" onclick="limparFiltros()"><span aria-hidden="true">✖</span> Limpar Filtros</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ TABELA ══ -->
+  <section class="card" aria-labelledby="titulo-tabela">
+    <div class="table-header">
+      <div>
+        <h2 class="card-title" id="titulo-tabela" style="margin-bottom:4px;"><span aria-hidden="true">📋</span> Lançamentos</h2>
+        <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
+      </div>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
+      <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
+        <thead>
+          <tr>
+            <th scope="col">Pago</th>
+            <th scope="col">Status</th>
+            <th scope="col">Data Origem</th>
+            <th scope="col">Data Venc.</th>
+            <th scope="col">Valor</th>
+            <th scope="col">Banco / Cartão</th>
+            <th scope="col">Estabelecimento</th>
+            <th scope="col">Forma Pgto</th>
+            <th scope="col">Parcela</th>
+            <th scope="col">Descrição</th>
+            <th scope="col">Categoria</th>
+            <th scope="col">Credor</th>
+            <th scope="col">Devedor</th>
+            <th scope="col">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-body">
+          <tr><td colspan="14">
+            <div class="empty-state" role="status">
+              <div class="empty-icon" aria-hidden="true">📭</div>
+              <p>Nenhum lançamento cadastrado.</p>
+              <p style="margin-top:6px;font-size:12px;color:var(--text3);">Use o formulário acima para adicionar.</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+  <!-- fim #painel-lancamentos -->
+
+  <!-- ══════ PAINEL: CONFIGURAÇÕES ══════ -->
+  <div id="painel-config" role="tabpanel" aria-labelledby="tab-btn-config" tabindex="0" hidden>
+
+  <!-- ══ EXPORTAR / IMPORTAR / DUPLICADOS ══ -->
+  <section class="card" aria-labelledby="titulo-dados">
+    <h2 class="card-title" id="titulo-dados"><span aria-hidden="true">🗄️</span> Dados e Manutenção</h2>
+    <div class="table-actions" style="margin-top:6px;">
+      <label for="input-import"
+             class="btn btn-secondary"
+             role="button"
+             tabindex="0"
+             aria-label="Importar lançamentos de arquivo XLSX"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+        <span aria-hidden="true">📥</span> Importar XLSX
+      </label>
+      <input type="file" id="input-import" accept=".xlsx,.xls"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
+             aria-label="Selecionar arquivo XLSX para importar"
+             onchange="lerArquivoXLSX(event)">
+      <button type="button" class="btn btn-success" onclick="exportarPlanilha()" aria-label="Exportar lançamentos para arquivo XLSX"><span aria-hidden="true">📤</span> Exportar XLSX</button>
+      <button type="button" class="btn btn-secondary" id="btn-limpar-duplicatas" onclick="limparDuplicatasExistentes()" aria-label="Procurar e remover lançamentos duplicados na nuvem"><span aria-hidden="true">🧹</span> Remover Duplicatas</button>
+    </div>
+  </section>
+
+  <!-- ══ GERENCIAR LISTAS ══ -->
+  <section class="card" aria-labelledby="titulo-listas">
+    <h2 class="card-title" id="titulo-listas"><span aria-hidden="true">🗂️</span> Gerenciar Listas</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Adicione ou remova as opções de Banco/Cartão, Categoria, Credor, Devedor, Forma de Pagamento, Parcela e Estabelecimento.
+    </p>
+    <div id="config-listas-container"></div>
+  </section>
+
+  </div>
+  <!-- fim #painel-config -->
+
+</main>
+
+<!-- ══ MODAL ADICIONAR OPÇÃO ══ -->
+<div class="modal-overlay" id="modal-overlay"
+     role="dialog" aria-modal="true"
+     aria-labelledby="modal-title" aria-describedby="modal-desc">
+  <div class="modal">
+    <h2 id="modal-title">Adicionar opção</h2>
+    <p id="modal-desc" class="sr-only">Digite o nome da nova opção e pressione Enter ou clique em Adicionar. Pressione Escape para cancelar.</p>
+    <div>
+      <label for="modal-input" id="modal-input-label">Nova opção</label>
+      <input type="text" id="modal-input"
+             aria-labelledby="modal-input-label"
+             placeholder="Digite o nome..."
+             autocomplete="off"
+             onkeydown="tratarTeclaModal(event)">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="btn-modal-cancelar" onclick="fecharModal()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btn-modal-confirmar" onclick="confirmarModal()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL DE PARCELAMENTO ══ -->
+<div class="modal-overlay" id="modal-parcelar-overlay"
+     role="dialog" aria-modal="true"
+     aria-labelledby="mp-titulo" aria-describedby="mp-desc">
+  <div class="modal modal-parcelar">
+    <h2 id="mp-titulo"><span aria-hidden="true">🗓</span> Parcelamento Automático</h2>
+    <p id="mp-desc" class="sr-only">
+      Informe o valor total da compra e o número de parcelas.
+      O sistema calculará o valor de cada parcela e criará um lançamento separado por mês,
+      avançando a data de vencimento mês a mês.
+      Pressione Escape para cancelar.
+    </p>
+
+    <div class="parc-inputs">
+      <div class="form-group">
+        <label for="mp-valor-total">Entrada de Valor <span aria-hidden="true" style="color:var(--red)">*</span></label>
+        <div class="tipo-valor-toggle" role="radiogroup" aria-label="Tipo de parcelamento: entrada ou saída">
+          <button type="button" id="mp-tipo-saida" class="tipo-valor-btn saida"
+                  role="radio" aria-checked="true"
+                  onclick="definirTipoValorParcelar('saida')">🔻 Saída (despesa)</button>
+          <button type="button" id="mp-tipo-entrada" class="tipo-valor-btn entrada"
+                  role="radio" aria-checked="false"
+                  onclick="definirTipoValorParcelar('entrada')">🔺 Entrada (receita)</button>
+        </div>
+        <input type="number" id="mp-valor-total" step="0.01" min="0"
+               placeholder="Ex.: 1200,00"
+               aria-required="true"
+               oninput="colorirValorParcelar(this); atualizarPreviewParcelas()"
+               autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="mp-num-parcelas">
+          Nº de Parcelas <span aria-hidden="true" style="color:var(--red)">*</span>
+          <span class="sr-only">(obrigatório — mínimo 2)</span>
+        </label>
+        <input type="number" id="mp-num-parcelas" min="2" max="360" step="1"
+               placeholder="Ex.: 12"
+               aria-required="true"
+               aria-describedby="mp-num-hint"
+               oninput="atualizarPreviewParcelas()"
+               autocomplete="off">
+        <span id="mp-num-hint" class="sr-only">Mínimo 2 parcelas.</span>
+      </div>
+      <div class="form-group">
+        <label for="mp-arredond">Arredondamento</label>
+        <select id="mp-arredond"
+                aria-label="Estratégia de arredondamento da diferença de centavos"
+                onchange="atualizarPreviewParcelas()">
+          <option value="primeira">Diferença na 1ª parcela</option>
+          <option value="ultima" selected>Diferença na última parcela</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="parc-resumo" id="mp-resumo" aria-live="polite" aria-atomic="true" style="display:none;">
+      <span>Total: <strong id="mp-r-total">—</strong></span>
+      <span>Parcelas: <strong id="mp-r-qtd">—</strong></span>
+      <span>Valor/parcela: <strong id="mp-r-valor">—</strong></span>
+      <span id="mp-r-diff-wrap" style="display:none;">Ajuste: <strong id="mp-r-diff" style="color:var(--amber);">—</strong></span>
+    </div>
+
+    <div class="parc-aviso" id="mp-aviso" style="display:none;" role="status" aria-live="polite">
+      <span aria-hidden="true">⚠️</span>
+      <span id="mp-aviso-txt"></span>
+    </div>
+
+    <div id="mp-preview-container" style="display:none;">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;
+                  letter-spacing:.05em;margin-bottom:6px;" id="mp-preview-label">
+        Prévia das parcelas
+      </div>
+      <div class="parc-preview-wrap" role="region" aria-labelledby="mp-preview-label" tabindex="0">
+        <div class="parc-preview-head" aria-hidden="true">
+          <span>#</span><span>Vencimento</span><span>Valor</span>
+        </div>
+        <div id="mp-preview-rows" role="list" aria-label="Lista de parcelas"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="btn-mp-cancelar"
+              onclick="fecharModalParcelar()">Cancelar</button>
+      <button type="button" class="btn btn-parcelar" id="btn-mp-confirmar"
+              onclick="confirmarParcelamento()"
+              aria-label="Confirmar parcelamento e criar os lançamentos">
+        <span aria-hidden="true">✔</span> Criar Lançamentos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST DE SINCRONIZAÇÃO ══ -->
+<div class="sync-toast" id="sync-toast" role="status" aria-live="polite"></div>
+
+</div><!-- /app-principal -->
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIGURAÇÃO SUPABASE
+// ═══════════════════════════════════════════════════
+const SUPABASE_URL = 'https://arkhifcucqozrpofhceq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_fNGQLgpF3_tOycUEciaznw_b0o2FM8h';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════
+let usuarioAtual         = null; // objeto user do Supabase Auth
+let lancamentos           = [];
+let lancamentosFiltrados  = [];
+let editandoId            = null;
+let modalCampo            = null;
+let modalOrigemBotaoId    = null;
+
+// Itens do lançamento em edição no formulário
+// Cada item: { id (local), valor, categoria, descricao }
+let itensFormulario = [];
+let proximoItemId   = 1;
+
+const CAMPOS_SELECT = ['banco','parcela','forma','estabelecimento','categoria','credor','devedor'];
+const CAMPOS_NOMES  = {
+  banco:'Banco / Cartão', parcela:'Parcela', forma:'Forma de Pagamento',
+  estabelecimento:'Estabelecimento', categoria:'Categoria', credor:'Credor', devedor:'Devedor'
+};
+const OPCOES_PADRAO = {
+  banco:[], parcela:[], forma:[], estabelecimento:[], categoria:[], credor:[], devedor:[]
+};
+let opcoesSelects = JSON.parse(JSON.stringify(OPCOES_PADRAO));
+// Configuração de contas/cartões por nome de banco: { tipo, saldo_inicial, limite_total }
+let contasConfig = {};
+
+// ═══════════════════════════════════════════════════
+//  ARIA LIVE
+// ═══════════════════════════════════════════════════
+function anunciar(msg, urgente) {
+  const el = document.getElementById(urgente ? 'aria-assertive' : 'aria-live');
+  el.textContent = '';
+  setTimeout(() => { el.textContent = msg; }, 60);
+}
+
+// ═══════════════════════════════════════════════════
+//  TOAST DE SINCRONIZAÇÃO (feedback visual silencioso)
+// ═══════════════════════════════════════════════════
+let toastTimeout = null;
+function mostrarToast(msg, isError) {
+  const toast = document.getElementById('sync-toast');
+  toast.textContent = msg;
+  toast.className = 'sync-toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { toast.className = 'sync-toast'; }, 2600);
+}
+
+// ═══════════════════════════════════════════════════
+//  AUTENTICAÇÃO
+// ═══════════════════════════════════════════════════
+function mostrarAbaAuth(aba) {
+  const isLogin = aba === 'login';
+  document.getElementById('tab-login').classList.toggle('active', isLogin);
+  document.getElementById('tab-cadastro').classList.toggle('active', !isLogin);
+  document.getElementById('tab-login').setAttribute('aria-selected', isLogin);
+  document.getElementById('tab-cadastro').setAttribute('aria-selected', !isLogin);
+  document.getElementById('form-login').style.display    = isLogin ? '' : 'none';
+  document.getElementById('form-cadastro').style.display = isLogin ? 'none' : '';
+  esconderErroAuth();
+  esconderSucessoAuth();
+}
+
+function mostrarErroAuth(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function esconderErroAuth() {
+  document.getElementById('auth-error').classList.remove('show');
+}
+function mostrarSucessoAuth(msg) {
+  const el = document.getElementById('auth-success');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function esconderSucessoAuth() {
+  document.getElementById('auth-success').classList.remove('show');
+}
+
+function traduzirErroAuth(msg) {
+  const m = (msg || '').toLowerCase();
+  if(m.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
+  if(m.includes('user already registered') || m.includes('already registered')) return 'Este e-mail já possui uma conta. Tente entrar.';
+  if(m.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.';
+  if(m.includes('password should be at least')) return 'A senha deve ter pelo menos 6 caracteres.';
+  if(m.includes('unable to validate email')) return 'E-mail inválido.';
+  if(m.includes('rate limit')) return 'Muitas tentativas. Aguarde um momento e tente novamente.';
+  return msg || 'Ocorreu um erro. Tente novamente.';
+}
+
+async function fazerLogin() {
+  esconderErroAuth(); esconderSucessoAuth();
+  const email = document.getElementById('login-email').value.trim();
+  const senha  = document.getElementById('login-senha').value;
+  if(!email || !senha) { mostrarErroAuth('Preencha e-mail e senha.'); return; }
+
+  const btn = document.getElementById('btn-login');
+  const textoOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Entrando...';
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+
+  btn.disabled = false;
+  btn.innerHTML = textoOriginal;
+
+  if(error) {
+    mostrarErroAuth(traduzirErroAuth(error.message));
+    return;
+  }
+  // Sucesso: onAuthStateChange chama iniciarAppLogado() automaticamente
+}
+
+async function fazerCadastro() {
+  esconderErroAuth(); esconderSucessoAuth();
+  const email   = document.getElementById('cadastro-email').value.trim();
+  const senha    = document.getElementById('cadastro-senha').value;
+  const confirma = document.getElementById('cadastro-senha-confirma').value;
+
+  if(!email || !senha || !confirma) { mostrarErroAuth('Preencha todos os campos.'); return; }
+  if(senha.length < 6) { mostrarErroAuth('A senha deve ter pelo menos 6 caracteres.'); return; }
+  if(senha !== confirma) { mostrarErroAuth('As senhas não coincidem.'); document.getElementById('cadastro-senha-confirma').focus(); return; }
+
+  const btn = document.getElementById('btn-cadastro');
+  const textoOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Criando conta...';
+
+  const { data, error } = await sb.auth.signUp({ email, password: senha });
+
+  btn.disabled = false;
+  btn.innerHTML = textoOriginal;
+
+  if(error) {
+    mostrarErroAuth(traduzirErroAuth(error.message));
+    return;
+  }
+
+  // Se a confirmação de e-mail estiver desabilitada, já vem com sessão ativa
+  // e onAuthStateChange cuida do resto. Se estiver habilitada, avisamos.
+  if(data && data.session) {
+    return;
+  }
+  mostrarSucessoAuth('Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
+  document.getElementById('form-cadastro').reset();
+  mostrarAbaAuth('login');
+}
+
+// ═══════════════════════════════════════════════════
+//  LOGOUT
+//  Segue o mesmo padrão simples do Banca Pro: dispara o
+//  signOut sem esperar (await) por ele. O próprio
+//  onAuthStateChange, ao detectar a ausência de sessão,
+//  troca a tela de volta para o login. Não há necessidade
+//  de timeout/spinner aqui — signOut() é uma operação local
+//  rápida (limpa o token salvo no navegador) e raramente trava.
+// ═══════════════════════════════════════════════════
+function fazerLogout() {
+  if(!confirm('Deseja realmente sair da sua conta?')) return;
+  appJaIniciado = false;
+  sb.auth.signOut();
+}
+
+// Reage a mudanças de sessão (login, logout, restauração automática no F5)
+sb.auth.onAuthStateChange((_evento, session) => {
+  if(session && session.user) {
+    usuarioAtual = session.user;
+    document.getElementById('auth-screen').style.display     = 'none';
+    document.getElementById('app-principal').style.display    = '';
+    document.getElementById('user-email-display').textContent = usuarioAtual.email;
+    iniciarAppLogado();
+  } else {
+    usuarioAtual = null;
+    document.getElementById('auth-screen').style.display  = '';
+    document.getElementById('app-principal').style.display = 'none';
+  }
+});
+
+// ═══════════════════════════════════════════════════
+//  INICIALIZAÇÃO DO APP (após login confirmado)
+//  Mesmo padrão do Banca Pro: a checagem de "já iniciado"
+//  é síncrona e acontece ANTES de qualquer await. Isso é
+//  suficiente para ser à prova de corrida — onAuthStateChange
+//  pode disparar várias vezes (login, restauração de sessão
+//  no F5, renovação de token em segundo plano), mas só a
+//  primeira vez com appJaIniciado=false realmente entra na
+//  função e dispara o carregamento.
+// ═══════════════════════════════════════════════════
+let appJaIniciado = false;
+
+async function iniciarAppLogado() {
+  if(appJaIniciado) return;
+  appJaIniciado = true;
+
+  iniciarRelogio();
+  registrarEventosModais();
+
+  mostrarToast('Carregando seus dados...');
+
+  await carregarOpcoesSupabase();
+  await carregarContasConfigSupabase();
+  await carregarLancamentosSupabase();
+
+  renderizarTodosSelects();
+  renderizarTodosFiltros();
+  renderizarContasConfig();
+  renderizarListasConfig();
+  aplicarFiltros();
+  atualizarSaldos();
+
+  mostrarToast('Pronto! ' + lancamentos.length + ' lançamento(s) carregado(s).');
+
+  verificarDadosLocaisParaMigrar();
+}
+
+// ═══════════════════════════════════════════════════
+//  NAVEGAÇÃO POR ABAS
+// ═══════════════════════════════════════════════════
+const ABAS = ['lancamentos', 'saldos', 'config'];
+const ROTULO_ABA = { lancamentos: 'Lançamentos', saldos: 'Saldos', config: 'Configurações' };
+let abaAtual = 'lancamentos';
+
+function mudarAba(nome) {
+  if(!ABAS.includes(nome)) return;
+  abaAtual = nome;
+  ABAS.forEach(a => {
+    const btn    = document.getElementById('tab-btn-' + a);
+    const painel = document.getElementById('painel-' + a);
+    const ativo  = a === nome;
+    btn.setAttribute('aria-selected', ativo ? 'true' : 'false');
+    btn.tabIndex = ativo ? 0 : -1;
+    painel.hidden = !ativo;
+  });
+  anunciar('Aba ' + ROTULO_ABA[nome] + ' selecionada.');
+}
+
+function navegarAbasTeclado(e) {
+  const idx = ABAS.indexOf(abaAtual);
+  let novo = null;
+  if(e.key === 'ArrowRight') novo = ABAS[(idx + 1) % ABAS.length];
+  else if(e.key === 'ArrowLeft') novo = ABAS[(idx - 1 + ABAS.length) % ABAS.length];
+  else if(e.key === 'Home') novo = ABAS[0];
+  else if(e.key === 'End') novo = ABAS[ABAS.length - 1];
+  if(novo) {
+    e.preventDefault();
+    mudarAba(novo);
+    document.getElementById('tab-btn-' + novo).focus();
+  }
+}
+
+function registrarEventosModais() {
+  const ov = document.getElementById('modal-overlay');
+  ov.addEventListener('click',   e => { if (e.target === ov) fecharModal(); });
+  ov.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+
+  const ovP = document.getElementById('modal-parcelar-overlay');
+  ovP.addEventListener('click',   e => { if (e.target === ovP) fecharModalParcelar(); });
+  ovP.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModalParcelar(); });
+
+  ['mp-valor-total','mp-num-parcelas'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if(e.key === 'Enter') { e.preventDefault(); confirmarParcelamento(); }
+    });
+  });
+}
+
+function iniciarRelogio() {
+  if(window._clockInterval) return; // evita múltiplos intervalos em re-logins
+  const tick = () => {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleDateString('pt-BR') + ' ' +
+      new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  };
+  tick();
+  window._clockInterval = setInterval(tick, 30000);
+}
+
+// ═══════════════════════════════════════════════════
+//  DEDUPLICAÇÃO DE LANÇAMENTOS
+//  Gera uma "assinatura" estável a partir dos campos que
+//  identificam um lançamento, para detectar duplicatas
+//  antes de inserir (usado por migração e importação XLSX).
+// ═══════════════════════════════════════════════════
+function assinaturaLancamento(l) {
+  const temItens = (l.itens && l.itens.length > 0);
+
+  // IMPORTANTE: quando o lançamento tem itens, a exportação para XLSX substitui
+  // a Descrição por "(lançamento com N itens)" e a Categoria por "(múltiplas)"
+  // na linha Principal — são textos gerados, não os dados reais. Se usássemos
+  // esses campos aqui, um lançamento composto NUNCA bateria com sua própria
+  // versão re-importada, e seria duplicado a cada ida-e-volta pela planilha.
+  // Por isso, para lançamentos com itens, a identidade é baseada nos campos
+  // que SÃO preservados fielmente (data, banco, forma, parcela, credor, devedor,
+  // valor total) mais a assinatura dos itens — que são exportados/importados
+  // com seus valores reais.
+  const base = [
+    l.dataOrigem || l.data_origem || '',
+    l.dataVencimento || l.data_vencimento || '',
+    Number(l.valor || 0).toFixed(2),
+    (l.banco || '').trim().toLowerCase(),
+    (l.estabelecimento || '').trim().toLowerCase(),
+    (l.forma || '').trim().toLowerCase(),
+    (l.parcela || '').trim().toLowerCase(),
+    temItens ? '' : (l.descricao || '').trim().toLowerCase(),
+    temItens ? '' : (l.categoria || '').trim().toLowerCase(),
+    (l.credor || '').trim().toLowerCase(),
+    (l.devedor || '').trim().toLowerCase()
+  ].join('|');
+
+  // Assinatura dos itens (preservados fielmente na exportação/importação)
+  const itens = (l.itens || []).map(i =>
+    [Number(i.valor||0).toFixed(2), (i.categoria||'').trim().toLowerCase(), (i.descricao||'').trim().toLowerCase()].join('|')
+  ).sort().join(';');
+
+  return base + '##' + itens;
+}
+
+// Monta o conjunto de assinaturas dos lançamentos já existentes no Supabase
+// (usa o array `lancamentos`, que reflete o estado atual carregado do banco)
+function construirSetAssinaturasExistentes() {
+  return new Set(lancamentos.map(assinaturaLancamento));
+}
+
+// ═══════════════════════════════════════════════════
+//  LIMPEZA DE DUPLICATAS JÁ EXISTENTES NO SUPABASE
+// ═══════════════════════════════════════════════════
+async function limparDuplicatasExistentes() {
+  if(!confirm(
+    'Isso vai analisar todos os seus lançamentos na nuvem e excluir as cópias duplicadas, ' +
+    'mantendo apenas uma de cada. Itens associados às duplicatas removidas também serão excluídos. ' +
+    'Deseja continuar?'
+  )) return;
+
+  mostrarToast('Procurando duplicatas...');
+  anunciar('Procurando lançamentos duplicados. Aguarde.');
+
+  // Garante que estamos trabalhando com os dados mais recentes do banco
+  await carregarLancamentosSupabase();
+
+  const vistos = new Map(); // assinatura -> id do primeiro lançamento mantido
+  const idsParaExcluir = [];
+
+  // Ordena por id crescente para manter sempre o registro MAIS ANTIGO de cada grupo
+  const ordenados = lancamentos.slice().sort((a,b) => a.id - b.id);
+
+  ordenados.forEach(l => {
+    const assinatura = assinaturaLancamento(l);
+    if(vistos.has(assinatura)) {
+      idsParaExcluir.push(l.id);
+    } else {
+      vistos.set(assinatura, l.id);
+    }
+  });
+
+  if(idsParaExcluir.length === 0) {
+    mostrarToast('Nenhuma duplicata encontrada.');
+    anunciar('Nenhum lançamento duplicado foi encontrado.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-limpar-duplicatas');
+  let textoOriginal;
+  if(btn) { textoOriginal = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Excluindo '+idsParaExcluir.length+' duplicata(s)...'; }
+
+  // Exclui em lotes de 100 para evitar URLs/queries excessivamente longas
+  let excluidos = 0, falhas = 0;
+  const tamanhoLote = 100;
+  for(let i=0; i<idsParaExcluir.length; i += tamanhoLote) {
+    const lote = idsParaExcluir.slice(i, i + tamanhoLote);
+    const { error } = await sb.from('lancamentos')
+      .delete()
+      .in('id', lote)
+      .eq('user_id', usuarioAtual.id);
+    if(error) falhas += lote.length;
+    else excluidos += lote.length;
+  }
+
+  if(btn) { btn.disabled = false; btn.innerHTML = textoOriginal; }
+
+  await carregarLancamentosSupabase();
+  aplicarFiltros();
+  atualizarSaldos();
+
+  if(falhas === 0) {
+    mostrarToast(excluidos + ' duplicata(s) removida(s).');
+    anunciar(excluidos + ' lançamentos duplicados foram removidos. Restaram os originais.');
+  } else {
+    mostrarToast(excluidos + ' removidas, ' + falhas + ' falharam.', true);
+    anunciar(excluidos + ' duplicatas removidas, ' + falhas + ' falharam. Tente novamente.', true);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  MIGRAÇÃO AUTOMÁTICA DO LOCALSTORAGE
+// ═══════════════════════════════════════════════════
+function verificarDadosLocaisParaMigrar() {
+  // Já migrado ou dispensado anteriormente? não mostra de novo.
+  if(localStorage.getItem('cf_migracao_status') === 'concluida' ||
+     localStorage.getItem('cf_migracao_status') === 'dispensada') return;
+
+  const dadosLocais = localStorage.getItem('cf_lancamentos');
+  if(!dadosLocais) return;
+
+  let lista = [];
+  try { lista = JSON.parse(dadosLocais); } catch(e) { return; }
+  if(!Array.isArray(lista) || lista.length === 0) return;
+
+  document.getElementById('migracao-qtd').textContent = lista.length;
+  document.getElementById('migracao-banner').style.display = '';
+  anunciar(lista.length + ' lançamentos encontrados neste dispositivo. Você pode migrá-los para a nuvem.');
+}
+
+function dispensarMigracao() {
+  localStorage.setItem('cf_migracao_status', 'dispensada');
+  document.getElementById('migracao-banner').style.display = 'none';
+  anunciar('Migração ignorada. Os dados locais permanecem apenas neste navegador.');
+}
+
+async function migrarDadosLocais() {
+  // Trava simples contra duplo-clique / duplo-disparo do botão
+  if(window._migracaoEmAndamento) return;
+  window._migracaoEmAndamento = true;
+
+  const dadosLocais = localStorage.getItem('cf_lancamentos');
+  const opcoesLocais = localStorage.getItem('cf_opcoes');
+  if(!dadosLocais) { window._migracaoEmAndamento = false; dispensarMigracao(); return; }
+
+  let lista = [];
+  let opcoesAntigas = {};
+  try {
+    lista = JSON.parse(dadosLocais);
+    if(opcoesLocais) opcoesAntigas = JSON.parse(opcoesLocais);
+  } catch(e) {
+    mostrarToast('Erro ao ler dados locais.', true);
+    window._migracaoEmAndamento = false;
+    return;
+  }
+  if(!Array.isArray(lista) || lista.length === 0) { window._migracaoEmAndamento = false; dispensarMigracao(); return; }
+
+  const btn = document.getElementById('btn-migrar');
+  const textoOriginal = btn.innerHTML;
+  btn.disabled = true;
+
+  // Garante que temos o estado mais atual do banco antes de comparar
+  await carregarLancamentosSupabase();
+  const assinaturasExistentes = construirSetAssinaturasExistentes();
+
+  // Filtra do lote local apenas os que ainda não existem na nuvem
+  const candidatos = lista.filter(l => !assinaturasExistentes.has(assinaturaLancamento(l)));
+  const jaExistiam = lista.length - candidatos.length;
+
+  if(candidatos.length === 0) {
+    btn.disabled = false; btn.innerHTML = textoOriginal;
+    localStorage.setItem('cf_migracao_status', 'concluida');
+    document.getElementById('migracao-banner').style.display = 'none';
+    mostrarToast('Todos os lançamentos já estavam na nuvem.');
+    anunciar('Nenhum lançamento novo para migrar — todos já estavam na nuvem.');
+    window._migracaoEmAndamento = false;
+    return;
+  }
+
+  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Migrando ' + candidatos.length + ' lançamento(s)...';
+  anunciar('Migrando ' + candidatos.length + ' lançamentos novos para a nuvem. Aguarde.' +
+           (jaExistiam>0 ? ' ' + jaExistiam + ' já existiam e serão ignorados.' : ''));
+
+  let sucesso = 0, falhas = 0;
+
+  for(const l of candidatos) {
+    try {
+      const { data: lancInserido, error: errLanc } = await sb.from('lancamentos').insert({
+        user_id:         usuarioAtual.id,
+        data_origem:     l.dataOrigem || null,
+        data_vencimento: l.dataVencimento || null,
+        valor:           l.valor || 0,
+        banco:           l.banco || null,
+        estabelecimento: l.estabelecimento || null,
+        forma:           l.forma || null,
+        parcela:         l.parcela || null,
+        descricao:       l.descricao || null,
+        categoria:       l.categoria || null,
+        credor:          l.credor || null,
+        devedor:         l.devedor || null,
+        pago:            !!l.pago
+      }).select().single();
+
+      if(errLanc) { falhas++; continue; }
+
+      // Itens do lançamento, se houver
+      if(l.itens && l.itens.length > 0) {
+        const itensParaInserir = l.itens.map((item, idx) => ({
+          lancamento_id: lancInserido.id,
+          user_id:       usuarioAtual.id,
+          valor:         item.valor || 0,
+          categoria:     item.categoria || null,
+          descricao:     item.descricao || null,
+          ordem:         idx
+        }));
+        await sb.from('itens_lancamento').insert(itensParaInserir);
+      }
+      sucesso++;
+    } catch(e) {
+      falhas++;
+    }
+  }
+
+  // Migra também as opções das caixas combinadas
+  for(const campo of CAMPOS_SELECT) {
+    const valores = opcoesAntigas[campo] || [];
+    for(const valor of valores) {
+      if(!valor) continue;
+      await sb.from('opcoes_listas').upsert(
+        { user_id: usuarioAtual.id, campo, valor },
+        { onConflict: 'user_id,campo,valor', ignoreDuplicates: true }
+      );
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = textoOriginal;
+  window._migracaoEmAndamento = false;
+
+  const resumo = sucesso + ' migrado(s)' + (jaExistiam>0 ? ', ' + jaExistiam + ' já existia(m)' : '') + (falhas>0 ? ', ' + falhas + ' falharam' : '');
+
+  if(falhas === 0) {
+    localStorage.setItem('cf_migracao_status', 'concluida');
+    document.getElementById('migracao-banner').style.display = 'none';
+    mostrarToast(resumo + '.');
+    anunciar(resumo + '. Migração concluída.');
+  } else {
+    mostrarToast(resumo + '.', true);
+    anunciar(resumo + '. Você pode tentar novamente.', true);
+  }
+
+  // Recarrega tudo do Supabase para refletir os dados migrados
+  await Promise.all([ carregarOpcoesSupabase(), carregarContasConfigSupabase(), carregarLancamentosSupabase() ]);
+  renderizarTodosSelects();
+  renderizarTodosFiltros();
+  renderizarContasConfig();
+  renderizarListasConfig();
+  aplicarFiltros();
+  atualizarSaldos();
+}
+
+// ═══════════════════════════════════════════════════
+//  CARREGAMENTO DE DADOS DO SUPABASE
+// ═══════════════════════════════════════════════════
+// Função utilitária de paginação — mesmo padrão comprovado do Banca Pro
+// (lá chamada de selecionarTudo). Busca todas as linhas de uma tabela em
+// blocos de 1000 (limite do Supabase), sem timeout nem retry artificial:
+// o próprio cliente Supabase já tem seus mecanismos de rede, e um erro
+// real aqui simplesmente interrompe o laço e retorna o que já foi obtido,
+// junto com o erro — quem chama decide o que fazer.
+async function selecionarTudo(tabela, ordenarPor, colunas) {
+  const TAMANHO_PAGINA = 1000;
+  let todos = [];
+  let pagina = 0;
+  while(true) {
+    const { data, error } = await sb.from(tabela).select(colunas || '*')
+      .order(ordenarPor)
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1);
+    if(error) return { data: todos, error };
+    todos = todos.concat(data || []);
+    if(!data || data.length < TAMANHO_PAGINA) break;
+    pagina++;
+  }
+  return { data: todos, error: null };
+}
+
+async function carregarOpcoesSupabase() {
+  opcoesSelects = JSON.parse(JSON.stringify(OPCOES_PADRAO));
+  const { data, error } = await selecionarTudo('opcoes_listas', 'valor');
+  if(error) { mostrarToast('Erro ao carregar listas: ' + error.message, true); return; }
+  (data || []).forEach(row => {
+    if(opcoesSelects[row.campo] && !opcoesSelects[row.campo].includes(row.valor)) {
+      opcoesSelects[row.campo].push(row.valor);
+    }
+  });
+  CAMPOS_SELECT.forEach(c => opcoesSelects[c].sort((a,b) => a.localeCompare(b,'pt-BR')));
+}
+
+async function carregarContasConfigSupabase() {
+  contasConfig = {};
+  const { data, error } = await selecionarTudo('contas_config', 'nome_banco');
+  if(error) { mostrarToast('Erro ao carregar contas/cartões: ' + error.message, true); return; }
+  (data || []).forEach(row => {
+    contasConfig[row.nome_banco] = {
+      id: row.id,
+      tipo: row.tipo,
+      saldo_inicial: row.saldo_inicial !== null ? parseFloat(row.saldo_inicial) : null,
+      limite_total:  row.limite_total  !== null ? parseFloat(row.limite_total)  : null
+    };
+  });
+}
+
+async function carregarLancamentosSupabase() {
+  const { data: lancRows, error: e1 } = await selecionarTudo('lancamentos', 'data_origem');
+  if(e1) { mostrarToast('Erro ao carregar lançamentos: ' + e1.message, true); lancamentos = []; return; }
+
+  const { data: itensRows, error: e2 } = await selecionarTudo('itens_lancamento', 'ordem');
+  if(e2) { mostrarToast('Erro ao carregar itens: ' + e2.message, true); }
+
+  const itensPorLancamento = {};
+  (itensRows || []).forEach(item => {
+    if(!itensPorLancamento[item.lancamento_id]) itensPorLancamento[item.lancamento_id] = [];
+    itensPorLancamento[item.lancamento_id].push({
+      valor:     parseFloat(item.valor) || 0,
+      categoria: item.categoria || '',
+      descricao: item.descricao || ''
+    });
+  });
+
+  lancamentos = (lancRows || []).map(l => ({
+    id:              l.id,
+    dataOrigem:      l.data_origem || '',
+    dataVencimento:  l.data_vencimento || '',
+    valor:           parseFloat(l.valor) || 0,
+    banco:           l.banco || '',
+    estabelecimento: l.estabelecimento || '',
+    forma:           l.forma || '',
+    parcela:         l.parcela || '',
+    descricao:       l.descricao || '',
+    categoria:       l.categoria || '',
+    credor:          l.credor || '',
+    devedor:         l.devedor || '',
+    pago:            !!l.pago,
+    itens:           itensPorLancamento[l.id] || []
+  }));
+}
+
+// ═══════════════════════════════════════════════════
+//  SELECTS — RENDERIZAÇÃO
+// ═══════════════════════════════════════════════════
+function renderizarSelect(campo) {
+  const sel = document.getElementById('f-'+campo);
+  if(!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— Selecionar —</option>';
+  (opcoesSelects[campo]||[]).forEach(op => {
+    const opt = document.createElement('option');
+    opt.value = op; opt.textContent = op; sel.appendChild(opt);
+  });
+  if(val) sel.value = val;
+}
+function renderizarTodosSelects() { CAMPOS_SELECT.forEach(renderizarSelect); }
+
+// ═══════════════════════════════════════════════════
+//  LEITOR DE NOTAS E COMPROVANTES (IA)
+// ═══════════════════════════════════════════════════
+
+// Mapeia os nomes de campo devolvidos pela IA para os <select> do formulário
+const CAMPOS_IA_PARA_SELECT = {
+  banco: 'banco',
+  estabelecimento: 'estabelecimento',
+  forma_pagamento: 'forma',
+  categoria_sugerida: 'categoria',
+  credor: 'credor',
+  devedor: 'devedor'
+};
+
+function mostrarStatusLeitorIA(msg, isError) {
+  const el = document.getElementById('leitor-ia-status');
+  if(el) { el.textContent = msg; el.style.color = isError ? 'var(--red)' : 'var(--text2)'; }
+}
+
+function limparSugestoesIA() {
+  const el = document.getElementById('leitor-ia-sugestoes');
+  if(el) el.innerHTML = '';
+}
+
+// Lê o arquivo escolhido e prepara o conteúdo (base64 para imagem/PDF, texto puro para txt/xml)
+function prepararArquivoParaIA(file) {
+  return new Promise((resolve, reject) => {
+    const nome = (file.name || '').toLowerCase();
+    const ext  = nome.includes('.') ? nome.split('.').pop() : '';
+    const tipoMime = file.type || '';
+
+    const isImagem = tipoMime.startsWith('image/');
+    const isPDF    = tipoMime === 'application/pdf' || ext === 'pdf';
+    const isXML    = ext === 'xml' || tipoMime === 'text/xml' || tipoMime === 'application/xml';
+    const isTexto  = !isImagem && !isPDF && (tipoMime.startsWith('text/') || ext === 'txt' || isXML);
+
+    if(isImagem || isPDF) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = String(reader.result).split(',')[1] || '';
+        resolve({
+          tipo: isImagem ? 'imagem' : 'pdf',
+          conteudo: base64,
+          mimeType: tipoMime || (isPDF ? 'application/pdf' : 'image/jpeg')
+        });
+      };
+      reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      reader.readAsDataURL(file);
+    } else if(isTexto) {
+      const reader = new FileReader();
+      reader.onload = () => resolve({
+        tipo: isXML ? 'xml' : 'texto',
+        conteudo: String(reader.result),
+        mimeType: tipoMime || 'text/plain'
+      });
+      reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      reader.readAsText(file, 'UTF-8');
+    } else {
+      reject(new Error('Formato não suportado. Envie uma imagem, PDF, TXT ou XML.'));
+    }
+  });
+}
+
+async function lerDocumentoIA(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if(!file) return;
+
+  limparSugestoesIA();
+  mostrarStatusLeitorIA('Lendo documento com IA, aguarde...');
+  anunciar('Lendo documento com IA. Aguarde.');
+
+  const btn = document.getElementById('btn-leitor-ia');
+  if(btn) btn.setAttribute('aria-disabled', 'true');
+
+  try {
+    const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
+
+    const resp = await fetch('/api/ler-documento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo: file.name })
+    });
+
+    let json;
+    try { json = await resp.json(); } catch(e) { json = null; }
+
+    if(!resp.ok || !json || !json.ok) {
+      const msgErro = (json && json.erro) || 'Falha ao ler o documento (' + resp.status + ').';
+      throw new Error(msgErro);
+    }
+
+    aplicarDadosIAaoFormulario(json.dados || {});
+  } catch(err) {
+    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    anunciar('Erro ao ler documento: ' + err.message, true);
+  } finally {
+    if(btn) btn.removeAttribute('aria-disabled');
+    input.value = '';
+  }
+}
+
+// Tenta encontrar, dentro das opções já cadastradas pelo usuário, uma opção
+// equivalente (ignorando maiúsculas/minúsculas e espaços) ao valor sugerido pela IA
+function encontrarOpcaoEquivalente(campo, valorSugerido) {
+  if(!valorSugerido) return null;
+  const alvo = valorSugerido.trim().toLowerCase();
+  const lista = opcoesSelects[campo] || [];
+  return lista.find(op => op.trim().toLowerCase() === alvo) || null;
+}
+
+function aplicarDadosIAaoFormulario(dados) {
+  const preenchidos = [];
+  const naoEncontrados = [];
+
+  // Data
+  if(dados.data) {
+    const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dados.data);
+    if(dataValida) {
+      document.getElementById('f-data-origem').value = dados.data;
+      preenchidos.push('Data');
+    }
+  }
+
+  // Tipo (entrada/saída) — define o sinal; se a IA não tiver certeza, mantém "Saída" (padrão)
+  if(dados.tipo_transacao === 'credito') {
+    definirTipoValor('entrada');
+    preenchidos.push('Tipo (Entrada)');
+  } else if(dados.tipo_transacao === 'debito') {
+    definirTipoValor('saida');
+    preenchidos.push('Tipo (Saída)');
+  }
+
+  // Valor (a IA devolve sempre em número absoluto; o sinal já foi tratado acima)
+  if(dados.valor !== null && dados.valor !== undefined && !isNaN(parseFloat(dados.valor))) {
+    const campoValor = document.getElementById('f-valor');
+    campoValor.value = Math.abs(parseFloat(dados.valor)).toFixed(2);
+    colorirValor(campoValor);
+    atualizarNotaValor();
+    preenchidos.push('Valor');
+  }
+
+  // Campos de seleção (banco, estabelecimento, forma, categoria, credor, devedor)
+  Object.keys(CAMPOS_IA_PARA_SELECT).forEach(campoIA => {
+    const campoSelect = CAMPOS_IA_PARA_SELECT[campoIA];
+    const sugestao = dados[campoIA];
+    if(!sugestao) return;
+
+    const equivalente = encontrarOpcaoEquivalente(campoSelect, sugestao);
+    if(equivalente) {
+      const sel = document.getElementById('f-' + campoSelect);
+      if(sel) { sel.value = equivalente; preenchidos.push(CAMPOS_NOMES[campoSelect]); }
+    } else {
+      naoEncontrados.push({ campo: campoSelect, valor: sugestao });
+    }
+  });
+
+  // Descrição (campo livre)
+  if(dados.descricao) {
+    document.getElementById('f-descricao').value = dados.descricao;
+    preenchidos.push('Descrição');
+  }
+
+  renderizarSugestoesNaoEncontradas(naoEncontrados);
+
+  let msg = preenchidos.length
+    ? 'Documento lido. Campos preenchidos automaticamente: ' + preenchidos.join(', ') + '.'
+    : 'Documento lido, mas nenhum campo pôde ser preenchido com confiança.';
+  if(naoEncontrados.length) {
+    msg += ' ' + naoEncontrados.length + ' sugestão(ões) da IA não bateram com opções já cadastradas — confira abaixo.';
+  }
+  if(!dados.tipo_transacao || dados.tipo_transacao === 'indefinido') {
+    msg += ' A IA não teve certeza se é Entrada ou Saída — confira o botão selecionado antes de salvar.';
+  }
+  mostrarStatusLeitorIA(msg);
+  anunciar(msg);
+}
+
+// Mostra, abaixo do leitor, as sugestões da IA que não corresponderam a nenhuma
+// opção já cadastrada, com um atalho para adicioná-las via modal existente
+function renderizarSugestoesNaoEncontradas(lista) {
+  const container = document.getElementById('leitor-ia-sugestoes');
+  if(!container) return;
+  if(!lista.length) { container.innerHTML = ''; return; }
+
+  container.innerHTML =
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:6px;">' +
+    'A IA sugeriu os valores abaixo, mas eles ainda não existem nas suas listas:' +
+    '</div>' +
+    lista.map(item =>
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;">' +
+        '<span><strong>' + CAMPOS_NOMES[item.campo] + ':</strong> ' + escaparHTML(item.valor) + '</span>' +
+        '<button type="button" class="btn-icon" ' +
+          'onclick="abrirModalComSugestaoIA(\'' + item.campo + '\', \'' + escaparParaJS(item.valor) + '\')" ' +
+          'aria-label="Adicionar \'' + escaparHTML(item.valor) + '\' como nova opção de ' + CAMPOS_NOMES[item.campo] + '">+</button>' +
+      '</div>'
+    ).join('');
+}
+
+// Escapa aspas simples e barras invertidas para uso seguro dentro de uma string JS
+// delimitada por aspas simples, embutida num atributo HTML onclick="..."
+function escaparParaJS(str) {
+  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function escaparHTML(txt) {
+  const d = document.createElement('div');
+  d.textContent = txt;
+  return d.innerHTML;
+}
+
+// Abre o modal de "adicionar opção" já existente no app, pré-preenchido com a sugestão da IA
+function abrirModalComSugestaoIA(campo, valorSugerido) {
+  openModal(campo);
+  const input = document.getElementById('modal-input');
+  if(input) input.value = valorSugerido;
+}
+
+const ROTULO_FILTRO = {banco:'Todos',forma:'Todas',estabelecimento:'Todos',categoria:'Todas',credor:'Todos',devedor:'Todos'};
+function renderizarFiltroSelect(campo) {
+  const sel = document.getElementById('fi-'+campo);
+  if(!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">'+(ROTULO_FILTRO[campo]||'Todos')+'</option>';
+  (opcoesSelects[campo]||[]).forEach(op => {
+    const opt = document.createElement('option');
+    opt.value = op; opt.textContent = op; sel.appendChild(opt);
+  });
+  if(val) sel.value = val;
+}
+function renderizarTodosFiltros() {
+  ['banco','forma','estabelecimento','categoria','credor','devedor'].forEach(renderizarFiltroSelect);
+}
+
+// ═══════════════════════════════════════════════════
+//  GERENCIAR LISTAS (aba Configurações)
+// ═══════════════════════════════════════════════════
+function renderizarListasConfig() {
+  const container = document.getElementById('config-listas-container');
+  if(!container) return;
+
+  container.innerHTML = CAMPOS_SELECT.map(campo => {
+    const lista = opcoesSelects[campo] || [];
+    const itensHtml = lista.length
+      ? '<ul class="config-lista" aria-label="Opções cadastradas para '+CAMPOS_NOMES[campo]+'">' +
+          lista.map(valor =>
+            '<li>' + escaparHTML(valor) +
+              '<button type="button" onclick="removerOpcaoConfig(\''+campo+'\', \''+escaparParaJS(valor)+'\')" ' +
+                'aria-label="Remover \''+escaparHTML(valor)+'\' de '+CAMPOS_NOMES[campo]+'">✕</button>' +
+            '</li>'
+          ).join('') +
+        '</ul>'
+      : '<p class="config-lista-vazio">Nenhuma opção cadastrada ainda.</p>';
+
+    return (
+      '<div class="config-lista-grupo">' +
+        '<h3>'+CAMPOS_NOMES[campo]+'</h3>' +
+        itensHtml +
+        '<div class="config-lista-add">' +
+          '<label for="cfg-add-'+campo+'" class="sr-only">Nova opção para '+CAMPOS_NOMES[campo]+'</label>' +
+          '<input type="text" id="cfg-add-'+campo+'" placeholder="Nova opção..." ' +
+            'onkeydown="if(event.key===\'Enter\'){event.preventDefault();adicionarOpcaoConfig(\''+campo+'\');}">' +
+          '<button type="button" class="btn btn-secondary" onclick="adicionarOpcaoConfig(\''+campo+'\')">Adicionar</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+async function adicionarOpcaoConfig(campo) {
+  const input = document.getElementById('cfg-add-' + campo);
+  const val = input.value.trim();
+  if(!val) { anunciar('Digite um nome para a nova opção.', true); input.focus(); return; }
+  if(!opcoesSelects[campo]) opcoesSelects[campo] = [];
+  if(opcoesSelects[campo].includes(val)) { anunciar('Essa opção já existe: ' + val, true); input.focus(); return; }
+
+  const { error } = await sb.from('opcoes_listas').insert({
+    user_id: usuarioAtual.id, campo: campo, valor: val
+  });
+
+  if(error) {
+    anunciar('Erro ao salvar a opção: ' + error.message, true);
+    mostrarToast('Erro ao salvar opção.', true);
+    return;
+  }
+
+  opcoesSelects[campo].push(val);
+  opcoesSelects[campo].sort((a,b) => a.localeCompare(b,'pt-BR'));
+  renderizarSelect(campo);
+  renderizarFiltroSelect(campo);
+  if(campo === 'categoria') {
+    document.querySelectorAll('.item-sel-categoria').forEach(s => {
+      const cur = s.value;
+      s.innerHTML = buildCategoriaOptions();
+      if(cur) s.value = cur;
+    });
+  }
+  if(campo === 'banco') renderizarContasConfig();
+  renderizarListasConfig();
+  document.getElementById('cfg-add-' + campo).focus();
+  anunciar('Opção "' + val + '" adicionada em ' + CAMPOS_NOMES[campo] + '.');
+}
+
+async function removerOpcaoConfig(campo, valor) {
+  if(!confirm('Remover a opção "' + valor + '" de ' + CAMPOS_NOMES[campo] + '?')) return;
+
+  const { error } = await sb.from('opcoes_listas')
+    .delete()
+    .eq('user_id', usuarioAtual.id)
+    .eq('campo', campo)
+    .eq('valor', valor);
+
+  if(error) {
+    anunciar('Erro ao remover a opção: ' + error.message, true);
+    mostrarToast('Erro ao remover opção.', true);
+    return;
+  }
+
+  opcoesSelects[campo] = opcoesSelects[campo].filter(o => o !== valor);
+  renderizarSelect(campo);
+  renderizarFiltroSelect(campo);
+  if(campo === 'banco') {
+    if(contasConfig[valor]) {
+      await sb.from('contas_config').delete().eq('user_id', usuarioAtual.id).eq('nome_banco', valor);
+      delete contasConfig[valor];
+    }
+    renderizarContasConfig();
+  }
+  renderizarListasConfig();
+  anunciar('Opção "' + valor + '" removida de ' + CAMPOS_NOMES[campo] + '.');
+}
+
+// ═══════════════════════════════════════════════════
+//  MODAL ADICIONAR OPÇÃO (agora grava direto no Supabase)
+// ═══════════════════════════════════════════════════
+function openModal(campo, origemBotaoId) {
+  modalCampo         = campo;
+  modalOrigemBotaoId = origemBotaoId || ('btn-add-'+campo);
+  document.getElementById('modal-title').textContent       = 'Adicionar opção: '+CAMPOS_NOMES[campo];
+  document.getElementById('modal-input-label').textContent = 'Nova opção para '+CAMPOS_NOMES[campo];
+  document.getElementById('modal-input').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.getElementById('modal-input').focus()
+  ));
+}
+function fecharModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  if(modalOrigemBotaoId) {
+    const btn = document.getElementById(modalOrigemBotaoId);
+    if(btn) btn.focus();
+  }
+  modalCampo = null; modalOrigemBotaoId = null;
+}
+function tratarTeclaModal(e) {
+  if(e.key==='Enter'){e.preventDefault();confirmarModal();}
+  if(e.key==='Escape') fecharModal();
+}
+async function confirmarModal() {
+  const val = document.getElementById('modal-input').value.trim();
+  if(!val){ anunciar('Digite um nome para a nova opção.',true); document.getElementById('modal-input').focus(); return; }
+  if(!opcoesSelects[modalCampo]) opcoesSelects[modalCampo]=[];
+  if(opcoesSelects[modalCampo].includes(val)){ anunciar('Essa opção já existe: '+val,true); document.getElementById('modal-input').select(); return; }
+
+  const campoSalvo  = modalCampo;
+  const origemSalvo = modalOrigemBotaoId;
+
+  const btnConfirmar = document.getElementById('btn-modal-confirmar');
+  btnConfirmar.disabled = true;
+
+  const { error } = await sb.from('opcoes_listas').insert({
+    user_id: usuarioAtual.id, campo: campoSalvo, valor: val
+  });
+
+  btnConfirmar.disabled = false;
+
+  if(error) {
+    anunciar('Erro ao salvar a opção: ' + error.message, true);
+    mostrarToast('Erro ao salvar opção.', true);
+    return;
+  }
+
+  opcoesSelects[campoSalvo].push(val);
+  opcoesSelects[campoSalvo].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  renderizarSelect(campoSalvo);
+  renderizarFiltroSelect(campoSalvo);
+  if(campoSalvo === 'banco') renderizarContasConfig();
+  renderizarListasConfig();
+  document.querySelectorAll('.item-sel-categoria').forEach(s => {
+    const cur = s.value;
+    s.innerHTML = buildCategoriaOptions();
+    if(cur) s.value = cur;
+  });
+
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalCampo = null; modalOrigemBotaoId = null;
+
+  if(origemSalvo && origemSalvo.startsWith('btn-add-cat-item-')) {
+    const itemId = origemSalvo.replace('btn-add-cat-item-','');
+    const selItem = document.getElementById('item-cat-'+itemId);
+    if(selItem){ selItem.value = val; selItem.focus(); }
+  } else {
+    const selPrincipal = document.getElementById('f-'+campoSalvo);
+    if(selPrincipal){ selPrincipal.value = val; selPrincipal.focus(); }
+  }
+  anunciar('Opção "'+val+'" adicionada em '+CAMPOS_NOMES[campoSalvo]+' e selecionada.');
+}
+
+async function removeOption(selectId, botaoRemoverId) {
+  const sel = document.getElementById(selectId);
+  const val = sel.value;
+  if(!val){ anunciar('Nenhuma opção selecionada para remover.',true); sel.focus(); return; }
+  if(!confirm('Remover a opção "'+val+'"?')){ document.getElementById(botaoRemoverId).focus(); return; }
+  const campo = selectId.replace('f-','');
+
+  const { error } = await sb.from('opcoes_listas')
+    .delete()
+    .eq('user_id', usuarioAtual.id)
+    .eq('campo', campo)
+    .eq('valor', val);
+
+  if(error) {
+    anunciar('Erro ao remover a opção: ' + error.message, true);
+    mostrarToast('Erro ao remover opção.', true);
+    sel.focus();
+    return;
+  }
+
+  opcoesSelects[campo] = opcoesSelects[campo].filter(o=>o!==val);
+  renderizarSelect(campo);
+  renderizarFiltroSelect(campo);
+  if(campo === 'banco') {
+    if(contasConfig[val]) {
+      await sb.from('contas_config').delete().eq('user_id', usuarioAtual.id).eq('nome_banco', val);
+      delete contasConfig[val];
+    }
+    renderizarContasConfig();
+  }
+  renderizarListasConfig();
+  sel.focus();
+  anunciar('Opção "'+val+'" removida de '+CAMPOS_NOMES[campo]+'.');
+}
+
+//  ITENS DO LANÇAMENTO
+// ═══════════════════════════════════════════════════
+function buildCategoriaOptions() {
+  return '<option value="">— Selecionar —</option>' +
+    (opcoesSelects.categoria||[]).map(op =>
+      '<option value="'+op.replace(/"/g,"&quot;")+'">'+op+'</option>'
+    ).join('');
+}
+
+function adicionarItem(dados) {
+  // dados = { id, valor, categoria, descricao } (usado ao editar/carregar)
+  const id  = dados ? dados.id : proximoItemId++;
+  if(!dados) itensFormulario.push({id, valor:'', categoria:'', descricao:''});
+
+  const idx    = itensFormulario.length; // posição para rótulo
+  const itemEl = document.createElement('div');
+  itemEl.className = 'item-row';
+  itemEl.setAttribute('role','listitem');
+  itemEl.id = 'item-row-'+id;
+  itemEl.innerHTML =
+    '<span class="item-numero" aria-hidden="true">Item '+idx+'</span>' +
+
+    // Valor do item
+    '<div class="form-group">' +
+      '<label for="item-val-'+id+'">Valor do item <span class="sr-only">(item '+idx+')</span></label>' +
+      '<input type="number" id="item-val-'+id+'" step="0.01"' +
+             ' placeholder="Ex.: -50,00 ou 120,00"' +
+             ' aria-describedby="itens-total-badge"' +
+             ' value="'+(dados&&dados.valor!==''?dados.valor:'')+'"' +
+             ' oninput="onItemValorInput('+id+', this)" autocomplete="off">' +
+    '</div>' +
+
+    // Categoria do item
+    '<div class="form-group">' +
+      '<label for="item-cat-'+id+'">Categoria <span class="sr-only">(item '+idx+')</span></label>' +
+      '<div class="select-wrapper">' +
+        '<select id="item-cat-'+id+'" class="item-sel-categoria"' +
+                ' onchange="onItemCatChange('+id+', this)">' +
+          buildCategoriaOptions() +
+        '</select>' +
+        '<button type="button" class="btn-icon" id="btn-add-cat-item-'+id+'"' +
+                ' onclick="openModal(\'categoria\',\'btn-add-cat-item-'+id+'\')"' +
+                ' aria-label="Adicionar nova categoria para item '+idx+'">+</button>' +
+      '</div>' +
+    '</div>' +
+
+    // Descrição do item
+    '<div class="form-group">' +
+      '<label for="item-desc-'+id+'">Descrição <span class="sr-only">(item '+idx+')</span></label>' +
+      '<input type="text" id="item-desc-'+id+'"' +
+             ' placeholder="Descreva este item..."' +
+             ' value="'+(dados&&dados.descricao?dados.descricao.replace(/"/g,'&quot;'):'')+'"' +
+             ' oninput="onItemDescInput('+id+', this)" autocomplete="off">' +
+    '</div>' +
+
+    // Botão remover (sempre presente)
+    '<button type="button" class="btn-remover-item" id="btn-rem-item-'+id+'"' +
+            ' onclick="removerItem('+id+')"' +
+            ' aria-label="Remover item '+idx+' do lançamento">✕</button>';
+
+  if(dados && dados.valor!=='' && parseFloat(dados.valor)<0)
+    itemEl.querySelector('input[type="number"]').classList.add('negativo');
+
+  document.getElementById('lista-itens').appendChild(itemEl);
+  document.getElementById('itens-vazio-msg').style.display = 'none';
+
+  // Preenche categoria se vier de dados
+  if(dados && dados.categoria) {
+    const sel = document.getElementById('item-cat-'+id);
+    if(sel) sel.value = dados.categoria;
+  }
+
+  // Move o botão "Adicionar Item" para depois deste item-row
+  // (apenas ao adicionar manualmente; ao carregar dados o botão fica no final de tudo)
+  if(!dados) {
+    const wrapBtn = document.getElementById('wrap-btn-add-item');
+    itemEl.appendChild(wrapBtn); // move o wrapper para dentro do item-row
+  }
+
+  atualizarTotalItens();
+  atualizarNotaValor();
+
+  // Foco no campo de valor do novo item (só ao adicionar manualmente)
+  if(!dados) {
+    requestAnimationFrame(()=>
+      document.getElementById('item-val-'+id).focus()
+    );
+    anunciar('Item '+idx+' adicionado. Preencha valor, categoria e descrição.');
+  }
+}
+
+function onItemValorInput(id, el) {
+  const v = parseFloat(el.value);
+  el.classList.toggle('negativo', !isNaN(v) && v<0);
+  const item = itensFormulario.find(i=>i.id===id);
+  if(item) item.valor = el.value;
+  atualizarTotalItens();
+  atualizarNotaValor();
+}
+function onItemCatChange(id, el) {
+  const item = itensFormulario.find(i=>i.id===id);
+  if(item) item.categoria = el.value;
+}
+function onItemDescInput(id, el) {
+  const item = itensFormulario.find(i=>i.id===id);
+  if(item) item.descricao = el.value;
+}
+
+function removerItem(id) {
+  const idx = itensFormulario.findIndex(i=>i.id===id);
+  if(idx===-1) return;
+  itensFormulario.splice(idx,1);
+  const row = document.getElementById('item-row-'+id);
+
+  // Se o botão "Adicionar Item" está dentro deste item-row,
+  // precisa ser salvo e reposicionado antes de remover o row
+  const wrapBtn = document.getElementById('wrap-btn-add-item');
+  const btnEstaNesteItem = row && row.contains(wrapBtn);
+
+  if(btnEstaNesteItem) {
+    // Move o botão temporariamente para fora do DOM (fora do row a ser removido)
+    document.getElementById('secao-itens').appendChild(wrapBtn);
+  }
+
+  if(row) row.remove();
+
+  // Renumera rótulos visíveis
+  document.querySelectorAll('#lista-itens .item-numero').forEach((el,i)=>{
+    el.textContent = 'Item '+(i+1);
+  });
+
+  if(itensFormulario.length===0) {
+    // Sem itens: botão volta ao seu wrapper externo (dentro de secao-itens)
+    document.getElementById('itens-vazio-msg').style.display='';
+    // wrapBtn já está em secao-itens se estava no item removido; senão busca
+    if(!document.getElementById('secao-itens').contains(wrapBtn))
+      document.getElementById('secao-itens').appendChild(wrapBtn);
+  } else {
+    // Move o botão para dentro do último item-row
+    const linhas = document.querySelectorAll('#lista-itens .item-row');
+    const ultimaLinha = linhas[linhas.length - 1];
+    if(ultimaLinha && btnEstaNesteItem) {
+      ultimaLinha.appendChild(wrapBtn);
+    } else if(!btnEstaNesteItem) {
+      // O botão estava em outro item — nada a fazer, permanece onde está
+    }
+  }
+
+  atualizarTotalItens();
+  atualizarNotaValor();
+
+  // Foco: vai para o campo de valor do item anterior, ou para o botão Adicionar
+  const linhasRestantes = document.querySelectorAll('#lista-itens .item-row');
+  if(linhasRestantes.length > 0) {
+    const ultimaLinha = linhasRestantes[linhasRestantes.length - 1];
+    const input = ultimaLinha.querySelector('input[type="number"]');
+    if(input) input.focus();
+  } else {
+    document.getElementById('btn-add-item').focus();
+  }
+  anunciar('Item removido. '+(itensFormulario.length)+' item'+(itensFormulario.length!==1?'s':'')+' no lançamento.');
+}
+
+function atualizarTotalItens() {
+  const total = itensFormulario.reduce((s,item) => {
+    const v = parseFloat(item.valor);
+    return s + (isNaN(v) ? 0 : v);
+  }, 0);
+  const badge = document.getElementById('itens-total-badge');
+  badge.textContent = 'Total: '+fmtValor(total);
+  badge.className   = 'itens-total-badge'+(total<0?' neg':'');
+}
+
+// Atualiza a nota abaixo do campo Valor principal
+function atualizarNotaValor() {
+  const nota = document.getElementById('f-valor-nota');
+  if(itensFormulario.length===0){ nota.style.display='none'; return; }
+  const total = itensFormulario.reduce((s,item)=>{
+    const v=parseFloat(item.valor); return s+(isNaN(v)?0:v);
+  },0);
+  const campoValor = document.getElementById('f-valor');
+  campoValor.value = total.toFixed(2);
+  colorirValor(campoValor);
+  nota.style.display = '';
+  nota.innerHTML = 'Valor calculado automaticamente pela soma dos itens: <span>'+fmtValor(total)+'</span>';
+}
+
+function limparItens() {
+  itensFormulario = [];
+  // Salva o botão antes de limpar a lista (ele pode estar dentro de um item-row)
+  const wrapBtn = document.getElementById('wrap-btn-add-item');
+  const secao   = document.getElementById('secao-itens');
+  if(!secao.contains(wrapBtn) || document.getElementById('lista-itens').contains(wrapBtn)) {
+    secao.appendChild(wrapBtn);
+  }
+  document.getElementById('lista-itens').innerHTML = '';
+  document.getElementById('itens-vazio-msg').style.display = '';
+  // Garante que o botão está no lugar correto (após a lista vazia)
+  secao.appendChild(wrapBtn);
+  atualizarTotalItens();
+  document.getElementById('f-valor-nota').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+//  FORMULÁRIO — SALVAR / LIMPAR / EDITAR (Supabase)
+// ═══════════════════════════════════════════════════
+// Tipo do lançamento principal: 'saida' (despesa) ou 'entrada' (receita).
+// O campo Valor sempre guarda um número absoluto; o sinal final é aplicado
+// na hora de salvar, de acordo com este tipo.
+let tipoValorAtual = 'saida';
+
+function definirTipoValor(tipo) {
+  tipoValorAtual = tipo;
+  document.getElementById('f-tipo-saida').setAttribute('aria-checked', tipo==='saida' ? 'true' : 'false');
+  document.getElementById('f-tipo-entrada').setAttribute('aria-checked', tipo==='entrada' ? 'true' : 'false');
+  colorirValor(document.getElementById('f-valor'));
+  anunciar(tipo==='saida' ? 'Tipo definido como Saída (despesa).' : 'Tipo definido como Entrada (receita).');
+}
+
+function obterTipoValor() {
+  return tipoValorAtual === 'entrada' ? 'entrada' : 'saida';
+}
+
+function colorirValor(el) {
+  // Quando há itens, o campo é só uma exibição calculada da soma deles
+  // (cada item pode ter seu próprio sinal), então mantemos a lógica antiga.
+  if(itensFormulario.length > 0) {
+    const v = parseFloat(el.value);
+    el.classList.toggle('negativo', !isNaN(v) && v<0);
+    return;
+  }
+  // Sem itens: o campo só aceita valor absoluto — o sinal vem do toggle Entrada/Saída
+  if(el.value.startsWith('-')) el.value = el.value.slice(1);
+  const v = parseFloat(el.value);
+  el.classList.toggle('negativo', obterTipoValor()==='saida' && !isNaN(v) && v>0);
+}
+
+async function salvarLancamento() {
+  const dataOrigem = document.getElementById('f-data-origem').value;
+  if(!dataOrigem){
+    anunciar('Preencha a Data de Origem antes de salvar.',true);
+    document.getElementById('f-data-origem').focus();
+    return;
+  }
+  let valor;
+  if(itensFormulario.length>0) {
+    valor = itensFormulario.reduce((s,item)=>{
+      const v=parseFloat(item.valor); return s+(isNaN(v)?0:v);
+    },0);
+  } else {
+    const valorStr = document.getElementById('f-valor').value;
+    const valorAbs = parseFloat(valorStr);
+    if(valorStr===''||isNaN(valorAbs)){
+      anunciar('Informe um valor numérico ou adicione itens ao lançamento.',true);
+      document.getElementById('f-valor').focus();
+      return;
+    }
+    valor = obterTipoValor()==='saida' ? -Math.abs(valorAbs) : Math.abs(valorAbs);
+  }
+
+  const dadosLancamento = {
+    user_id:         usuarioAtual.id,
+    data_origem:     dataOrigem,
+    data_vencimento: document.getElementById('f-data-vencimento').value || null,
+    valor,
+    banco:           document.getElementById('f-banco').value || null,
+    estabelecimento: document.getElementById('f-estabelecimento').value || null,
+    forma:           document.getElementById('f-forma').value || null,
+    parcela:         document.getElementById('f-parcela').value || null,
+    descricao:       itensFormulario.length>0 ? null : (document.getElementById('f-descricao').value || null),
+    categoria:       itensFormulario.length>0 ? null : (document.getElementById('f-categoria').value || null),
+    credor:          document.getElementById('f-credor').value || null,
+    devedor:         document.getElementById('f-devedor').value || null
+  };
+
+  const itensParaSalvar = itensFormulario.length>0
+    ? itensFormulario.map(i=>({
+        valor:    parseFloat(i.valor)||0,
+        categoria:i.categoria || null,
+        descricao:i.descricao || null
+      }))
+    : [];
+
+  const btnSalvar = document.getElementById('btn-salvar');
+  const textoOriginal = btnSalvar.innerHTML;
+  btnSalvar.disabled = true;
+  btnSalvar.innerHTML = '<span class="spinner" aria-hidden="true"></span> Salvando...';
+
+  try {
+    if(editandoId) {
+      // ── ATUALIZAR ──
+      const { error: errUpd } = await sb.from('lancamentos')
+        .update(dadosLancamento)
+        .eq('id', editandoId)
+        .eq('user_id', usuarioAtual.id);
+      if(errUpd) throw errUpd;
+
+      // Substitui todos os itens: remove os antigos e insere os novos
+      await sb.from('itens_lancamento').delete().eq('lancamento_id', editandoId);
+      if(itensParaSalvar.length > 0) {
+        const itensComFk = itensParaSalvar.map((i, idx) => ({
+          ...i, lancamento_id: editandoId, user_id: usuarioAtual.id, ordem: idx
+        }));
+        const { error: errItens } = await sb.from('itens_lancamento').insert(itensComFk);
+        if(errItens) throw errItens;
+      }
+
+      editandoId = null;
+      anunciar('Lançamento atualizado com sucesso.');
+    } else {
+      // ── CRIAR ──
+      const { data: novo, error: errIns } = await sb.from('lancamentos')
+        .insert(dadosLancamento)
+        .select()
+        .single();
+      if(errIns) throw errIns;
+
+      if(itensParaSalvar.length > 0) {
+        const itensComFk = itensParaSalvar.map((i, idx) => ({
+          ...i, lancamento_id: novo.id, user_id: usuarioAtual.id, ordem: idx
+        }));
+        const { error: errItens } = await sb.from('itens_lancamento').insert(itensComFk);
+        if(errItens) throw errItens;
+      }
+
+      anunciar('Lançamento salvo' + (itensParaSalvar.length>0 ? ' com '+itensParaSalvar.length+' item'+(itensParaSalvar.length!==1?'s':'') : '') + '.');
+    }
+
+    btnSalvar.innerHTML = '<span aria-hidden="true">💾</span> Salvar Lançamento';
+    limparFormulario();
+    await carregarLancamentosSupabase();
+    aplicarFiltros();
+    atualizarSaldos();
+    mostrarToast('Lançamento salvo na nuvem.');
+  } catch(err) {
+    anunciar('Erro ao salvar: ' + err.message, true);
+    mostrarToast('Erro ao salvar lançamento.', true);
+  } finally {
+    btnSalvar.disabled = false;
+    if(btnSalvar.innerHTML.includes('spinner')) btnSalvar.innerHTML = textoOriginal;
+  }
+}
+
+function limparFormulario() {
+  document.getElementById('f-data-origem').value     = '';
+  document.getElementById('f-data-vencimento').value = '';
+  const valEl = document.getElementById('f-valor');
+  valEl.value = ''; valEl.classList.remove('negativo');
+  definirTipoValor('saida');
+  document.getElementById('f-descricao').value = '';
+  CAMPOS_SELECT.forEach(c=>{const s=document.getElementById('f-'+c);if(s)s.value='';});
+  editandoId=null;
+  document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
+  limparItens();
+}
+
+function editarLancamento(id) {
+  const l = lancamentos.find(x=>x.id===id);
+  if(!l) return;
+  editandoId=id;
+  document.getElementById('f-data-origem').value     = l.dataOrigem;
+  document.getElementById('f-data-vencimento').value = l.dataVencimento;
+  document.getElementById('f-descricao').value       = l.descricao||'';
+  document.getElementById('f-banco').value           = l.banco||'';
+  document.getElementById('f-estabelecimento').value = l.estabelecimento||'';
+  document.getElementById('f-forma').value           = l.forma||'';
+  document.getElementById('f-parcela').value         = l.parcela||'';
+  document.getElementById('f-categoria').value       = l.categoria||'';
+  document.getElementById('f-credor').value          = l.credor||'';
+  document.getElementById('f-devedor').value         = l.devedor||'';
+  limparItens();
+  if(l.itens && l.itens.length>0) {
+    l.itens.forEach(item=>{
+      itensFormulario.push({id:proximoItemId++, valor:item.valor, categoria:item.categoria, descricao:item.descricao});
+      adicionarItem(itensFormulario[itensFormulario.length-1]);
+    });
+    atualizarNotaValor();
+  } else {
+    const valEl = document.getElementById('f-valor');
+    definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
+    valEl.value = Math.abs(l.valor);
+    colorirValor(valEl);
+  }
+  document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">✏️</span> Atualizar Lançamento';
+  window.scrollTo({top:0,behavior:'smooth'});
+  setTimeout(()=>document.getElementById('f-data-origem').focus(),320);
+  anunciar('Formulário preenchido para edição: '+fmtData(l.dataOrigem)+', '+fmtValor(l.valor)+'.');
+}
+
+async function excluirLancamento(id) {
+  const l=lancamentos.find(x=>x.id===id);
+  const desc=(l?(l.descricao||fmtData(l.dataOrigem)):'' ).replace(/"/g,"'");
+  if(!confirm('Excluir o lançamento "'+desc+'"?')) return;
+
+  const { error } = await sb.from('lancamentos')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', usuarioAtual.id);
+  // itens_lancamento é removido automaticamente via ON DELETE CASCADE
+
+  if(error) {
+    anunciar('Erro ao excluir: ' + error.message, true);
+    mostrarToast('Erro ao excluir lançamento.', true);
+    return;
+  }
+
+  lancamentos=lancamentos.filter(x=>x.id!==id);
+  aplicarFiltros(); atualizarSaldos();
+  anunciar('Lançamento excluído.');
+  mostrarToast('Lançamento excluído.');
+}
+
+async function togglePago(id, chkEl) {
+  const l=lancamentos.find(x=>x.id===id);
+  if(!l) return;
+  const novoStatus = !l.pago;
+
+  // Atualização otimista da UI
+  l.pago = novoStatus;
+  const tr=chkEl?chkEl.closest('tr'):null;
+  if(tr){
+    const badge=tr.querySelector('.badge-status');
+    if(badge){badge.className='badge badge-status '+(l.pago?'badge-pago':'badge-pendente');badge.textContent=l.pago?'✓ Pago':'⏳ Pendente';}
+    tr.className=(l.pago?'pago-row':'')+(tr.classList.contains('has-subitems')?' has-subitems':'');
+    chkEl.setAttribute('aria-label',l.pago?'Pago — clique para marcar como pendente':'Pendente — clique para marcar como pago');
+  }
+  aplicarFiltrosSilencioso();
+  anunciar('Lançamento marcado como '+(l.pago?'pago':'pendente')+'.');
+
+  const { error } = await sb.from('lancamentos')
+    .update({ pago: novoStatus })
+    .eq('id', id)
+    .eq('user_id', usuarioAtual.id);
+
+  if(error) {
+    // Reverte em caso de erro
+    l.pago = !novoStatus;
+    if(chkEl) chkEl.checked = l.pago;
+    if(tr){
+      const badge=tr.querySelector('.badge-status');
+      if(badge){badge.className='badge badge-status '+(l.pago?'badge-pago':'badge-pendente');badge.textContent=l.pago?'✓ Pago':'⏳ Pendente';}
+      tr.className=(l.pago?'pago-row':'')+(tr.classList.contains('has-subitems')?' has-subitems':'');
+    }
+    aplicarFiltrosSilencioso();
+    anunciar('Erro ao atualizar status. Revertido.', true);
+    mostrarToast('Erro ao salvar status — revertido.', true);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  FILTROS
+// ═══════════════════════════════════════════════════
+function aplicarFiltrosSilencioso() {
+  const origemDe=document.getElementById('fi-origem-de').value;
+  const origemAte=document.getElementById('fi-origem-ate').value;
+  const vencDe=document.getElementById('fi-venc-de').value;
+  const vencAte=document.getElementById('fi-venc-ate').value;
+  const status=document.getElementById('fi-status').value;
+  const banco=document.getElementById('fi-banco').value;
+  const forma=document.getElementById('fi-forma').value;
+  const estab=document.getElementById('fi-estabelecimento').value;
+  const cat=document.getElementById('fi-categoria').value;
+  const cred=document.getElementById('fi-credor').value;
+  const dev=document.getElementById('fi-devedor').value;
+
+  lancamentosFiltrados=lancamentos.filter(l=>{
+    if(origemDe  && l.dataOrigem<origemDe)  return false;
+    if(origemAte && l.dataOrigem>origemAte) return false;
+    if(vencDe    && l.dataVencimento && l.dataVencimento<vencDe)  return false;
+    if(vencAte   && l.dataVencimento && l.dataVencimento>vencAte) return false;
+    if(status==='pago'    &&!l.pago) return false;
+    if(status==='pendente'&&l.pago)  return false;
+    if(banco && l.banco!==banco) return false;
+    if(forma && l.forma!==forma) return false;
+    if(estab && l.estabelecimento!==estab) return false;
+    // Filtro por categoria: lançamento simples OU algum item bate
+    if(cat){
+      const temCatPrincipal = l.categoria===cat;
+      const temCatItem      = (l.itens||[]).some(i=>i.categoria===cat);
+      if(!temCatPrincipal && !temCatItem) return false;
+    }
+    if(cred && l.credor!==cred) return false;
+    if(dev  && l.devedor!==dev) return false;
+    return true;
+  });
+  lancamentosFiltrados.sort((a,b)=>
+    a.dataOrigem<b.dataOrigem?-1:a.dataOrigem>b.dataOrigem?1:a.id-b.id
+  );
+  atualizarSaldos();
+  document.getElementById('table-info').textContent=
+    lancamentosFiltrados.length+' registro'+(lancamentosFiltrados.length!==1?'s':'');
+}
+function aplicarFiltros() { aplicarFiltrosSilencioso(); renderizarTabela(); }
+function limparFiltros() {
+  ['fi-origem-de','fi-origem-ate','fi-venc-de','fi-venc-ate'].forEach(id=>document.getElementById(id).value='');
+  ['fi-status','fi-banco','fi-forma','fi-estabelecimento','fi-categoria','fi-credor','fi-devedor'].forEach(id=>document.getElementById(id).value='');
+  aplicarFiltros();
+  anunciar('Filtros limpos. Exibindo todos os lançamentos.');
+}
+
+// ═══════════════════════════════════════════════════
+//  TABELA — RENDERIZAÇÃO
+// ═══════════════════════════════════════════════════
+function fmtData(d){if(!d)return'—';const[y,m,day]=d.split('-');return day+'/'+m+'/'+y;}
+function fmtValor(v){return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function renderizarTabela() {
+  const tbody = document.getElementById('tabela-body');
+  const info  = document.getElementById('table-info');
+  if(!lancamentosFiltrados.length){
+    tbody.innerHTML='<tr><td colspan="14"><div class="empty-state" role="status">' +
+      '<div class="empty-icon" aria-hidden="true">📭</div>' +
+      '<p>Nenhum lançamento encontrado.</p>' +
+      '<p style="margin-top:6px;font-size:12px;color:var(--text3);">Ajuste os filtros ou adicione novos lançamentos.</p>' +
+      '</div></td></tr>';
+    info.textContent='0 registros';
+    return;
+  }
+  const qtd=lancamentosFiltrados.length;
+  info.textContent=qtd+' registro'+(qtd!==1?'s':'');
+
+  const linhas=[];
+  lancamentosFiltrados.forEach(l=>{
+    const temItens = l.itens && l.itens.length>0;
+    const eParcelado = l.parcela && /^\d+\/\d+$/.test(l.parcela);
+    const chkLabel = l.pago?'Pago — clique para marcar como pendente':'Pendente — clique para marcar como pago';
+    const desc = (temItens
+      ? l.itens.map(i=>i.descricao).filter(Boolean).join(' / ') || '—'
+      : l.descricao||'—').replace(/"/g,"'");
+    const categorias = temItens
+      ? [...new Set(l.itens.map(i=>i.categoria).filter(Boolean))].join(', ')||'—'
+      : l.categoria||'—';
+    const vNeg = l.valor<0;
+
+    linhas.push(
+      '<tr class="'+(l.pago?'pago-row':'')+(temItens?' has-subitems':'')+'">' +
+      '<td><div class="chk-wrap"><label class="chk-label"><input type="checkbox"'+(l.pago?' checked':'')+
+        ' aria-label="'+chkLabel+'" onchange="togglePago('+l.id+',this)"></label></div></td>'+
+      '<td><span class="badge badge-status '+(l.pago?'badge-pago':'badge-pendente')+'" aria-hidden="true">'+(l.pago?'✓ Pago':'⏳ Pendente')+'</span>'+
+          (temItens?'<span class="badge badge-multi" aria-label="'+l.itens.length+' itens">'+l.itens.length+' itens</span>':'')+
+          (eParcelado?'<span class="badge badge-parcelado" aria-label="parcela '+l.parcela+'">'+l.parcela+'</span>':'')+
+      '</td>'+
+      '<td>'+fmtData(l.dataOrigem)+'</td>'+
+      '<td>'+fmtData(l.dataVencimento)+'</td>'+
+      '<td class="valor-cell '+(vNeg?'valor-neg':'valor-pos')+'">'+fmtValor(l.valor)+'</td>'+
+      '<td>'+(l.banco||'—')+'</td>'+
+      '<td>'+(l.estabelecimento||'—')+'</td>'+
+      '<td>'+(l.forma||'—')+'</td>'+
+      '<td>'+(l.parcela||'—')+'</td>'+
+      '<td style="max-width:200px;white-space:normal;word-break:break-word;">'+desc+'</td>'+
+      '<td style="max-width:160px;white-space:normal;word-break:break-word;">'+categorias+'</td>'+
+      '<td>'+(l.credor||'—')+'</td>'+
+      '<td>'+(l.devedor||'—')+'</td>'+
+      '<td><div class="td-actions">'+
+        '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;"'+
+          ' onclick="editarLancamento('+l.id+')" aria-label="Editar lançamento: '+desc+'"><span aria-hidden="true">✏️</span></button>'+
+        '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;"'+
+          ' onclick="excluirLancamento('+l.id+')" aria-label="Excluir lançamento: '+desc+'"><span aria-hidden="true">🗑</span></button>'+
+      '</div></td>'+
+      '</tr>'
+    );
+
+    // Sub-linhas de itens
+    if(temItens) {
+      l.itens.forEach((item,idx)=>{
+        const ivNeg=item.valor<0;
+        linhas.push(
+          '<tr class="sub-row" aria-label="Item '+(idx+1)+' de '+l.itens.length+'">'+
+          '<td></td>'+
+          '<td style="color:var(--text3);font-style:italic;">Item '+(idx+1)+'</td>'+
+          '<td colspan="2"></td>'+
+          '<td class="valor-cell '+(ivNeg?'valor-neg':'valor-pos')+'" style="font-size:11px;">'+fmtValor(item.valor)+'</td>'+
+          '<td colspan="4"></td>'+
+          '<td style="max-width:200px;white-space:normal;word-break:break-word;">'+(item.descricao||'—')+'</td>'+
+          '<td>'+(item.categoria||'—')+'</td>'+
+          '<td colspan="3"></td>'+
+          '</tr>'
+        );
+      });
+    }
+  });
+  tbody.innerHTML=linhas.join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  SALDOS
+// ═══════════════════════════════════════════════════
+function atualizarSaldos(){
+  const lista=lancamentosFiltrados;
+  const total=lista.reduce((s,l)=>s+l.valor,0);
+  const pago =lista.filter(l=>l.pago).reduce((s,l)=>s+l.valor,0);
+  const pend =lista.filter(l=>!l.pago).reduce((s,l)=>s+l.valor,0);
+  document.getElementById('saldo-total').textContent   =fmtValor(total);
+  document.getElementById('saldo-pago').textContent    =fmtValor(pago);
+  document.getElementById('saldo-pendente').textContent=fmtValor(pend);
+  document.getElementById('saldo-count').textContent   =lista.length;
+  atualizarContas();
+}
+
+// ═══════════════════════════════════════════════════
+//  CONTAS E CARTÕES (saldo em conta / limite de crédito)
+// ═══════════════════════════════════════════════════
+const CATEGORIA_CARTAO = 'cartão de crédito';
+
+function renderizarContasConfig() {
+  const container = document.getElementById('contas-config-lista');
+  if(!container) return;
+  const bancos = opcoesSelects.banco || [];
+
+  if(!bancos.length) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text3);">Cadastre um Banco/Cartão no formulário de lançamento para poder configurá-lo aqui.</p>';
+    return;
+  }
+
+  container.innerHTML = bancos.map(nome => {
+    const cfg  = contasConfig[nome] || {};
+    const tipo = cfg.tipo || '';
+    const idSafe = 'conta-' + nome.replace(/[^a-zA-Z0-9]/g,'_');
+    return (
+      '<div class="conta-row" data-banco="'+escaparHTML(nome)+'">' +
+        '<div class="conta-nome">'+escaparHTML(nome)+'</div>' +
+        '<div class="form-group" style="margin:0;">' +
+          '<label for="'+idSafe+'-tipo" class="sr-only">Tipo de '+escaparHTML(nome)+'</label>' +
+          '<select id="'+idSafe+'-tipo" onchange="onTipoContaChange(\''+idSafe+'\')">' +
+            '<option value=""'+(tipo===''?' selected':'')+'>— Não configurada —</option>' +
+            '<option value="conta_corrente"'+(tipo==='conta_corrente'?' selected':'')+'>Conta Corrente</option>' +
+            '<option value="cartao_credito"'+(tipo==='cartao_credito'?' selected':'')+'>Cartão de Crédito</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="form-group" style="margin:0;" id="'+idSafe+'-valor-grupo">' +
+          '<label for="'+idSafe+'-valor" class="sr-only">'+
+            (tipo==='cartao_credito' ? 'Limite total de '+escaparHTML(nome) : 'Saldo inicial de '+escaparHTML(nome)) +
+          '</label>' +
+          '<input type="number" id="'+idSafe+'-valor" step="0.01" ' +
+            'placeholder="'+(tipo==='cartao_credito' ? 'Limite total' : 'Saldo inicial')+'" ' +
+            'value="'+(tipo==='cartao_credito' ? (cfg.limite_total ?? '') : (cfg.saldo_inicial ?? ''))+'" ' +
+            (tipo===''?'disabled':'') +
+            '>' +
+        '</div>' +
+        '<button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" ' +
+          'onclick="salvarContaConfig(\''+idSafe+'\', \''+escaparParaJS(nome)+'\')" '+(tipo===''?'disabled':'')+
+          ' id="'+idSafe+'-btn-salvar">Salvar</button>' +
+        '<div class="conta-resultado" id="'+idSafe+'-resultado"></div>' +
+      '</div>'
+    );
+  }).join('');
+
+  atualizarContas();
+}
+
+function onTipoContaChange(idSafe) {
+  const tipo = document.getElementById(idSafe+'-tipo').value;
+  const input = document.getElementById(idSafe+'-valor');
+  const label = document.querySelector('label[for="'+idSafe+'-valor"]');
+  const btn   = document.getElementById(idSafe+'-btn-salvar');
+  input.disabled = tipo === '';
+  btn.disabled   = tipo === '';
+  input.placeholder = tipo === 'cartao_credito' ? 'Limite total' : 'Saldo inicial';
+  if(label) label.textContent = tipo === 'cartao_credito' ? 'Limite total' : 'Saldo inicial';
+}
+
+async function salvarContaConfig(idSafe, nomeBanco) {
+  const tipo = document.getElementById(idSafe+'-tipo').value;
+  const valorStr = document.getElementById(idSafe+'-valor').value;
+  const valor = parseFloat(valorStr);
+
+  if(!tipo) { anunciar('Escolha o tipo antes de salvar.', true); return; }
+  if(valorStr === '' || isNaN(valor)) {
+    anunciar('Informe ' + (tipo==='cartao_credito' ? 'o limite total.' : 'o saldo inicial.'), true);
+    document.getElementById(idSafe+'-valor').focus();
+    return;
+  }
+
+  const registro = {
+    user_id: usuarioAtual.id,
+    nome_banco: nomeBanco,
+    tipo: tipo,
+    saldo_inicial: tipo === 'conta_corrente' ? valor : null,
+    limite_total:  tipo === 'cartao_credito' ? valor : null
+  };
+
+  const btn = document.getElementById(idSafe+'-btn-salvar');
+  btn.disabled = true;
+
+  const { error } = await sb.from('contas_config')
+    .upsert(registro, { onConflict: 'user_id,nome_banco' });
+
+  btn.disabled = false;
+
+  if(error) {
+    anunciar('Erro ao salvar: ' + error.message, true);
+    mostrarToast('Erro ao salvar configuração da conta.', true);
+    return;
+  }
+
+  contasConfig[nomeBanco] = {
+    tipo: registro.tipo,
+    saldo_inicial: registro.saldo_inicial,
+    limite_total: registro.limite_total
+  };
+
+  anunciar((tipo==='cartao_credito' ? 'Cartão' : 'Conta') + ' ' + nomeBanco + ' configurado(a) com sucesso.');
+  mostrarToast('Configuração de ' + nomeBanco + ' salva.');
+  atualizarContas();
+}
+
+// Recalcula saldo/limite de cada conta configurada, usando TODOS os lançamentos
+// (sem filtro de tela), já que representam o estado real da conta/cartão.
+function atualizarContas() {
+  Object.keys(contasConfig).forEach(nomeBanco => {
+    const idSafe = 'conta-' + nomeBanco.replace(/[^a-zA-Z0-9]/g,'_');
+    const el = document.getElementById(idSafe+'-resultado');
+    if(!el) return;
+
+    const cfg = contasConfig[nomeBanco];
+    const doBanco = lancamentos.filter(l => l.banco === nomeBanco);
+
+    if(cfg.tipo === 'conta_corrente') {
+      const saldoAtual = (cfg.saldo_inicial || 0) + doBanco.reduce((s,l)=>s+l.valor,0);
+      el.textContent = 'Saldo atual: ' + fmtValor(saldoAtual);
+      el.classList.toggle('alerta', saldoAtual < 0);
+    } else if(cfg.tipo === 'cartao_credito') {
+      const doCartao = doBanco.filter(l => (l.categoria||'').trim().toLowerCase() === CATEGORIA_CARTAO);
+      const limiteUsado = Math.max(0, -doCartao.reduce((s,l)=>s+l.valor,0));
+      const limiteTotal = cfg.limite_total || 0;
+      const limiteRestante = limiteTotal - limiteUsado;
+      el.textContent = 'Limite restante: ' + fmtValor(limiteRestante) + ' de ' + fmtValor(limiteTotal) + ' (usado: ' + fmtValor(limiteUsado) + ')';
+      el.classList.toggle('alerta', limiteRestante < 0);
+    } else {
+      el.textContent = '';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  EXPORT XLSX
+// ═══════════════════════════════════════════════════
+function exportarPlanilha(){
+  if(!lancamentosFiltrados.length){anunciar('Não há dados para exportar.',true);return;}
+  const dados=[];
+  lancamentosFiltrados
+    .slice().sort((a,b)=>a.dataOrigem.localeCompare(b.dataOrigem)||a.id-b.id)
+    .forEach(l=>{
+      if(l.itens&&l.itens.length>0){
+        // Linha principal
+        dados.push({
+          'Data Origem':fmtData(l.dataOrigem),'Data Vencimento':fmtData(l.dataVencimento),
+          'Valor (R$)':l.valor,'Banco / Cartão':l.banco||'',
+          'Estabelecimento':l.estabelecimento||'','Forma de Pagamento':l.forma||'',
+          'Parcela':l.parcela||'','Descrição':'(lançamento com '+l.itens.length+' itens)',
+          'Categoria':'(múltiplas)','Credor':l.credor||'','Devedor':l.devedor||'',
+          'Status':l.pago?'Pago':'Pendente','Tipo':'Principal'
+        });
+        // Sub-linhas de itens
+        l.itens.forEach((item,idx)=>{
+          dados.push({
+            'Data Origem':'','Data Vencimento':'',
+            'Valor (R$)':item.valor,'Banco / Cartão':'',
+            'Estabelecimento':'','Forma de Pagamento':'',
+            'Parcela':'','Descrição':item.descricao||'',
+            'Categoria':item.categoria||'','Credor':'','Devedor':'',
+            'Status':'','Tipo':'Item '+(idx+1)
+          });
+        });
+      } else {
+        dados.push({
+          'Data Origem':fmtData(l.dataOrigem),'Data Vencimento':fmtData(l.dataVencimento),
+          'Valor (R$)':l.valor,'Banco / Cartão':l.banco||'',
+          'Estabelecimento':l.estabelecimento||'','Forma de Pagamento':l.forma||'',
+          'Parcela':l.parcela||'','Descrição':l.descricao||'',
+          'Categoria':l.categoria||'','Credor':l.credor||'','Devedor':l.devedor||'',
+          'Status':l.pago?'Pago':'Pendente','Tipo':'Simples'
+        });
+      }
+    });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(dados);
+  ws['!cols']=[{wch:14},{wch:16},{wch:12},{wch:18},{wch:22},{wch:20},{wch:10},{wch:36},{wch:18},{wch:20},{wch:20},{wch:10},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'Lançamentos');
+  const total=lancamentosFiltrados.reduce((s,l)=>s+l.valor,0);
+  const pago=lancamentosFiltrados.filter(l=>l.pago).reduce((s,l)=>s+l.valor,0);
+  const pend=lancamentosFiltrados.filter(l=>!l.pago).reduce((s,l)=>s+l.valor,0);
+  const wsR=XLSX.utils.json_to_sheet([
+    {Item:'Total de Registros',Valor:lancamentosFiltrados.length},
+    {Item:'Total Geral (R$)',Valor:total.toFixed(2)},
+    {Item:'Total Pago (R$)',Valor:pago.toFixed(2)},
+    {Item:'Total Pendente (R$)',Valor:pend.toFixed(2)}
+  ]);
+  wsR['!cols']=[{wch:22},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsR,'Resumo');
+  const agora   = new Date();
+  const pad     = n => String(n).padStart(2,'0');
+  const nomeDtHr= agora.getFullYear()        +
+                  pad(agora.getMonth()+1)     +
+                  pad(agora.getDate())        + '_' +
+                  pad(agora.getHours())       +
+                  pad(agora.getMinutes())     +
+                  pad(agora.getSeconds());
+  XLSX.writeFile(wb,'controle_financeiro_'+nomeDtHr+'.xlsx');
+  anunciar('Planilha exportada com '+lancamentosFiltrados.length+' registros.');
+}
+
+// ═══════════════════════════════════════════════════
+//  IMPORT XLSX (grava direto no Supabase)
+// ═══════════════════════════════════════════════════
+function lerArquivoXLSX(event){
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+
+    // Agrupa linhas em lançamentos + seus itens (mesma lógica do parser anterior)
+    const novosLancamentos = [];
+    const opcoesParaColetar = { banco:new Set(), parcela:new Set(), forma:new Set(), estabelecimento:new Set(), categoria:new Set(), credor:new Set(), devedor:new Set() };
+    let lancAtual = null;
+
+    rows.forEach(row=>{
+      const tipo=String(row['Tipo']||'').trim();
+      if(tipo.startsWith('Item ')){
+        if(lancAtual){
+          const catItem = row['Categoria']||'';
+          lancAtual.itens.push({
+            valor:    parseFloat(String(row['Valor (R$)']||'0').replace(',','.'))||0,
+            categoria:catItem,
+            descricao:row['Descrição']||''
+          });
+          if(catItem) opcoesParaColetar.categoria.add(catItem);
+        }
+        return;
+      }
+      lancAtual = {
+        dataOrigem:     parseDateBR(row['Data Origem']||''),
+        dataVencimento: parseDateBR(row['Data Vencimento']||''),
+        valor:          parseFloat(String(row['Valor (R$)']||'0').replace(',','.'))||0,
+        banco:          row['Banco / Cartão']||'',
+        estabelecimento:row['Estabelecimento']||'',
+        forma:          row['Forma de Pagamento']||'',
+        parcela:        row['Parcela']||'',
+        descricao:      row['Descrição']||'',
+        categoria:      row['Categoria']||'',
+        credor:         row['Credor']||'',
+        devedor:        row['Devedor']||'',
+        pago:           (row['Status']||'').toLowerCase()==='pago',
+        itens:          []
+      };
+      ['banco','estabelecimento','forma','parcela','categoria','credor','devedor'].forEach(campo=>{
+        const v = lancAtual[campo];
+        if(v) opcoesParaColetar[campo].add(v);
+      });
+      novosLancamentos.push(lancAtual);
+    });
+
+    if(novosLancamentos.length === 0) {
+      alert('Nenhum lançamento válido encontrado na planilha.');
+      event.target.value='';
+      return;
+    }
+
+    // Feedback visual de progresso
+    const labelImport = document.querySelector('label[for="input-import"]');
+    const textoOriginal = labelImport.innerHTML;
+    labelImport.innerHTML = '<span class="spinner" aria-hidden="true"></span> Verificando duplicatas...';
+    anunciar('Verificando duplicatas antes de importar.');
+
+    // Garante que temos o estado mais atual do banco antes de comparar
+    await carregarLancamentosSupabase();
+    const assinaturasExistentes = construirSetAssinaturasExistentes();
+
+    // Filtra apenas os lançamentos que ainda não existem na nuvem.
+    // Observação: um lançamento exportado com itens vira, na planilha, uma linha
+    // "Principal" com descrição/categoria genéricas — a assinatura usa os MESMOS
+    // critérios de exportação (banco, estabelecimento, forma, parcela, credor,
+    // devedor, data e a lista de itens), então a comparação funciona mesmo nesse caso.
+    const candidatos = novosLancamentos.filter(l => !assinaturasExistentes.has(assinaturaLancamento(l)));
+    const jaExistiam = novosLancamentos.length - candidatos.length;
+
+    if(candidatos.length === 0) {
+      labelImport.innerHTML = textoOriginal;
+      event.target.value='';
+      mostrarToast('Todos os lançamentos da planilha já existiam.');
+      anunciar('Nenhum lançamento novo — todos os ' + novosLancamentos.length + ' já existiam na nuvem.');
+      return;
+    }
+
+    labelImport.innerHTML = '<span class="spinner" aria-hidden="true"></span> Importando 0/'+candidatos.length+'...';
+    anunciar('Importando '+candidatos.length+' lançamentos novos.' +
+             (jaExistiam>0 ? ' ' + jaExistiam + ' já existiam e serão ignorados.' : ''));
+
+    let importados = 0, falhas = 0;
+
+    for(let i=0; i<candidatos.length; i++) {
+      const l = candidatos[i];
+      try {
+        const { data: lancInserido, error: errLanc } = await sb.from('lancamentos').insert({
+          user_id:         usuarioAtual.id,
+          data_origem:     l.dataOrigem || null,
+          data_vencimento: l.dataVencimento || null,
+          valor:           l.valor,
+          banco:           l.banco || null,
+          estabelecimento: l.estabelecimento || null,
+          forma:           l.forma || null,
+          parcela:         l.parcela || null,
+          descricao:       l.descricao || null,
+          categoria:       l.categoria || null,
+          credor:          l.credor || null,
+          devedor:         l.devedor || null,
+          pago:            l.pago
+        }).select().single();
+
+        if(errLanc) { falhas++; continue; }
+
+        if(l.itens.length > 0) {
+          const itensComFk = l.itens.map((item, idx) => ({
+            lancamento_id: lancInserido.id,
+            user_id:       usuarioAtual.id,
+            valor:         item.valor,
+            categoria:     item.categoria || null,
+            descricao:     item.descricao || null,
+            ordem:         idx
+          }));
+          await sb.from('itens_lancamento').insert(itensComFk);
+        }
+        importados++;
+      } catch(err) {
+        falhas++;
+      }
+      labelImport.innerHTML = '<span class="spinner" aria-hidden="true"></span> Importando '+(i+1)+'/'+candidatos.length+'...';
+    }
+
+    // Insere as novas opções de lista coletadas (ignora duplicadas via upsert)
+    for(const campo of Object.keys(opcoesParaColetar)) {
+      for(const valor of opcoesParaColetar[campo]) {
+        await sb.from('opcoes_listas').upsert(
+          { user_id: usuarioAtual.id, campo, valor },
+          { onConflict: 'user_id,campo,valor', ignoreDuplicates: true }
+        );
+      }
+    }
+
+    labelImport.innerHTML = textoOriginal;
+    event.target.value='';
+
+    await Promise.all([ carregarOpcoesSupabase(), carregarContasConfigSupabase(), carregarLancamentosSupabase() ]);
+    renderizarTodosSelects();
+    renderizarTodosFiltros();
+    renderizarContasConfig();
+    renderizarListasConfig();
+    aplicarFiltros();
+    atualizarSaldos();
+
+    const msg = importados+' importado'+(importados!==1?'s':'')+
+                (jaExistiam>0 ? ', '+jaExistiam+' já exist'+(jaExistiam!==1?'iam':'ia') : '') +
+                (falhas>0?', '+falhas+' falharam':'')+'.';
+    anunciar(msg);
+    mostrarToast(msg, falhas>0);
+    alert((falhas===0?'✅ ':'⚠️ ')+msg);
+  };
+  reader.readAsBinaryString(file);
+}
+
+function parseDateBR(str){
+  if(!str) return '';
+  str=String(str).trim();
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(str)){const[d,m,y]=str.split('/');return y+'-'+m+'-'+d;}
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  if(!isNaN(str)){
+    const date=new Date(Math.round((parseFloat(str)-25569)*86400000));
+    return date.getUTCFullYear()+'-'+String(date.getUTCMonth()+1).padStart(2,'0')+'-'+String(date.getUTCDate()).padStart(2,'0');
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════════
+//  PARCELAMENTO AUTOMÁTICO (grava direto no Supabase)
+// ═══════════════════════════════════════════════════
+
+// Avança uma data (yyyy-mm-dd) por N meses, mantendo o dia original
+// quando possível, ou o último dia do mês destino.
+function avancarMeses(dataStr, meses) {
+  if(!dataStr) return '';
+  const [y, m, d] = dataStr.split('-').map(Number);
+  let novoMes = m + meses;
+  let novoAno = y + Math.floor((novoMes - 1) / 12);
+  novoMes = ((novoMes - 1) % 12) + 1;
+  const ultimoDia = new Date(novoAno, novoMes, 0).getDate();
+  const novoDia = Math.min(d, ultimoDia);
+  return novoAno + '-' +
+         String(novoMes).padStart(2,'0') + '-' +
+         String(novoDia).padStart(2,'0');
+}
+
+let tipoValorParcelarAtual = 'saida';
+
+function definirTipoValorParcelar(tipo) {
+  tipoValorParcelarAtual = tipo;
+  document.getElementById('mp-tipo-saida').setAttribute('aria-checked', tipo==='saida' ? 'true' : 'false');
+  document.getElementById('mp-tipo-entrada').setAttribute('aria-checked', tipo==='entrada' ? 'true' : 'false');
+  colorirValorParcelar(document.getElementById('mp-valor-total'));
+  atualizarPreviewParcelas();
+}
+
+function obterTipoValorParcelar() {
+  return tipoValorParcelarAtual === 'entrada' ? 'entrada' : 'saida';
+}
+
+function abrirModalParcelar() {
+  const valAtualAbs = Math.abs(parseFloat(document.getElementById('f-valor').value));
+  if(!isNaN(valAtualAbs) && valAtualAbs !== 0) {
+    document.getElementById('mp-valor-total').value = valAtualAbs.toFixed(2);
+    definirTipoValorParcelar(itensFormulario.length > 0 ? 'saida' : obterTipoValor());
+  } else {
+    document.getElementById('mp-valor-total').value = '';
+    definirTipoValorParcelar('saida');
+  }
+  colorirValorParcelar(document.getElementById('mp-valor-total'));
+  document.getElementById('mp-num-parcelas').value = '';
+  document.getElementById('mp-resumo').style.display = 'none';
+  document.getElementById('mp-aviso').style.display  = 'none';
+  document.getElementById('mp-preview-container').style.display = 'none';
+  document.getElementById('modal-parcelar-overlay').classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.getElementById('mp-valor-total').focus()
+  ));
+  anunciar('Painel de parcelamento aberto. Informe o valor total e o número de parcelas.');
+}
+
+function fecharModalParcelar() {
+  document.getElementById('modal-parcelar-overlay').classList.remove('open');
+  document.getElementById('btn-parcelar').focus();
+  anunciar('Parcelamento cancelado.');
+}
+
+function calcularParcelas(valorTotalAbs, numParcelas, arredond, sinal) {
+  const abs   = Math.abs(valorTotalAbs);
+  const totalCentavos = Math.round(abs * 100);
+  const baseCentavos  = Math.floor(totalCentavos / numParcelas);
+  const restoCentavos = totalCentavos - baseCentavos * numParcelas;
+  const parcelas = [];
+  for(let i = 0; i < numParcelas; i++) {
+    parcelas.push((baseCentavos / 100) * sinal);
+  }
+  if(restoCentavos !== 0) {
+    const idx = arredond === 'primeira' ? 0 : numParcelas - 1;
+    parcelas[idx] = ((baseCentavos + restoCentavos) / 100) * sinal;
+  }
+  return parcelas;
+}
+
+function colorirValorParcelar(el) {
+  if(el.value.startsWith('-')) el.value = el.value.slice(1);
+  const v = parseFloat(el.value);
+  el.classList.toggle('negativo', obterTipoValorParcelar()==='saida' && !isNaN(v) && v > 0);
+}
+
+function atualizarPreviewParcelas() {
+  const valorTotal  = parseFloat(document.getElementById('mp-valor-total').value);
+  const numParcelas = parseInt(document.getElementById('mp-num-parcelas').value);
+  const arredond    = document.getElementById('mp-arredond').value;
+  const sinal       = obterTipoValorParcelar() === 'saida' ? -1 : 1;
+
+  colorirValorParcelar(document.getElementById('mp-valor-total'));
+
+  const resumo   = document.getElementById('mp-resumo');
+  const aviso    = document.getElementById('mp-aviso');
+  const preview  = document.getElementById('mp-preview-container');
+
+  if(isNaN(valorTotal) || valorTotal === 0 || isNaN(numParcelas) || numParcelas < 2) {
+    resumo.style.display  = 'none';
+    aviso.style.display   = 'none';
+    preview.style.display = 'none';
+    return;
+  }
+
+  const parcelas  = calcularParcelas(valorTotal, numParcelas, arredond, sinal);
+  const valorBase = parcelas.find((_,i) =>
+    arredond === 'primeira' ? i > 0 : i < numParcelas - 1
+  );
+  const temDiff = parcelas.some(p => Math.abs(Math.abs(p) - Math.abs(valorBase)) > 0.001);
+
+  resumo.style.display = '';
+  document.getElementById('mp-r-total').textContent = fmtValor(valorTotal * sinal);
+  document.getElementById('mp-r-qtd').textContent   = numParcelas + 'x';
+  document.getElementById('mp-r-valor').textContent = fmtValor(valorBase);
+  const diffWrap = document.getElementById('mp-r-diff-wrap');
+  if(temDiff) {
+    const idxDiff = arredond === 'primeira' ? 0 : numParcelas - 1;
+    diffWrap.style.display = '';
+    document.getElementById('mp-r-diff').textContent =
+      fmtValor(parcelas[idxDiff]) +
+      (arredond === 'primeira' ? ' (1ª)' : ' (última)');
+  } else {
+    diffWrap.style.display = 'none';
+  }
+
+  if(temDiff) {
+    const idxDiff  = arredond === 'primeira' ? 0 : numParcelas - 1;
+    const nParcela = arredond === 'primeira' ? '1ª' : 'última';
+    const diff     = parcelas[idxDiff] - valorBase;
+    aviso.style.display = '';
+    document.getElementById('mp-aviso-txt').textContent =
+      'Há diferença de ' + fmtValor(Math.abs(diff)) +
+      ' de centavos por arredondamento. Será aplicada na ' + nParcela + ' parcela.';
+  } else {
+    aviso.style.display = 'none';
+  }
+
+  const dataVencBase = document.getElementById('f-data-vencimento').value ||
+                       new Date().toISOString().slice(0,10);
+
+  preview.style.display = '';
+  const rows = document.getElementById('mp-preview-rows');
+  const idxDiff = arredond === 'primeira' ? 0 : numParcelas - 1;
+  rows.innerHTML = parcelas.map((val, i) => {
+    const dataVenc = avancarMeses(dataVencBase, i);
+    const isDiff   = temDiff && i === idxDiff;
+    return '<div class="parc-preview-row" role="listitem">' +
+      '<div class="parc-num" aria-hidden="true">' + (i+1) + '</div>' +
+      '<div>' + fmtData(dataVenc) + '</div>' +
+      '<div>' + fmtValor(val) + (isDiff ? '<span class="parc-diff">(ajuste)</span>' : '') + '</div>' +
+      '</div>';
+  }).join('');
+
+  anunciar(numParcelas + ' parcelas de ' + fmtValor(valorBase) +
+           (temDiff ? ', com ajuste de centavos na ' + (arredond==='primeira'?'primeira':'última') + ' parcela' : '') + '.');
+}
+
+async function confirmarParcelamento() {
+  const valorTotal  = parseFloat(document.getElementById('mp-valor-total').value);
+  const numParcelas = parseInt(document.getElementById('mp-num-parcelas').value);
+  const arredond    = document.getElementById('mp-arredond').value;
+  const sinal       = obterTipoValorParcelar() === 'saida' ? -1 : 1;
+
+  if(isNaN(valorTotal) || valorTotal === 0) {
+    anunciar('Informe um valor total válido.',true);
+    document.getElementById('mp-valor-total').focus();
+    return;
+  }
+  if(isNaN(numParcelas) || numParcelas < 2) {
+    anunciar('O número de parcelas deve ser ao menos 2.',true);
+    document.getElementById('mp-num-parcelas').focus();
+    return;
+  }
+
+  const dataOrigem   = document.getElementById('f-data-origem').value ||
+                       new Date().toISOString().slice(0,10);
+  const dataVencBase = document.getElementById('f-data-vencimento').value ||
+                       new Date().toISOString().slice(0,10);
+  const banco        = document.getElementById('f-banco').value || null;
+  const estab        = document.getElementById('f-estabelecimento').value || null;
+  const forma        = document.getElementById('f-forma').value || null;
+  const categoria    = document.getElementById('f-categoria').value || null;
+  const credor       = document.getElementById('f-credor').value || null;
+  const devedor      = document.getElementById('f-devedor').value || null;
+  const descricaoBase = document.getElementById('f-descricao').value.trim();
+
+  const parcelas = calcularParcelas(valorTotal, numParcelas, arredond, sinal);
+  const labelParcela = i => (i+1) + '/' + numParcelas;
+
+  const btnConfirmar = document.getElementById('btn-mp-confirmar');
+  const textoOriginal = btnConfirmar.innerHTML;
+  btnConfirmar.disabled = true;
+  btnConfirmar.innerHTML = '<span class="spinner" aria-hidden="true"></span> Criando 0/'+numParcelas+'...';
+
+  // Garante que todas as labels de parcela existam como opção
+  for(let i=0; i<numParcelas; i++) {
+    const lbl = labelParcela(i);
+    if(!opcoesSelects.parcela.includes(lbl)) {
+      await sb.from('opcoes_listas').upsert(
+        { user_id: usuarioAtual.id, campo: 'parcela', valor: lbl },
+        { onConflict: 'user_id,campo,valor', ignoreDuplicates: true }
+      );
+      opcoesSelects.parcela.push(lbl);
+    }
+  }
+  opcoesSelects.parcela.sort((a,b) => a.localeCompare(b,'pt-BR'));
+  renderizarSelect('parcela');
+  renderizarFiltroSelect('parcela');
+
+  let sucesso = 0, falhas = 0;
+  for(let i=0; i<parcelas.length; i++) {
+    const val = parcelas[i];
+    const desc = descricaoBase ? descricaoBase + ' — ' + labelParcela(i) : labelParcela(i);
+    try {
+      const { error } = await sb.from('lancamentos').insert({
+        user_id:         usuarioAtual.id,
+        data_origem:     dataOrigem,
+        data_vencimento: avancarMeses(dataVencBase, i),
+        valor:           val,
+        banco, estabelecimento: estab, forma,
+        parcela:         labelParcela(i),
+        descricao:       desc,
+        categoria, credor, devedor,
+        pago:            false
+      });
+      if(error) falhas++; else sucesso++;
+    } catch(e) { falhas++; }
+    btnConfirmar.innerHTML = '<span class="spinner" aria-hidden="true"></span> Criando '+(i+1)+'/'+numParcelas+'...';
+  }
+
+  btnConfirmar.disabled = false;
+  btnConfirmar.innerHTML = textoOriginal;
+
+  fecharModalParcelar();
+  limparFormulario();
+  await carregarLancamentosSupabase();
+  aplicarFiltros();
+  atualizarSaldos();
+
+  if(falhas === 0) {
+    anunciar(sucesso + ' lançamentos criados com sucesso pelo parcelamento de ' + fmtValor(valorTotal * sinal) + '.');
+    mostrarToast(sucesso + ' parcelas criadas na nuvem.');
+  } else {
+    anunciar(sucesso + ' parcelas criadas, ' + falhas + ' falharam.', true);
+    mostrarToast(sucesso + ' criadas, ' + falhas + ' falharam.', true);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => { mostrarAbaAuth("login"); });
+</script>
+</body>
+</html>
