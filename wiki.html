@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle Financeiro — Guia de Uso</title>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#171b26;--bg3:#1e2436;--card:#1a1f2e;
+  --border:#2a3050;--border2:#3a4568;
+  --text:#e8eaf2;--text2:#9aa3be;--text3:#6b7590;
+  --accent:#4f7cff;--accent2:#3a5fcc;
+  --green:#22c55e;--green2:#16a34a;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--teal:#14b8a6;
+  --radius:10px;--radius-sm:6px;--radius-lg:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:3px;}
+.skip-link{
+  position:absolute;top:-100px;left:8px;background:var(--accent);color:#fff;
+  padding:8px 16px;border-radius:var(--radius-sm);font-weight:600;
+  z-index:9999;text-decoration:none;transition:top .1s;
+}
+.skip-link:focus{top:8px;}
+
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
+
+/* ── HEADER ── */
+.app-header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 24px;display:flex;align-items:center;
+  justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;
+  flex-wrap:wrap;gap:8px;
+}
+.app-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.btn-voltar-app{
+  background:var(--accent);border:none;color:#fff;
+  padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;
+  text-decoration:none;outline:none;
+}
+.btn-voltar-app:hover{background:var(--accent2);}
+.btn-voltar-app:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ── LAYOUT ── */
+.wiki-shell{
+  max-width:1240px;margin:0 auto;padding:24px 20px 80px;
+  display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;
+}
+
+/* ── SUMÁRIO LATERAL ── */
+.toc{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:18px;position:sticky;top:80px;
+  max-height:calc(100vh - 100px);overflow-y:auto;
+}
+.toc-title{
+  font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:12px;
+}
+.toc nav{display:flex;flex-direction:column;gap:2px;}
+.toc a{
+  color:var(--text2);text-decoration:none;font-size:13px;padding:7px 10px;
+  border-radius:var(--radius-sm);transition:all .15s;display:block;
+}
+.toc a:hover{background:var(--bg3);color:var(--text);}
+.toc a:focus-visible{outline:3px solid var(--accent);outline-offset:1px;}
+.toc a.sub{padding-left:22px;font-size:12px;color:var(--text3);}
+
+/* ── CONTEÚDO ── */
+.content{display:flex;flex-direction:column;gap:24px;min-width:0;}
+.intro-card{
+  background:linear-gradient(135deg, rgba(79,124,255,.12), rgba(167,139,250,.08));
+  border:1px solid rgba(79,124,255,.25);border-radius:var(--radius-lg);
+  padding:24px;
+}
+.intro-card h1{font-size:22px;font-weight:700;margin-bottom:8px;color:var(--text);}
+.intro-card p{color:var(--text2);font-size:14px;max-width:680px;}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;}
+.card h2{
+  font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px;
+  display:flex;align-items:center;gap:10px;scroll-margin-top:80px;
+}
+.card .secao-desc{color:var(--text3);font-size:12px;margin-bottom:16px;}
+.card h3{font-size:14px;font-weight:700;color:var(--accent);margin:18px 0 8px;scroll-margin-top:80px;}
+.card h3:first-of-type{margin-top:6px;}
+.card p{color:var(--text2);margin-bottom:10px;}
+.card ul, .card ol{color:var(--text2);margin:0 0 12px 0;padding-left:22px;display:flex;flex-direction:column;gap:6px;}
+.card li{padding-left:2px;}
+.card strong{color:var(--text);font-weight:600;}
+.card code{
+  background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  padding:1px 6px;font-size:12px;color:var(--teal);font-family:'Consolas',monospace;
+}
+
+/* ── BADGES INLINE (mesmo estilo do app) ── */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-pago{background:rgba(34,197,94,.15);color:var(--green);}
+.badge-pendente{background:rgba(245,158,11,.15);color:var(--amber);}
+.badge-multi{background:rgba(20,184,166,.15);color:var(--teal);}
+.badge-parcelado{background:rgba(167,139,250,.15);color:var(--purple);}
+
+/* ── CALLOUTS ── */
+.callout{
+  border-radius:var(--radius);padding:14px 16px;margin:14px 0;
+  display:flex;gap:10px;align-items:flex-start;font-size:13px;
+}
+.callout-icon{font-size:16px;flex-shrink:0;line-height:1.4;}
+.callout-tip{background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.22);color:var(--text2);}
+.callout-tip strong{color:var(--accent);}
+.callout-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22);color:var(--text2);}
+.callout-warn strong{color:var(--amber);}
+.callout-danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.22);color:var(--text2);}
+.callout-danger strong{color:var(--red);}
+.callout-ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);color:var(--text2);}
+.callout-ok strong{color:var(--green);}
+
+/* ── PASSOS NUMERADOS ── */
+.passos{display:flex;flex-direction:column;gap:10px;margin:14px 0;}
+.passo{
+  display:flex;gap:12px;align-items:flex-start;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;
+}
+.passo-num{
+  width:24px;height:24px;border-radius:50%;background:rgba(79,124,255,.18);color:var(--accent);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;
+}
+.passo-texto{color:var(--text2);font-size:13px;padding-top:2px;}
+.passo-texto strong{color:var(--text);}
+
+/* ── TABELA DE CAMPOS ── */
+.tabela-campos{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:13px;}
+.tabela-campos th{
+  text-align:left;padding:9px 12px;background:var(--bg3);color:var(--text2);
+  font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);
+}
+.tabela-campos td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;}
+.tabela-campos tr:last-child td{border-bottom:none;}
+.tabela-campos .campo-nome{color:var(--text);font-weight:600;white-space:nowrap;}
+
+/* ── BOTÃO ILUSTRATIVO (não-clicável, só visual) ── */
+.btn-demo{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:600;cursor:default;
+}
+.btn-demo-primary{background:var(--accent);color:#fff;}
+.btn-demo-teal{background:var(--teal);color:#fff;}
+.btn-demo-purple{background:var(--purple);color:#fff;}
+.btn-demo-success{background:var(--green2);color:#fff;}
+.btn-demo-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);}
+
+.divider{height:1px;background:var(--border);margin:18px 0;}
+
+/* ── BOTÃO VOLTAR AO TOPO ── */
+.voltar-topo{
+  position:fixed;bottom:24px;right:24px;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  text-decoration:none;outline:none;
+}
+.voltar-topo:hover{background:var(--accent2);}
+.voltar-topo:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .wiki-shell{grid-template-columns:1fr;}
+  .toc{position:static;max-height:none;}
+}
+</style>
+</head>
+<body>
+
+<a href="#conteudo-principal" class="skip-link">Pular para o conteúdo</a>
+
+<header class="app-header" role="banner">
+  <div class="app-logo">
+    <div class="logo-icon" aria-hidden="true">📖</div>
+    <span>Controle Financeiro — Guia de Uso</span>
+  </div>
+  <div class="header-right">
+    <a href="index.html" class="btn-voltar-app">
+      <span aria-hidden="true">💰</span> Abrir o App
+    </a>
+  </div>
+</header>
+
+<div class="wiki-shell">
+
+  <!-- ══ SUMÁRIO ══ -->
+  <aside class="toc" aria-label="Sumário do guia">
+    <div class="toc-title">Sumário</div>
+    <nav>
+      <a href="#visao-geral">Visão Geral</a>
+      <a href="#abas">As 3 Abas do App</a>
+      <a href="#conta">Conta e Acesso</a>
+      <a href="#conta-criar" class="sub">Criar conta e entrar</a>
+      <a href="#conta-migracao" class="sub">Migração de dados antigos</a>
+      <a href="#conta-saida" class="sub">Sair da conta</a>
+      <a href="#leitor-ia">Leitor de Notas com IA</a>
+      <a href="#lancamentos">Lançamentos</a>
+      <a href="#lanc-campos" class="sub">Campos do formulário</a>
+      <a href="#lanc-entrada-saida" class="sub">Entrada e Saída</a>
+      <a href="#lanc-listas" class="sub">Adicionar/remover opções rápido</a>
+      <a href="#lanc-status" class="sub">Marcar como pago</a>
+      <a href="#itens-multiplos">Itens Múltiplos</a>
+      <a href="#parcelamento">Parcelamento Automático</a>
+      <a href="#filtros">Filtros</a>
+      <a href="#saldos">Saldos</a>
+      <a href="#saldos-resumo" class="sub">Resumo em Tempo Real</a>
+      <a href="#contas-cartoes" class="sub">Contas e Cartões</a>
+      <a href="#configuracoes">Configurações</a>
+      <a href="#planilhas" class="sub">Exportar e Importar Planilhas</a>
+      <a href="#duplicatas" class="sub">Lançamentos Duplicados</a>
+      <a href="#gerenciar-listas" class="sub">Gerenciar Listas</a>
+      <a href="#acessibilidade">Acessibilidade</a>
+      <a href="#problemas">Resolução de Problemas</a>
+    </nav>
+  </aside>
+
+  <!-- ══ CONTEÚDO ══ -->
+  <main class="content" id="conteudo-principal">
+
+    <div class="intro-card">
+      <h1>💰 Guia do Controle Financeiro</h1>
+      <p>
+        Este é o guia de referência do seu app de controle financeiro pessoal. Aqui você encontra
+        explicações sobre cada funcionalidade, desde o cadastro básico de lançamentos até recursos
+        avançados como o leitor de documentos com IA, contas e cartões, parcelamento automático e
+        itens múltiplos. Use o sumário ao lado para navegar direto para o que precisa.
+      </p>
+    </div>
+
+    <!-- ══ VISÃO GERAL ══ -->
+    <section class="card" id="visao-geral">
+      <h2><span aria-hidden="true">🧭</span> Visão Geral</h2>
+      <p class="secao-desc">O que o app faz e como ele é organizado</p>
+      <p>
+        O Controle Financeiro é um app pessoal para registrar entradas e saídas de dinheiro,
+        com suporte a contas a pagar/receber, parcelamentos, lançamentos compostos por múltiplos
+        itens, leitura automática de notas fiscais e comprovantes por IA, controle de limite de
+        cartão de crédito, filtros avançados e sincronização na nuvem via Supabase — seus dados
+        ficam disponíveis em qualquer dispositivo onde você fizer login.
+      </p>
+      <p>A tela principal é organizada em <strong>três abas</strong>: Lançamentos, Saldos e Configurações.</p>
+    </section>
+
+    <!-- ══ AS 3 ABAS ══ -->
+    <section class="card" id="abas">
+      <h2><span aria-hidden="true">🗂️</span> As 3 Abas do App</h2>
+      <p class="secao-desc">Como o app está organizado hoje</p>
+      <table class="tabela-campos">
+        <thead><tr><th>Aba</th><th>O que você encontra nela</th></tr></thead>
+        <tbody>
+          <tr><td class="campo-nome">📋 Lançamentos</td><td>Leitor de Notas com IA, formulário de Novo Lançamento, Filtros e a tabela de lançamentos.</td></tr>
+          <tr><td class="campo-nome">📊 Saldos</td><td>Resumo em Tempo Real (totais) e Contas e Cartões (saldo de contas correntes e limite de cartões de crédito).</td></tr>
+          <tr><td class="campo-nome">⚙️ Configurações</td><td>Exportar/Importar planilhas, remover duplicatas e Gerenciar Listas (Banco, Categoria, Credor, etc.).</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Você pode navegar entre as abas pelo teclado: com o foco em uma aba, use as setas ← e → para trocar de aba.</span>
+      </div>
+    </section>
+
+    <!-- ══ CONTA E ACESSO ══ -->
+    <section class="card" id="conta">
+      <h2><span aria-hidden="true">🔐</span> Conta e Acesso</h2>
+      <p class="secao-desc">Como entrar, migrar dados antigos e sair</p>
+
+      <h3 id="conta-criar">Criar conta e entrar</h3>
+      <p>Na tela inicial você escolhe entre duas abas:</p>
+      <ul>
+        <li><strong>Entrar</strong> — para quem já tem conta. Informe e-mail e senha.</li>
+        <li><strong>Criar conta</strong> — informe e-mail, senha (mínimo 6 caracteres) e confirme a senha.</li>
+      </ul>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span><strong>Confirmação de e-mail:</strong> dependendo da configuração do sistema, pode ser
+        pedido que você confirme seu e-mail antes do primeiro login. Se isso acontecer, verifique sua
+        caixa de entrada (e o spam) após criar a conta.</span>
+      </div>
+
+      <h3 id="conta-migracao">Migração de dados antigos</h3>
+      <p>
+        Se você usava uma versão anterior do app (com dados salvos apenas no navegador) e faz login
+        pela primeira vez neste dispositivo, um banner aparece no topo oferecendo migrar esses dados
+        para a sua conta na nuvem.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">O banner mostra quantos lançamentos foram encontrados neste navegador.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Clique em <strong>Migrar para a nuvem</strong> para enviar tudo (lançamentos, itens e as listas de opções) para sua conta. Ou em <strong>Ignorar e manter só na nuvem</strong> se não quiser migrar.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">O app verifica automaticamente se cada lançamento já existe na nuvem antes de enviá-lo, então é seguro repetir essa ação sem gerar duplicatas.</div>
+        </div>
+      </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span>Depois de migrado (ou dispensado), o banner não aparece de novo automaticamente naquele navegador.</span>
+      </div>
+
+      <h3 id="conta-saida">Sair da conta</h3>
+      <p>
+        Use o botão <span class="btn-demo btn-demo-secondary">🚪 Sair</span> no canto superior direito.
+        O app pede uma confirmação antes de encerrar a sessão.
+      </p>
+    </section>
+
+    <!-- ══ LEITOR DE NOTAS COM IA ══ -->
+    <section class="card" id="leitor-ia">
+      <h2><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
+      <p class="secao-desc">Preenchimento automático a partir de uma nota fiscal ou comprovante</p>
+      <p>
+        Na aba <strong>Lançamentos</strong>, logo acima do formulário, você encontra o botão
+        <span class="btn-demo btn-demo-primary">📎 Selecionar Documento</span>. Ele aceita imagem
+        (foto ou print), PDF, TXT ou XML.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Clique em <strong>Selecionar Documento</strong> e escolha o arquivo da nota fiscal, recibo ou comprovante de pagamento/transferência.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">A IA analisa o documento e extrai data, valor, banco/instituição, estabelecimento, forma de pagamento, categoria sugerida, credor, devedor e uma descrição curta.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Os campos do formulário de <strong>Novo Lançamento</strong> são preenchidos automaticamente com o que foi identificado.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">4</div>
+          <div class="passo-texto">Revise cada campo preenchido antes de salvar — a IA pode não ter certeza de tudo, especialmente o tipo Entrada/Saída em documentos ambíguos.</div>
+        </div>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span>Sempre confira os dados preenchidos antes de salvar o lançamento — a leitura automática é uma sugestão, não uma confirmação. Se o tipo (Entrada/Saída) não ficar claro no documento, o app mantém o botão de Saída selecionado por padrão.</span>
+      </div>
+    </section>
+
+    <!-- ══ LANÇAMENTOS ══ -->
+    <section class="card" id="lancamentos">
+      <h2><span aria-hidden="true">➕</span> Lançamentos</h2>
+      <p class="secao-desc">Cadastro, edição e organização dos seus registros financeiros</p>
+
+      <h3 id="lanc-campos">Campos do formulário</h3>
+      <table class="tabela-campos">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Observação</th></tr></thead>
+        <tbody>
+          <tr><td class="campo-nome">Data Origem</td><td>Data</td><td>Obrigatório. Data em que o lançamento foi gerado.</td></tr>
+          <tr><td class="campo-nome">Data Vencimento</td><td>Data</td><td>Opcional. Usada como base para o parcelamento automático.</td></tr>
+          <tr><td class="campo-nome">Entrada de Valor</td><td>Toggle + Número</td><td>Obrigatório. Escolha primeiro <strong>🔻 Saída (despesa)</strong> ou <strong>🔺 Entrada (receita)</strong> no botão de alternância, depois digite o valor sempre <strong>positivo</strong> — o sinal é definido pelo toggle, não pelo número.</td></tr>
+          <tr><td class="campo-nome">Banco / Cartão</td><td>Lista</td><td>Gerenciável — veja a seção abaixo. Se configurado em Contas e Cartões, afeta o saldo ou o limite calculado.</td></tr>
+          <tr><td class="campo-nome">Estabelecimento</td><td>Lista</td><td>Gerenciável.</td></tr>
+          <tr><td class="campo-nome">Forma de Pagamento</td><td>Lista</td><td>Gerenciável.</td></tr>
+          <tr><td class="campo-nome">Parcela</td><td>Lista</td><td>Gerenciável. Preenchida automaticamente ao usar o Parcelamento Automático.</td></tr>
+          <tr><td class="campo-nome">Categoria</td><td>Lista</td><td>Gerenciável. Ignorada se o lançamento tiver itens múltiplos (cada item tem sua própria categoria).</td></tr>
+          <tr><td class="campo-nome">Credor</td><td>Lista</td><td>Gerenciável.</td></tr>
+          <tr><td class="campo-nome">Devedor</td><td>Lista</td><td>Gerenciável.</td></tr>
+          <tr><td class="campo-nome">Descrição</td><td>Texto livre</td><td>Opcional. Também é ignorada se houver itens múltiplos.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="lanc-entrada-saida">Entrada e Saída</h3>
+      <p>
+        O valor do lançamento não é mais digitado com sinal negativo/positivo. Em vez disso, dois
+        botões de alternância definem o tipo:
+      </p>
+      <ul>
+        <li><span class="btn-demo btn-demo-secondary">🔻 Saída (despesa)</span> — selecionado por padrão.</li>
+        <li><span class="btn-demo btn-demo-secondary">🔺 Entrada (receita)</span></li>
+      </ul>
+      <p>
+        Depois de escolher o tipo, digite o valor sempre como número positivo no campo abaixo do
+        toggle. O mesmo padrão vale para o modal de <strong>Parcelamento Automático</strong>.
+      </p>
+
+      <h3 id="lanc-listas">Adicionar/remover opções rápido</h3>
+      <p>
+        Os campos do tipo Lista funcionam como caixas combinadas que você mesmo alimenta —
+        o app não vem com nenhuma opção pré-cadastrada, então a primeira vez que usar cada campo
+        você vai precisar criar as opções que fizer sentido para você.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">+</div>
+          <div class="passo-texto">Clique no botão <strong>+</strong> ao lado do campo para abrir uma janela e digitar uma nova opção. Ela é salva na nuvem imediatamente e já fica selecionada no campo.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">−</div>
+          <div class="passo-texto">Selecione uma opção existente no campo e clique no botão <strong>−</strong> para remover essa opção da lista (pede confirmação antes).</div>
+        </div>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Pra gerenciar todas as listas de uma vez, em vez de campo por campo, use o painel <a href="#gerenciar-listas">Gerenciar Listas</a>, na aba Configurações.</span>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span>Remover uma opção da lista não exclui os lançamentos que já usam aquele valor — eles continuam exibindo o texto, só não aparece mais como opção para novos lançamentos.</span>
+      </div>
+
+      <h3 id="lanc-status">Marcar como pago</h3>
+      <p>
+        Cada linha da tabela tem uma caixa de marcação na primeira coluna.
+        <span class="badge badge-pendente">⏳ Pendente</span> quando desmarcada,
+        <span class="badge badge-pago">✓ Pago</span> quando marcada. A mudança é salva
+        automaticamente, e os totais do Resumo são recalculados na hora.
+      </p>
+    </section>
+
+    <!-- ══ ITENS MÚLTIPLOS ══ -->
+    <section class="card" id="itens-multiplos">
+      <h2><span aria-hidden="true">🧾</span> Itens Múltiplos</h2>
+      <p class="secao-desc">Para lançamentos compostos por mais de um valor e categoria</p>
+      <p>
+        Use essa funcionalidade quando uma única compra ou recibo precisa ser dividido em partes
+        com categorias diferentes — por exemplo, uma nota de supermercado que misturou alimentação
+        e produtos de limpeza.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">No formulário de lançamento, role até a seção <strong>Itens do Lançamento</strong> e clique em <span class="btn-demo btn-demo-teal">＋ Adicionar Item</span>.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Preencha <strong>Valor</strong>, <strong>Categoria</strong> e <strong>Descrição</strong> daquele item específico.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Repita clicando em Adicionar Item novamente — o botão sempre aparece depois do último item criado, então o fluxo de preenchimento é sequencial.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">4</div>
+          <div class="passo-texto">O campo <strong>Valor</strong> principal do formulário é calculado e travado automaticamente como a soma de todos os itens — você não precisa (e não deve) preenchê-lo manualmente nesse caso.</div>
+        </div>
+      </div>
+      <p>
+        Para remover um item, clique no <strong>✕</strong> ao lado dele. Os campos de Categoria e
+        Descrição principais do formulário são ignorados quando há itens, já que cada item tem os seus.
+      </p>
+      <p>
+        Na tabela, lançamentos com itens mostram um selo <span class="badge badge-multi">3 itens</span>
+        e exibem uma linha de detalhe abaixo da linha principal para cada item.
+      </p>
+    </section>
+
+    <!-- ══ PARCELAMENTO ══ -->
+    <section class="card" id="parcelamento">
+      <h2><span aria-hidden="true">🗓</span> Parcelamento Automático</h2>
+      <p class="secao-desc">Divida uma compra em parcelas mensais com um clique</p>
+      <p>
+        Em vez de criar manualmente um lançamento para cada parcela, use o botão
+        <span class="btn-demo btn-demo-purple">🗓 Parcelar</span> no formulário.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Preencha os campos comuns do lançamento (banco, estabelecimento, categoria, credor, devedor, descrição) e a <strong>Data de Vencimento</strong> da primeira parcela.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Clique em <strong>Parcelar</strong>. Escolha <strong>🔻 Saída</strong> ou <strong>🔺 Entrada</strong> no toggle, informe o <strong>Valor Total</strong> (sempre positivo) da compra e o <strong>Número de Parcelas</strong> (mínimo 2).</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Escolha onde fica o ajuste de centavos, se houver: na <strong>1ª parcela</strong> ou na <strong>última</strong>.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">4</div>
+          <div class="passo-texto">Revise a prévia (mostra cada parcela com data e valor) e clique em <strong>Criar Lançamentos</strong>.</div>
+        </div>
+      </div>
+      <p>
+        O app cria <strong>um lançamento separado para cada parcela</strong>, com a data de vencimento
+        avançando mês a mês a partir da data informada (preservando o dia, ou ajustando para o
+        último dia do mês quando necessário). Cada parcela recebe a etiqueta <code>1/N</code>,
+        <code>2/N</code> etc. no campo Parcela, visível na tabela como
+        <span class="badge badge-parcelado">3/12</span>.
+      </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>O tipo (Entrada/Saída) escolhido no toggle se aplica a todas as parcelas geradas.</span>
+      </div>
+    </section>
+
+    <!-- ══ FILTROS ══ -->
+    <section class="card" id="filtros">
+      <h2><span aria-hidden="true">🔍</span> Filtros</h2>
+      <p class="secao-desc">Como refinar a visualização da tabela de lançamentos</p>
+      <p>Na aba Lançamentos, a seção de Filtros permite combinar:</p>
+      <ul>
+        <li>Intervalo de <strong>Data Origem</strong> (de/até)</li>
+        <li>Intervalo de <strong>Data Vencimento</strong> (de/até)</li>
+        <li><strong>Status</strong> — Pago, Pendente ou Todos</li>
+        <li><strong>Banco/Cartão, Forma de Pagamento, Estabelecimento, Categoria, Credor, Devedor</strong></li>
+      </ul>
+      <p>
+        Clique em <strong>Filtrar</strong> para aplicar ou <strong>Limpar Filtros</strong> para
+        voltar a ver tudo. Os totais do Resumo (na aba Saldos) refletem sempre o que está filtrado
+        na tela, não o total absoluto da conta.
+      </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>O filtro de Categoria também encontra lançamentos com itens múltiplos — basta que <em>algum</em> item tenha aquela categoria.</span>
+      </div>
+      <p>A tabela é sempre ordenada pela <strong>Data Origem</strong>, da mais antiga para a mais recente.</p>
+    </section>
+
+    <!-- ══ SALDOS ══ -->
+    <section class="card" id="saldos">
+      <h2><span aria-hidden="true">📊</span> Saldos</h2>
+      <p class="secao-desc">Aba com o resumo financeiro e o controle de contas e cartões</p>
+
+      <h3 id="saldos-resumo">Resumo em Tempo Real</h3>
+      <p>
+        Mostra <strong>Total Geral</strong>, <strong>Total Pago</strong>, <strong>Total Pendente</strong>
+        e <strong>Registros visíveis</strong>, sempre recalculados de acordo com os filtros aplicados
+        na aba Lançamentos.
+      </p>
+
+      <h3 id="contas-cartoes">Contas e Cartões</h3>
+      <p>
+        Permite configurar cada Banco/Cartão cadastrado como um de dois tipos:
+      </p>
+      <ul>
+        <li><strong>Conta Corrente</strong> — acompanha o saldo, somando entradas e subtraindo saídas.</li>
+        <li><strong>Cartão de Crédito</strong> — acompanha o limite disponível.</li>
+      </ul>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Para o limite do cartão ser recalculado corretamente: compras no cartão devem usar a
+        Categoria <strong>"Cartão de Crédito"</strong> com tipo <strong>Saída</strong>; o pagamento
+        da fatura usa a mesma categoria com tipo <strong>Entrada</strong>.</span>
+      </div>
+    </section>
+
+    <!-- ══ CONFIGURAÇÕES ══ -->
+    <section class="card" id="configuracoes">
+      <h2><span aria-hidden="true">⚙️</span> Configurações</h2>
+      <p class="secao-desc">Aba com backup, manutenção de dados e gerenciamento de listas</p>
+
+      <h3 id="planilhas">Exportar e Importar Planilhas</h3>
+      <p>
+        Clique em <span class="btn-demo btn-demo-success">📤 Exportar XLSX</span> para baixar uma
+        planilha com os lançamentos <strong>atualmente filtrados na tela</strong>. O arquivo gerado
+        contém:
+      </p>
+      <ul>
+        <li>Aba <strong>Lançamentos</strong> — todos os campos, ordenados por data crescente. Lançamentos com itens aparecem como uma linha "Principal" seguida de uma linha por item.</li>
+        <li>Aba <strong>Resumo</strong> — total de registros, total geral, total pago e total pendente.</li>
+      </ul>
+      <p>
+        O nome do arquivo inclui data e hora da exportação
+        (ex.: <code>controle_financeiro_20260626_143022.xlsx</code>), então cada exportação gera
+        um arquivo único, sem sobrescrever backups anteriores do mesmo dia.
+      </p>
+      <p>
+        Clique em <span class="btn-demo btn-demo-secondary">📥 Importar XLSX</span> e selecione um
+        arquivo no mesmo formato gerado pela exportação. O app reconhece automaticamente lançamentos
+        simples e compostos, e adiciona à nuvem apenas o que for novo.
+      </p>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span>A importação verifica antes de cada lançamento se ele já existe na nuvem (comparando
+        data, valor, banco, categoria e os demais campos). Lançamentos repetidos são automaticamente
+        ignorados — você pode reimportar o mesmo arquivo sem medo de duplicar.</span>
+      </div>
+
+      <h3 id="duplicatas">Lançamentos Duplicados</h3>
+      <p>
+        Se em algum momento você suspeitar que há lançamentos duplicados na sua conta — por exemplo,
+        depois de testar a importação algumas vezes — use o botão
+        <span class="btn-demo btn-demo-secondary">🧹 Remover Duplicatas</span>.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Clique no botão e confirme a ação na janela de aviso.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">O app compara todos os lançamentos da sua conta e identifica grupos idênticos (mesma data, valor, banco, categoria e demais campos — incluindo os itens, no caso de lançamentos compostos).</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Para cada grupo de duplicatas, o <strong>registro mais antigo é mantido</strong> e os demais são excluídos, junto com os itens associados a eles.</div>
+        </div>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span>Essa ação exclui dados permanentemente. Se tiver dúvida, exporte um backup em XLSX antes de rodar a limpeza.</span>
+      </div>
+
+      <h3 id="gerenciar-listas">Gerenciar Listas</h3>
+      <p>
+        Painel dedicado para adicionar ou remover, de uma vez, as opções de Banco/Cartão, Categoria,
+        Credor, Devedor, Forma de Pagamento, Parcela e Estabelecimento — sem precisar abrir o
+        formulário de lançamento. Funciona igual aos botões <strong>+</strong> e <strong>−</strong>
+        de cada campo, só que reunidos em um só lugar.
+      </p>
+    </section>
+
+    <!-- ══ ACESSIBILIDADE ══ -->
+    <section class="card" id="acessibilidade">
+      <h2><span aria-hidden="true">♿</span> Acessibilidade</h2>
+      <p class="secao-desc">Recursos para uso com leitor de tela e navegação por teclado</p>
+      <ul>
+        <li>Todos os campos têm rótulos (<code>label</code>) associados, lidos corretamente por leitores de tela.</li>
+        <li>As abas seguem o padrão ARIA <code>tablist</code>/<code>tab</code>/<code>tabpanel</code>, navegáveis pelas setas do teclado.</li>
+        <li>Ações importantes (salvar, excluir, marcar como pago, adicionar/remover opções, importar/exportar, leitura por IA) são anunciadas em voz através de regiões de leitura automática.</li>
+        <li>O foco do teclado nunca se perde ao adicionar uma nova opção numa lista — ele retorna ao campo de onde você veio, para continuar preenchendo o formulário sem interrupção.</li>
+        <li>Existe um link de atalho ("Pular para o conteúdo") logo no início da página, para quem navega por teclado.</li>
+        <li>Janelas (modais) podem ser fechadas com a tecla <strong>Esc</strong>.</li>
+      </ul>
+    </section>
+
+    <!-- ══ RESOLUÇÃO DE PROBLEMAS ══ -->
+    <section class="card" id="problemas">
+      <h2><span aria-hidden="true">🛟</span> Resolução de Problemas</h2>
+      <p class="secao-desc">O que fazer em situações comuns</p>
+
+      <h3>A tela ficou travada em "Carregando seus dados..."</h3>
+      <p>
+        O app tenta novamente automaticamente em caso de falha pontual de rede. Se persistir por
+        mais de um minuto, recarregue a página (F5) — a sessão é restaurada automaticamente, sem
+        precisar logar de novo.
+      </p>
+
+      <h3>O botão Sair não funcionou</h3>
+      <p>
+        Aguarde alguns segundos: o app tenta confirmar a saída com o servidor e, se demorar demais,
+        força a saída local mesmo assim. Se a tela de login não aparecer, recarregue a página.
+      </p>
+
+      <h3>O Leitor de Notas com IA não preencheu nada, ou deu erro</h3>
+      <p>
+        Confira se o arquivo é uma imagem legível, PDF, TXT ou XML. Documentos muito escuros,
+        cortados ou de baixa qualidade podem não ser lidos corretamente — nesse caso, preencha o
+        formulário manualmente. Se o erro persistir, tente novamente em alguns instantes.
+      </p>
+
+      <h3>Apareceram lançamentos duplicados</h3>
+      <p>
+        Use o botão <strong>Remover Duplicatas</strong> descrito na seção
+        <a href="#duplicatas">Lançamentos Duplicados</a>, na aba Configurações.
+      </p>
+
+      <h3>Removi uma opção de lista por engano</h3>
+      <p>
+        Basta clicar no botão <strong>+</strong> do mesmo campo (ou usar o painel
+        <a href="#gerenciar-listas">Gerenciar Listas</a>) e cadastrar a opção novamente com o
+        mesmo nome. Os lançamentos antigos que já usavam aquele valor não foram afetados pela remoção.
+      </p>
+
+      <div class="divider"></div>
+      <p style="color:var(--text3);font-size:12px;">
+        Guia atualizado conforme a versão mais recente do app. Caso encontre algo que não bata com
+        o que você vê na tela, é sinal de que o app evoluiu — pode pedir uma atualização deste guia.
+      </p>
+    </section>
+
+  </main>
+</div>
+
+<a href="#conteudo-principal" class="voltar-topo" aria-label="Voltar ao topo da página" title="Voltar ao topo">↑</a>
+
+</body>
+</html>
