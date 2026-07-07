@@ -685,8 +685,8 @@ select option{background:#1e2436;}
   <section class="card" aria-labelledby="titulo-leitor">
     <h2 class="card-title" id="titulo-leitor"><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-      Envie uma imagem, PDF, TXT ou XML de uma nota fiscal ou comprovante. A IA vai ler o documento e
-      pré-preencher o formulário de lançamento abaixo. Confira sempre os campos antes de salvar.
+      Envie uma imagem, PDF, TXT, XML ou XLSX de uma nota fiscal ou comprovante — ou cole o texto abaixo.
+      A IA vai ler o conteúdo e pré-preencher o formulário de lançamento. Confira sempre os campos antes de salvar.
     </p>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <label for="input-leitor-ia"
@@ -698,14 +698,25 @@ select option{background:#1e2436;}
              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <span aria-hidden="true">📎</span> Selecionar Documento
       </label>
-      <input type="file" id="input-leitor-ia" accept="image/*,.pdf,.txt,.xml"
+      <input type="file" id="input-leitor-ia" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
              aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática"
              onchange="lerDocumentoIA(event)">
       <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
+
+    <div class="form-group" style="margin-top:14px;">
+      <label for="leitor-ia-texto">Ou cole o texto do comprovante</label>
+      <textarea id="leitor-ia-texto" rows="4" placeholder="Cole aqui o texto do e-mail, mensagem ou comprovante..."></textarea>
+      <button type="button" class="btn btn-secondary" id="btn-leitor-ia-texto"
+              style="margin-top:8px;" onclick="analisarTextoColado()">
+        <span aria-hidden="true">🔎</span> Analisar Texto
+      </button>
+    </div>
+
     <div id="leitor-ia-sugestoes" aria-live="polite" style="margin-top:10px;"></div>
   </section>
+
 
   <!-- ══ FORMULÁRIO ══ -->
   <section class="card" aria-labelledby="titulo-form">
@@ -1766,8 +1777,10 @@ function prepararArquivoParaIA(file) {
 
     const isImagem = tipoMime.startsWith('image/');
     const isPDF    = tipoMime === 'application/pdf' || ext === 'pdf';
+    const isXLSX   = ext === 'xlsx' || ext === 'xls' ||
+                      tipoMime.indexOf('spreadsheet') !== -1 || tipoMime === 'application/vnd.ms-excel';
     const isXML    = ext === 'xml' || tipoMime === 'text/xml' || tipoMime === 'application/xml';
-    const isTexto  = !isImagem && !isPDF && (tipoMime.startsWith('text/') || ext === 'txt' || isXML);
+    const isTexto  = !isImagem && !isPDF && !isXLSX && (tipoMime.startsWith('text/') || ext === 'txt' || isXML);
 
     if(isImagem || isPDF) {
       const reader = new FileReader();
@@ -1781,6 +1794,30 @@ function prepararArquivoParaIA(file) {
       };
       reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
       reader.readAsDataURL(file);
+    } else if(isXLSX) {
+      // Planilha: extraímos o conteúdo como texto (CSV por aba) no navegador
+      // e mandamos para a IA pelo mesmo caminho de texto — sem precisar de
+      // nenhuma mudança no worker do Cloudflare.
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const wb = XLSX.read(reader.result, { type: 'binary' });
+          let textoExtraido = '';
+          wb.SheetNames.forEach(nomeAba => {
+            const csv = XLSX.utils.sheet_to_csv(wb.Sheets[nomeAba]);
+            textoExtraido += '--- Planilha: ' + nomeAba + ' ---\n' + csv + '\n\n';
+          });
+          if(!textoExtraido.trim()) {
+            reject(new Error('A planilha parece estar vazia.'));
+            return;
+          }
+          resolve({ tipo: 'texto', conteudo: textoExtraido.slice(0, 50000), mimeType: 'text/plain' });
+        } catch(e) {
+          reject(new Error('Não foi possível ler a planilha. Verifique se o arquivo não está corrompido.'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      reader.readAsBinaryString(file);
     } else if(isTexto) {
       const reader = new FileReader();
       reader.onload = () => resolve({
@@ -1791,9 +1828,33 @@ function prepararArquivoParaIA(file) {
       reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
       reader.readAsText(file, 'UTF-8');
     } else {
-      reject(new Error('Formato não suportado. Envie uma imagem, PDF, TXT ou XML.'));
+      reject(new Error('Formato não suportado. Envie uma imagem, PDF, TXT, XML ou XLSX.'));
     }
   });
+}
+
+// Envia o conteúdo (de arquivo ou texto colado) para a IA e aplica o resultado ao formulário.
+// Compartilhada entre lerDocumentoIA (arquivo) e analisarTextoColado (texto livre).
+async function processarConteudoIA(tipo, conteudo, mimeType, nomeArquivo) {
+  limparSugestoesIA();
+  mostrarStatusLeitorIA('Lendo documento com IA, aguarde...');
+  anunciar('Lendo documento com IA. Aguarde.');
+
+  const resp = await fetch('/api/ler-documento', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo })
+  });
+
+  let json;
+  try { json = await resp.json(); } catch(e) { json = null; }
+
+  if(!resp.ok || !json || !json.ok) {
+    const msgErro = (json && json.erro) || 'Falha ao ler o documento (' + resp.status + ').';
+    throw new Error(msgErro);
+  }
+
+  aplicarDadosIAaoFormulario(json.dados || {});
 }
 
 async function lerDocumentoIA(event) {
@@ -1801,37 +1862,40 @@ async function lerDocumentoIA(event) {
   const file = input.files && input.files[0];
   if(!file) return;
 
-  limparSugestoesIA();
-  mostrarStatusLeitorIA('Lendo documento com IA, aguarde...');
-  anunciar('Lendo documento com IA. Aguarde.');
-
   const btn = document.getElementById('btn-leitor-ia');
   if(btn) btn.setAttribute('aria-disabled', 'true');
 
   try {
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
-
-    const resp = await fetch('/api/ler-documento', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo: file.name })
-    });
-
-    let json;
-    try { json = await resp.json(); } catch(e) { json = null; }
-
-    if(!resp.ok || !json || !json.ok) {
-      const msgErro = (json && json.erro) || 'Falha ao ler o documento (' + resp.status + ').';
-      throw new Error(msgErro);
-    }
-
-    aplicarDadosIAaoFormulario(json.dados || {});
+    await processarConteudoIA(tipo, conteudo, mimeType, file.name);
   } catch(err) {
     mostrarStatusLeitorIA('Erro: ' + err.message, true);
     anunciar('Erro ao ler documento: ' + err.message, true);
   } finally {
     if(btn) btn.removeAttribute('aria-disabled');
     input.value = '';
+  }
+}
+
+async function analisarTextoColado() {
+  const textarea = document.getElementById('leitor-ia-texto');
+  const texto = textarea.value.trim();
+  if(!texto) {
+    anunciar('Cole ou digite um texto para analisar.', true);
+    textarea.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-leitor-ia-texto');
+  if(btn) btn.disabled = true;
+
+  try {
+    await processarConteudoIA('texto', texto, 'text/plain', 'texto colado');
+  } catch(err) {
+    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    anunciar('Erro ao analisar texto: ' + err.message, true);
+  } finally {
+    if(btn) btn.disabled = false;
   }
 }
 
