@@ -158,6 +158,20 @@ input.negativo{color:var(--red);}
 .config-lista-add{display:flex;gap:8px;max-width:420px;}
 .config-lista-add input{flex:1;}
 
+/* ── DOCUMENTOS ARMAZENADOS ── */
+.doc-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.doc-lista li{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:8px 12px;font-size:13px;
+}
+.doc-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.doc-nome{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;}
+.doc-meta{font-size:11px;color:var(--text3);}
+.doc-acoes{display:flex;gap:6px;flex-shrink:0;}
+.doc-acoes .btn{padding:6px 10px;font-size:12px;}
+.doc-lista-vazio{font-size:12px;color:var(--text3);}
+
 /* ── SELECT COM BOTÕES ── */
 .select-wrapper{display:flex;gap:6px;align-items:center;}
 .select-wrapper select{flex:1;min-width:0;}
@@ -701,7 +715,29 @@ select option{background:#1e2436;}
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
              aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática"
              onchange="lerDocumentoIA(event)">
+
+      <label for="input-leitor-guardar"
+             class="btn btn-secondary"
+             role="button"
+             tabindex="0"
+             id="btn-leitor-guardar"
+             aria-label="Selecionar arquivo para apenas guardar na nuvem, sem analisar agora"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+        <span aria-hidden="true">📤</span> Apenas Guardar Arquivo
+      </label>
+      <input type="file" id="input-leitor-guardar" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
+             aria-label="Selecionar arquivo para apenas guardar na nuvem"
+             onchange="guardarArquivoSemAnalisar(event)">
+
       <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
+    </div>
+
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="leitor-ia-salvar-tambem" checked style="width:auto;">
+      <label for="leitor-ia-salvar-tambem" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
+        Também guardar este arquivo na nuvem ao analisar
+      </label>
     </div>
 
     <div class="form-group" style="margin-top:14px;">
@@ -714,7 +750,18 @@ select option{background:#1e2436;}
     </div>
 
     <div id="leitor-ia-sugestoes" aria-live="polite" style="margin-top:10px;"></div>
+
+    <!-- ══ DOCUMENTOS ARMAZENADOS ══ -->
+    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:14px;">
+      <h3 style="font-size:13px;font-weight:700;margin-bottom:8px;">📂 Documentos Armazenados</h3>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+        Arquivos guardados na nuvem. Você pode analisar qualquer um deles com a IA quando quiser, sem precisar
+        enviar de novo.
+      </p>
+      <ul id="documentos-armazenados-lista" class="doc-lista" aria-label="Documentos guardados na nuvem"></ul>
+    </div>
   </section>
+
 
 
   <!-- ══ FORMULÁRIO ══ -->
@@ -1126,6 +1173,8 @@ const OPCOES_PADRAO = {
 let opcoesSelects = JSON.parse(JSON.stringify(OPCOES_PADRAO));
 // Configuração de contas/cartões por nome de banco: { tipo, saldo_inicial, limite_total }
 let contasConfig = {};
+// Documentos (notas/comprovantes) guardados no Supabase Storage
+let documentosArmazenados = [];
 
 // ═══════════════════════════════════════════════════
 //  ARIA LIVE
@@ -1303,6 +1352,7 @@ async function iniciarAppLogado() {
   await carregarOpcoesSupabase();
   await carregarContasConfigSupabase();
   await carregarLancamentosSupabase();
+  await carregarDocumentosArmazenados();
 
   renderizarTodosSelects();
   renderizarTodosFiltros();
@@ -1867,9 +1917,22 @@ async function lerDocumentoIA(event) {
   const btn = document.getElementById('btn-leitor-ia');
   if(btn) btn.setAttribute('aria-disabled', 'true');
 
+  const salvarTambem = document.getElementById('leitor-ia-salvar-tambem').checked;
+
   try {
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
     await processarConteudoIA(tipo, conteudo, mimeType, file.name);
+
+    if(salvarTambem) {
+      try {
+        await uploadDocumentoStorage(file);
+        anunciar('Arquivo também guardado na nuvem.');
+      } catch(erroSalvar) {
+        // A análise já foi feita; um erro ao guardar não deve travar o fluxo,
+        // só avisa e deixa o formulário preenchido normalmente.
+        anunciar('Documento analisado, mas houve erro ao guardar o arquivo: ' + erroSalvar.message, true);
+      }
+    }
   } catch(err) {
     mostrarStatusLeitorIA('Erro: ' + err.message, true);
     anunciar('Erro ao ler documento: ' + err.message, true);
@@ -1899,6 +1962,168 @@ async function analisarTextoColado() {
   } finally {
     if(btn) btn.disabled = false;
   }
+}
+
+// ═══════════════════════════════════════════════════
+//  DOCUMENTOS ARMAZENADOS (Supabase Storage)
+// ═══════════════════════════════════════════════════
+function fmtTamanhoArquivo(bytes) {
+  if(!bytes && bytes !== 0) return '';
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function fmtDataHoraDoc(isoStr) {
+  if(!isoStr) return '';
+  try {
+    return new Date(isoStr).toLocaleString('pt-BR', {
+      day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+    });
+  } catch(e) { return ''; }
+}
+
+async function carregarDocumentosArmazenados() {
+  const { data, error } = await sb.from('documentos_armazenados')
+    .select('*')
+    .order('criado_em', { ascending: false });
+  if(error) {
+    mostrarToast('Erro ao carregar documentos guardados: ' + error.message, true);
+    return;
+  }
+  documentosArmazenados = data || [];
+  renderizarDocumentosArmazenados();
+}
+
+function renderizarDocumentosArmazenados() {
+  const container = document.getElementById('documentos-armazenados-lista');
+  if(!container) return;
+
+  if(!documentosArmazenados.length) {
+    container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento guardado ainda.</li>';
+    return;
+  }
+
+  container.innerHTML = documentosArmazenados.map(doc => (
+    '<li>' +
+      '<div class="doc-info">' +
+        '<span class="doc-nome" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</span>' +
+        '<span class="doc-meta">'+fmtDataHoraDoc(doc.criado_em)+
+          (doc.tamanho_bytes ? ' · '+fmtTamanhoArquivo(doc.tamanho_bytes) : '')+'</span>' +
+      '</div>' +
+      '<div class="doc-acoes">' +
+        '<button type="button" class="btn btn-secondary" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
+          'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>' +
+        '<button type="button" class="btn-icon" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
+          'aria-label="Excluir '+escaparHTML(doc.nome_arquivo)+'">🗑️</button>' +
+      '</div>' +
+    '</li>'
+  )).join('');
+}
+
+// Envia o arquivo bruto para o bucket privado "documentos" e registra os metadados.
+// Cada usuário só acessa a própria pasta (política RLS baseada no user_id no caminho).
+async function uploadDocumentoStorage(file) {
+  const nomeSeguro = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const caminho = usuarioAtual.id + '/' + Date.now() + '-' + nomeSeguro;
+
+  const { error: erroUpload } = await sb.storage.from('documentos').upload(caminho, file, {
+    contentType: file.type || 'application/octet-stream',
+    upsert: false
+  });
+  if(erroUpload) throw new Error('Falha ao enviar o arquivo: ' + erroUpload.message);
+
+  const { data: registro, error: erroInsert } = await sb.from('documentos_armazenados').insert({
+    user_id: usuarioAtual.id,
+    nome_arquivo: file.name,
+    caminho: caminho,
+    mime_type: file.type || null,
+    tamanho_bytes: file.size || null
+  }).select().single();
+
+  if(erroInsert) {
+    // Remove o arquivo órfão do storage já que o registro de metadados falhou
+    await sb.storage.from('documentos').remove([caminho]);
+    throw new Error('Falha ao registrar o documento: ' + erroInsert.message);
+  }
+
+  documentosArmazenados.unshift(registro);
+  renderizarDocumentosArmazenados();
+}
+
+async function guardarArquivoSemAnalisar(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if(!file) return;
+
+  const btn = document.getElementById('btn-leitor-guardar');
+  if(btn) btn.setAttribute('aria-disabled', 'true');
+  mostrarStatusLeitorIA('Guardando arquivo na nuvem, aguarde...');
+  anunciar('Guardando arquivo na nuvem. Aguarde.');
+
+  try {
+    await uploadDocumentoStorage(file);
+    mostrarStatusLeitorIA('Arquivo "' + file.name + '" guardado com sucesso.');
+    anunciar('Arquivo "' + file.name + '" guardado na nuvem.');
+    mostrarToast('Documento guardado.');
+  } catch(err) {
+    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    anunciar('Erro ao guardar arquivo: ' + err.message, true);
+  } finally {
+    if(btn) btn.removeAttribute('aria-disabled');
+    input.value = '';
+  }
+}
+
+async function analisarDocumentoArmazenado(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+
+  mostrarStatusLeitorIA('Baixando documento guardado, aguarde...');
+  anunciar('Baixando documento guardado. Aguarde.');
+
+  try {
+    const { data: assinado, error: erroSigned } = await sb.storage
+      .from('documentos').createSignedUrl(doc.caminho, 60);
+    if(erroSigned) throw new Error(erroSigned.message);
+
+    const resp = await fetch(assinado.signedUrl);
+    if(!resp.ok) throw new Error('Não foi possível baixar o arquivo (HTTP ' + resp.status + ').');
+    const blob = await resp.blob();
+    const file = new File([blob], doc.nome_arquivo, { type: doc.mime_type || blob.type });
+
+    const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
+    await processarConteudoIA(tipo, conteudo, mimeType, file.name);
+  } catch(err) {
+    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    anunciar('Erro ao analisar documento guardado: ' + err.message, true);
+  }
+}
+
+async function excluirDocumentoArmazenado(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+  if(!confirm('Excluir o documento "' + doc.nome_arquivo + '"? Essa ação não pode ser desfeita.')) return;
+
+  const { error: erroStorage } = await sb.storage.from('documentos').remove([doc.caminho]);
+  if(erroStorage) {
+    anunciar('Erro ao excluir arquivo: ' + erroStorage.message, true);
+    mostrarToast('Erro ao excluir arquivo.', true);
+    return;
+  }
+
+  const { error: erroDb } = await sb.from('documentos_armazenados')
+    .delete().eq('id', id).eq('user_id', usuarioAtual.id);
+  if(erroDb) {
+    anunciar('Erro ao excluir registro: ' + erroDb.message, true);
+    mostrarToast('Erro ao excluir documento.', true);
+    return;
+  }
+
+  documentosArmazenados = documentosArmazenados.filter(d => d.id !== id);
+  renderizarDocumentosArmazenados();
+  anunciar('Documento "' + doc.nome_arquivo + '" excluído.');
+  mostrarToast('Documento excluído.');
 }
 
 // Tenta encontrar, dentro das opções já cadastradas pelo usuário, uma opção
