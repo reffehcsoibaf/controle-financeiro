@@ -637,11 +637,7 @@ select option{background:#1e2436;}
     </div>
   </div>
 
-  <!-- ══════ PAINEL: SALDOS ══════ -->
-  <div id="painel-saldos" role="tabpanel" aria-labelledby="tab-btn-saldos" tabindex="0" hidden>
-
-  <!-- ══ SALDOS ══ -->
-
+  <!-- ══ RESUMO EM TEMPO REAL (sempre visível, em qualquer aba) ══ -->
   <section class="card" aria-labelledby="titulo-saldos">
     <h2 class="card-title" id="titulo-saldos"><span aria-hidden="true">📊</span> Resumo em Tempo Real</h2>
     <div class="saldos-grid" role="list">
@@ -663,6 +659,9 @@ select option{background:#1e2436;}
       </div>
     </div>
   </section>
+
+  <!-- ══════ PAINEL: SALDOS ══════ -->
+  <div id="painel-saldos" role="tabpanel" aria-labelledby="tab-btn-saldos" tabindex="0" hidden>
 
   <!-- ══ CONTAS E CARTÕES ══ -->
   <section class="card" aria-labelledby="titulo-contas">
@@ -831,6 +830,9 @@ select option{background:#1e2436;}
               </span>
             </div>
           </div>
+          <p style="font-size:12px;color:var(--text3);margin:4px 0 8px;">
+            O sinal do botão Entrada/Saída acima vale para o total. Para descontos, adicione um item com valor negativo.
+          </p>
 
           <p id="itens-vazio-msg" style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">
             Nenhum item adicionado. Use o botão abaixo para lançamentos compostos por múltiplos valores e categorias.
@@ -2266,7 +2268,7 @@ function adicionarItem(dados) {
     '<div class="form-group">' +
       '<label for="item-val-'+id+'">Valor do item <span class="sr-only">(item '+idx+')</span></label>' +
       '<input type="number" id="item-val-'+id+'" step="0.01"' +
-             ' placeholder="Ex.: -50,00 ou 120,00"' +
+             ' placeholder="Ex.: 50,00 (ou -10,00 para desconto)"' +
              ' aria-describedby="itens-total-badge"' +
              ' value="'+(dados&&dados.valor!==''?dados.valor:'')+'"' +
              ' oninput="onItemValorInput('+id+', this)" autocomplete="off">' +
@@ -2420,11 +2422,13 @@ function atualizarNotaValor() {
   const total = itensFormulario.reduce((s,item)=>{
     const v=parseFloat(item.valor); return s+(isNaN(v)?0:v);
   },0);
+  const totalAbs = Math.abs(total);
+  const sinal = obterTipoValor()==='saida' ? -1 : 1;
   const campoValor = document.getElementById('f-valor');
-  campoValor.value = total.toFixed(2);
+  campoValor.value = totalAbs.toFixed(2);
   colorirValor(campoValor);
   nota.style.display = '';
-  nota.innerHTML = 'Valor calculado automaticamente pela soma dos itens: <span>'+fmtValor(total)+'</span>';
+  nota.innerHTML = 'Valor calculado automaticamente pela soma dos itens: <span>'+fmtValor(totalAbs*sinal)+'</span>';
 }
 
 function limparItens() {
@@ -2456,6 +2460,7 @@ function definirTipoValor(tipo) {
   document.getElementById('f-tipo-saida').setAttribute('aria-checked', tipo==='saida' ? 'true' : 'false');
   document.getElementById('f-tipo-entrada').setAttribute('aria-checked', tipo==='entrada' ? 'true' : 'false');
   colorirValor(document.getElementById('f-valor'));
+  atualizarNotaValor();
   anunciar(tipo==='saida' ? 'Tipo definido como Saída (despesa).' : 'Tipo definido como Entrada (receita).');
 }
 
@@ -2464,14 +2469,8 @@ function obterTipoValor() {
 }
 
 function colorirValor(el) {
-  // Quando há itens, o campo é só uma exibição calculada da soma deles
-  // (cada item pode ter seu próprio sinal), então mantemos a lógica antiga.
-  if(itensFormulario.length > 0) {
-    const v = parseFloat(el.value);
-    el.classList.toggle('negativo', !isNaN(v) && v<0);
-    return;
-  }
-  // Sem itens: o campo só aceita valor absoluto — o sinal vem do toggle Entrada/Saída
+  // O campo sempre guarda um valor absoluto — o sinal final vem do toggle
+  // Entrada/Saída, tanto para lançamentos simples quanto para os com itens.
   if(el.value.startsWith('-')) el.value = el.value.slice(1);
   const v = parseFloat(el.value);
   el.classList.toggle('negativo', obterTipoValor()==='saida' && !isNaN(v) && v>0);
@@ -2486,9 +2485,10 @@ async function salvarLancamento() {
   }
   let valor;
   if(itensFormulario.length>0) {
-    valor = itensFormulario.reduce((s,item)=>{
+    const somaItens = itensFormulario.reduce((s,item)=>{
       const v=parseFloat(item.valor); return s+(isNaN(v)?0:v);
     },0);
+    valor = obterTipoValor()==='saida' ? -Math.abs(somaItens) : Math.abs(somaItens);
   } else {
     const valorStr = document.getElementById('f-valor').value;
     const valorAbs = parseFloat(valorStr);
@@ -2612,6 +2612,7 @@ function editarLancamento(id) {
   document.getElementById('f-devedor').value         = l.devedor||'';
   limparItens();
   if(l.itens && l.itens.length>0) {
+    definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
     l.itens.forEach(item=>{
       itensFormulario.push({id:proximoItemId++, valor:item.valor, categoria:item.categoria, descricao:item.descricao});
       adicionarItem(itensFormulario[itensFormulario.length-1]);
