@@ -120,7 +120,7 @@ export default {
 
 // ==================== PROVEDOR: GEMINI ====================
 async function lerComGemini({ apiKey, documento }) {
-  const modelo = 'gemini-3-flash'; // modelo recomendado do free tier em 2026
+  const modelo = 'gemini-2.5-flash'; // GA estável, multimodal, confirmado no free tier (não usar nomes "preview", que são desativados sem aviso)
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
   const parte = montarParteConteudo(documento);
