@@ -628,6 +628,7 @@ select option{background:#1e2436;}
   <div class="tabs-nav" role="tablist" aria-label="Seções do Controle Financeiro" id="tabs-nav" onkeydown="navegarAbasTeclado(event)">
     <button type="button" role="tab" id="tab-btn-lancamentos" aria-selected="true" aria-controls="painel-lancamentos" tabindex="0" onclick="mudarAba('lancamentos')"><span aria-hidden="true">📋</span> Lançamentos</button>
     <button type="button" role="tab" id="tab-btn-saldos" aria-selected="false" aria-controls="painel-saldos" tabindex="-1" onclick="mudarAba('saldos')"><span aria-hidden="true">📊</span> Saldos</button>
+    <button type="button" role="tab" id="tab-btn-documentos" aria-selected="false" aria-controls="painel-documentos" tabindex="-1" onclick="mudarAba('documentos')"><span aria-hidden="true">📂</span> Documentos</button>
     <button type="button" role="tab" id="tab-btn-config" aria-selected="false" aria-controls="painel-config" tabindex="-1" onclick="mudarAba('config')"><span aria-hidden="true">⚙️</span> Configurações</button>
   </div>
 
@@ -715,28 +716,13 @@ select option{background:#1e2436;}
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
              aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática"
              onchange="lerDocumentoIA(event)">
-
-      <label for="input-leitor-guardar"
-             class="btn btn-secondary"
-             role="button"
-             tabindex="0"
-             id="btn-leitor-guardar"
-             aria-label="Selecionar arquivo para apenas guardar na nuvem, sem analisar agora"
-             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-        <span aria-hidden="true">📤</span> Apenas Guardar Arquivo
-      </label>
-      <input type="file" id="input-leitor-guardar" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
-             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
-             aria-label="Selecionar arquivo para apenas guardar na nuvem"
-             onchange="guardarArquivoSemAnalisar(event)">
-
       <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
 
     <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
       <input type="checkbox" id="leitor-ia-salvar-tambem" checked style="width:auto;">
       <label for="leitor-ia-salvar-tambem" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
-        Também guardar este arquivo na nuvem ao analisar
+        Também guardar este arquivo na aba Documentos
       </label>
     </div>
 
@@ -750,16 +736,6 @@ select option{background:#1e2436;}
     </div>
 
     <div id="leitor-ia-sugestoes" aria-live="polite" style="margin-top:10px;"></div>
-
-    <!-- ══ DOCUMENTOS ARMAZENADOS ══ -->
-    <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:14px;">
-      <h3 style="font-size:13px;font-weight:700;margin-bottom:8px;">📂 Documentos Armazenados</h3>
-      <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-        Arquivos guardados na nuvem. Você pode analisar qualquer um deles com a IA quando quiser, sem precisar
-        enviar de novo.
-      </p>
-      <ul id="documentos-armazenados-lista" class="doc-lista" aria-label="Documentos guardados na nuvem"></ul>
-    </div>
   </section>
 
 
@@ -982,6 +958,46 @@ select option{background:#1e2436;}
 
   </div>
   <!-- fim #painel-lancamentos -->
+
+  <!-- ══════ PAINEL: DOCUMENTOS ══════ -->
+  <div id="painel-documentos" role="tabpanel" aria-labelledby="tab-btn-documentos" tabindex="0" hidden>
+
+  <!-- ══ DOCUMENTOS ARMAZENADOS ══ -->
+  <section class="card" aria-labelledby="titulo-documentos">
+    <h2 class="card-title" id="titulo-documentos"><span aria-hidden="true">📂</span> Documentos Armazenados</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Notas fiscais e comprovantes guardados na nuvem. Analise qualquer um deles com a IA quando quiser,
+      baixe o arquivo original, ou apenas guarde um novo documento sem analisar agora.
+    </p>
+
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <label for="input-leitor-guardar"
+             class="btn btn-primary"
+             role="button"
+             tabindex="0"
+             id="btn-leitor-guardar"
+             aria-label="Selecionar arquivo para guardar na nuvem, sem analisar agora"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+        <span aria-hidden="true">📤</span> Guardar Novo Arquivo
+      </label>
+      <input type="file" id="input-leitor-guardar" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
+             aria-label="Selecionar arquivo para guardar na nuvem"
+             onchange="guardarArquivoSemAnalisar(event)">
+      <span id="documentos-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
+    </div>
+
+    <div class="form-group" style="max-width:420px;margin-bottom:14px;">
+      <label for="documentos-busca">Buscar por nome do arquivo</label>
+      <input type="search" id="documentos-busca" placeholder="Ex.: mercado, nota, uber..."
+             autocomplete="off" oninput="filtrarDocumentosArmazenados()">
+    </div>
+
+    <ul id="documentos-armazenados-lista" class="doc-lista" aria-label="Documentos guardados na nuvem"></ul>
+  </section>
+
+  </div>
+  <!-- fim #painel-documentos -->
 
   <!-- ══════ PAINEL: CONFIGURAÇÕES ══════ -->
   <div id="painel-config" role="tabpanel" aria-labelledby="tab-btn-config" tabindex="0" hidden>
@@ -1369,8 +1385,8 @@ async function iniciarAppLogado() {
 // ═══════════════════════════════════════════════════
 //  NAVEGAÇÃO POR ABAS
 // ═══════════════════════════════════════════════════
-const ABAS = ['lancamentos', 'saldos', 'config'];
-const ROTULO_ABA = { lancamentos: 'Lançamentos', saldos: 'Saldos', config: 'Configurações' };
+const ABAS = ['lancamentos', 'saldos', 'documentos', 'config'];
+const ROTULO_ABA = { lancamentos: 'Lançamentos', saldos: 'Saldos', documentos: 'Documentos', config: 'Configurações' };
 let abaAtual = 'lancamentos';
 
 function mudarAba(nome) {
@@ -1995,16 +2011,34 @@ async function carregarDocumentosArmazenados() {
   renderizarDocumentosArmazenados();
 }
 
-function renderizarDocumentosArmazenados() {
+function mostrarStatusDocumentos(msg, isError) {
+  const el = document.getElementById('documentos-status');
+  if(el) { el.textContent = msg; el.style.color = isError ? 'var(--red)' : 'var(--text2)'; }
+}
+
+function filtrarDocumentosArmazenados() {
+  const termo = (document.getElementById('documentos-busca').value || '').trim().toLowerCase();
+  const filtrados = termo
+    ? documentosArmazenados.filter(doc => doc.nome_arquivo.toLowerCase().includes(termo))
+    : documentosArmazenados;
+  renderizarDocumentosArmazenados(filtrados);
+}
+
+function renderizarDocumentosArmazenados(lista) {
   const container = document.getElementById('documentos-armazenados-lista');
   if(!container) return;
+  const itens = lista || documentosArmazenados;
 
   if(!documentosArmazenados.length) {
     container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento guardado ainda.</li>';
     return;
   }
+  if(!itens.length) {
+    container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento encontrado para essa busca.</li>';
+    return;
+  }
 
-  container.innerHTML = documentosArmazenados.map(doc => (
+  container.innerHTML = itens.map(doc => (
     '<li>' +
       '<div class="doc-info">' +
         '<span class="doc-nome" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</span>' +
@@ -2014,6 +2048,8 @@ function renderizarDocumentosArmazenados() {
       '<div class="doc-acoes">' +
         '<button type="button" class="btn btn-secondary" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
           'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>' +
+        '<button type="button" class="btn btn-secondary" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
+          'aria-label="Baixar '+escaparHTML(doc.nome_arquivo)+'">⬇️ Baixar</button>' +
         '<button type="button" class="btn-icon" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
           'aria-label="Excluir '+escaparHTML(doc.nome_arquivo)+'">🗑️</button>' +
       '</div>' +
@@ -2048,7 +2084,7 @@ async function uploadDocumentoStorage(file) {
   }
 
   documentosArmazenados.unshift(registro);
-  renderizarDocumentosArmazenados();
+  filtrarDocumentosArmazenados();
 }
 
 async function guardarArquivoSemAnalisar(event) {
@@ -2058,16 +2094,16 @@ async function guardarArquivoSemAnalisar(event) {
 
   const btn = document.getElementById('btn-leitor-guardar');
   if(btn) btn.setAttribute('aria-disabled', 'true');
-  mostrarStatusLeitorIA('Guardando arquivo na nuvem, aguarde...');
+  mostrarStatusDocumentos('Guardando arquivo na nuvem, aguarde...');
   anunciar('Guardando arquivo na nuvem. Aguarde.');
 
   try {
     await uploadDocumentoStorage(file);
-    mostrarStatusLeitorIA('Arquivo "' + file.name + '" guardado com sucesso.');
+    mostrarStatusDocumentos('Arquivo "' + file.name + '" guardado com sucesso.');
     anunciar('Arquivo "' + file.name + '" guardado na nuvem.');
     mostrarToast('Documento guardado.');
   } catch(err) {
-    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    mostrarStatusDocumentos('Erro: ' + err.message, true);
     anunciar('Erro ao guardar arquivo: ' + err.message, true);
   } finally {
     if(btn) btn.removeAttribute('aria-disabled');
@@ -2075,11 +2111,45 @@ async function guardarArquivoSemAnalisar(event) {
   }
 }
 
+// Baixa o arquivo original direto para o dispositivo, sem enviar para a IA.
+async function baixarDocumentoArmazenado(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+
+  mostrarStatusDocumentos('Baixando ' + doc.nome_arquivo + '...');
+  anunciar('Baixando ' + doc.nome_arquivo + '. Aguarde.');
+
+  try {
+    const { data: blob, error } = await sb.storage.from('documentos').download(doc.caminho);
+    if(error) throw new Error(error.message);
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.nome_arquivo;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    mostrarStatusDocumentos('Download de ' + doc.nome_arquivo + ' concluído.');
+    anunciar('Download de ' + doc.nome_arquivo + ' concluído.');
+  } catch(err) {
+    mostrarStatusDocumentos('Erro: ' + err.message, true);
+    anunciar('Erro ao baixar documento: ' + err.message, true);
+    mostrarToast('Erro ao baixar documento.', true);
+  }
+}
+
+// Analisar um documento já guardado: muda para a aba Lançamentos (onde o
+// formulário e o status da IA ficam visíveis) e reaproveita o mesmo fluxo
+// usado para um arquivo recém-selecionado.
 async function analisarDocumentoArmazenado(id) {
   const doc = documentosArmazenados.find(d => d.id === id);
   if(!doc) return;
 
-  mostrarStatusLeitorIA('Baixando documento guardado, aguarde...');
+  mudarAba('documentos'); // mantém contexto até confirmar o download
+  mostrarStatusDocumentos('Baixando documento guardado, aguarde...');
   anunciar('Baixando documento guardado. Aguarde.');
 
   try {
@@ -2092,9 +2162,13 @@ async function analisarDocumentoArmazenado(id) {
     const blob = await resp.blob();
     const file = new File([blob], doc.nome_arquivo, { type: doc.mime_type || blob.type });
 
+    mostrarStatusDocumentos('Documento baixado. Enviando para a IA...');
+    mudarAba('lancamentos');
+
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
     await processarConteudoIA(tipo, conteudo, mimeType, file.name);
   } catch(err) {
+    mostrarStatusDocumentos('Erro: ' + err.message, true);
     mostrarStatusLeitorIA('Erro: ' + err.message, true);
     anunciar('Erro ao analisar documento guardado: ' + err.message, true);
   }
@@ -2121,7 +2195,7 @@ async function excluirDocumentoArmazenado(id) {
   }
 
   documentosArmazenados = documentosArmazenados.filter(d => d.id !== id);
-  renderizarDocumentosArmazenados();
+  filtrarDocumentosArmazenados();
   anunciar('Documento "' + doc.nome_arquivo + '" excluído.');
   mostrarToast('Documento excluído.');
 }
