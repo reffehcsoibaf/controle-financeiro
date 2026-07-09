@@ -119,36 +119,60 @@ export default {
 };
 
 // ==================== PROVEDOR: GEMINI ====================
+// Lista de modelos candidatos, em ordem de preferência. Se o Google
+// descontinuar um (o que tem acontecido com frequência), o próximo da
+// lista assume automaticamente na próxima leitura — sem precisar editar
+// o Worker toda vez que um nome de modelo for aposentado.
+const MODELOS_GEMINI_CANDIDATOS = [
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-3.5-flash',
+];
+
 async function lerComGemini({ apiKey, documento }) {
-  const modelo = 'gemini-2.5-flash'; // GA estável, multimodal, confirmado no free tier (não usar nomes "preview", que são desativados sem aviso)
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-
   const parte = montarParteConteudo(documento);
+  let ultimoErro = null;
 
-  const resposta = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: PROMPT_SISTEMA }] },
-      contents: [{ role: 'user', parts: [parte] }],
-      generationConfig: { temperature: 0 },
-    }),
-  });
+  for (const modelo of MODELOS_GEMINI_CANDIDATOS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+    try {
+      const resposta = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: PROMPT_SISTEMA }] },
+          contents: [{ role: 'user', parts: [parte] }],
+          generationConfig: { temperature: 0 },
+        }),
+      });
 
-  if (!resposta.ok) {
-    const corpoErro = await resposta.text();
-    throw new Error(`Gemini retornou ${resposta.status}: ${corpoErro}`);
+      if (!resposta.ok) {
+        const corpoErro = await resposta.text();
+        if (resposta.status === 404 || resposta.status === 503) {
+          console.log(`[gemini] Modelo "${modelo}" indisponível (${resposta.status}), tentando o próximo candidato.`);
+          ultimoErro = new Error(`Gemini (${modelo}) retornou ${resposta.status}: ${corpoErro}`);
+          continue;
+        }
+        throw new Error(`Gemini (${modelo}) retornou ${resposta.status}: ${corpoErro}`);
+      }
+
+      const dados = await resposta.json();
+      const texto = dados?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!texto) {
+        throw new Error(`Gemini (${modelo}) não retornou texto utilizável (possível bloqueio de segurança ou resposta vazia).`);
+      }
+
+      const extraido = extrairJSON(texto);
+      if (!extraido) throw new Error(`Não foi possível interpretar o JSON retornado pelo Gemini (${modelo}).`);
+      return extraido;
+    } catch (e) {
+      ultimoErro = e;
+      continue;
+    }
   }
 
-  const dados = await resposta.json();
-  const texto = dados?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!texto) {
-    throw new Error('Gemini não retornou texto utilizável (possível bloqueio de segurança ou resposta vazia).');
-  }
-
-  const extraido = extrairJSON(texto);
-  if (!extraido) throw new Error('Não foi possível interpretar o JSON retornado pelo Gemini.');
-  return extraido;
+  throw ultimoErro || new Error('Nenhum modelo Gemini candidato respondeu.');
 }
 
 function montarParteConteudo(documento) {
