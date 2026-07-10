@@ -200,7 +200,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="toc-title">Sumário</div>
     <nav>
       <a href="#visao-geral">Visão Geral</a>
-      <a href="#abas">As 3 Abas do App</a>
+      <a href="#abas">As 4 Abas do App</a>
       <a href="#conta">Conta e Acesso</a>
       <a href="#conta-criar" class="sub">Criar conta e entrar</a>
       <a href="#conta-migracao" class="sub">Migração de dados antigos</a>
@@ -217,6 +217,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#saldos">Saldos</a>
       <a href="#saldos-resumo" class="sub">Resumo em Tempo Real</a>
       <a href="#contas-cartoes" class="sub">Contas e Cartões</a>
+      <a href="#documentos">Documentos</a>
+      <a href="#documentos-guardar" class="sub">Guardar um arquivo</a>
+      <a href="#documentos-acoes" class="sub">Analisar, baixar e excluir</a>
+      <a href="#documentos-busca" class="sub">Buscar documentos</a>
       <a href="#configuracoes">Configurações</a>
       <a href="#planilhas" class="sub">Exportar e Importar Planilhas</a>
       <a href="#duplicatas" class="sub">Lançamentos Duplicados</a>
@@ -246,28 +250,34 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <p>
         O Controle Financeiro é um app pessoal para registrar entradas e saídas de dinheiro,
         com suporte a contas a pagar/receber, parcelamentos, lançamentos compostos por múltiplos
-        itens, leitura automática de notas fiscais e comprovantes por IA, controle de limite de
+        itens, leitura automática de notas fiscais e comprovantes por IA (inclusive por planilha
+        XLSX ou texto colado), armazenamento desses documentos na nuvem, controle de limite de
         cartão de crédito, filtros avançados e sincronização na nuvem via Supabase — seus dados
         ficam disponíveis em qualquer dispositivo onde você fizer login.
       </p>
-      <p>A tela principal é organizada em <strong>três abas</strong>: Lançamentos, Saldos e Configurações.</p>
+      <p>A tela principal é organizada em <strong>quatro abas</strong>: Lançamentos, Saldos, Documentos e Configurações. O Resumo em Tempo Real fica sempre visível no topo, em qualquer aba.</p>
     </section>
 
-    <!-- ══ AS 3 ABAS ══ -->
+    <!-- ══ AS 4 ABAS ══ -->
     <section class="card" id="abas">
-      <h2><span aria-hidden="true">🗂️</span> As 3 Abas do App</h2>
+      <h2><span aria-hidden="true">🗂️</span> As 4 Abas do App</h2>
       <p class="secao-desc">Como o app está organizado hoje</p>
       <table class="tabela-campos">
         <thead><tr><th>Aba</th><th>O que você encontra nela</th></tr></thead>
         <tbody>
           <tr><td class="campo-nome">📋 Lançamentos</td><td>Leitor de Notas com IA, formulário de Novo Lançamento, Filtros e a tabela de lançamentos.</td></tr>
-          <tr><td class="campo-nome">📊 Saldos</td><td>Resumo em Tempo Real (totais) e Contas e Cartões (saldo de contas correntes e limite de cartões de crédito).</td></tr>
+          <tr><td class="campo-nome">📊 Saldos</td><td>Contas e Cartões (saldo de contas correntes e limite de cartões de crédito).</td></tr>
+          <tr><td class="campo-nome">📂 Documentos</td><td>Notas fiscais e comprovantes guardados na nuvem — analisar, baixar ou excluir, com busca por nome.</td></tr>
           <tr><td class="campo-nome">⚙️ Configurações</td><td>Exportar/Importar planilhas, remover duplicatas e Gerenciar Listas (Banco, Categoria, Credor, etc.).</td></tr>
         </tbody>
       </table>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span>Você pode navegar entre as abas pelo teclado: com o foco em uma aba, use as setas ← e → para trocar de aba.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>O <strong>Resumo em Tempo Real</strong> (Total Geral, Pago, Pendente e Registros visíveis) não pertence a nenhuma aba específica — ele fica sempre visível no topo da tela, não importa em qual aba você esteja.</span>
       </div>
     </section>
 
@@ -328,16 +338,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <p>
         Na aba <strong>Lançamentos</strong>, logo acima do formulário, você encontra o botão
         <span class="btn-demo btn-demo-primary">📎 Selecionar Documento</span>. Ele aceita imagem
-        (foto ou print), PDF, TXT ou XML.
+        (foto ou print), PDF, TXT, XML ou <strong>XLSX</strong> (planilha). Também é possível colar o
+        texto do comprovante diretamente, sem precisar de arquivo — veja o campo
+        <strong>"Ou cole o texto do comprovante"</strong>, logo abaixo do botão.
       </p>
       <div class="passos">
         <div class="passo">
           <div class="passo-num" aria-hidden="true">1</div>
-          <div class="passo-texto">Clique em <strong>Selecionar Documento</strong> e escolha o arquivo da nota fiscal, recibo ou comprovante de pagamento/transferência.</div>
+          <div class="passo-texto">Clique em <strong>Selecionar Documento</strong> e escolha o arquivo da nota fiscal, recibo ou comprovante de pagamento/transferência — ou cole o texto e clique em <strong>🔎 Analisar Texto</strong>.</div>
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">2</div>
-          <div class="passo-texto">A IA analisa o documento e extrai data, valor, banco/instituição, estabelecimento, forma de pagamento, categoria sugerida, credor, devedor e uma descrição curta.</div>
+          <div class="passo-texto">A IA analisa o conteúdo e extrai data, valor, banco/instituição, estabelecimento, forma de pagamento, categoria sugerida, credor, devedor e uma descrição curta.</div>
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">3</div>
@@ -351,6 +363,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="callout callout-warn">
         <span class="callout-icon" aria-hidden="true">⚠️</span>
         <span>Sempre confira os dados preenchidos antes de salvar o lançamento — a leitura automática é uma sugestão, não uma confirmação. Se o tipo (Entrada/Saída) não ficar claro no documento, o app mantém o botão de Saída selecionado por padrão.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>O checkbox <strong>"Também guardar este arquivo na aba Documentos"</strong>, marcado por padrão, salva uma cópia do arquivo enviado na nuvem ao mesmo tempo em que ele é analisado — você não precisa enviar duas vezes. Veja a seção <a href="#documentos">Documentos</a> para mais detalhes.</span>
       </div>
     </section>
 
@@ -449,13 +465,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">4</div>
-          <div class="passo-texto">O campo <strong>Valor</strong> principal do formulário é calculado e travado automaticamente como a soma de todos os itens — você não precisa (e não deve) preenchê-lo manualmente nesse caso.</div>
+          <div class="passo-texto">O campo <strong>Valor</strong> principal do formulário é calculado e travado automaticamente como a soma de todos os itens — você não precisa (e não deve) preenchê-lo manualmente nesse caso. O sinal final (Entrada ou Saída) continua vindo do toggle no topo do campo Valor, não de cada item.</div>
         </div>
       </div>
       <p>
         Para remover um item, clique no <strong>✕</strong> ao lado dele. Os campos de Categoria e
         Descrição principais do formulário são ignorados quando há itens, já que cada item tem os seus.
       </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span><strong>Desconto:</strong> adicione um item com valor <strong>negativo</strong> (ex.: <code>-10,00</code>) para descontar do total — útil quando a nota tem um desconto que não é um item de verdade. O toggle Entrada/Saída continua controlando a direção do total líquido.</span>
+      </div>
       <p>
         Na tabela, lançamentos com itens mostram um selo <span class="badge badge-multi">3 itens</span>
         e exibem uma linha de detalhe abaixo da linha principal para cada item.
@@ -514,8 +534,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </ul>
       <p>
         Clique em <strong>Filtrar</strong> para aplicar ou <strong>Limpar Filtros</strong> para
-        voltar a ver tudo. Os totais do Resumo (na aba Saldos) refletem sempre o que está filtrado
-        na tela, não o total absoluto da conta.
+        voltar a ver tudo. Os totais do <strong>Resumo em Tempo Real</strong>, sempre visível no topo
+        da tela, refletem sempre o que está filtrado, não o total absoluto da conta.
       </p>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
@@ -527,13 +547,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <!-- ══ SALDOS ══ -->
     <section class="card" id="saldos">
       <h2><span aria-hidden="true">📊</span> Saldos</h2>
-      <p class="secao-desc">Aba com o resumo financeiro e o controle de contas e cartões</p>
+      <p class="secao-desc">Aba com o controle de contas e cartões</p>
 
       <h3 id="saldos-resumo">Resumo em Tempo Real</h3>
       <p>
         Mostra <strong>Total Geral</strong>, <strong>Total Pago</strong>, <strong>Total Pendente</strong>
         e <strong>Registros visíveis</strong>, sempre recalculados de acordo com os filtros aplicados
-        na aba Lançamentos.
+        na aba Lançamentos. Diferente das outras seções deste guia, o Resumo não é exclusivo da aba
+        Saldos — ele fica fixo no topo da tela e aparece em qualquer aba que você estiver.
       </p>
 
       <h3 id="contas-cartoes">Contas e Cartões</h3>
@@ -549,6 +570,62 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span>Para o limite do cartão ser recalculado corretamente: compras no cartão devem usar a
         Categoria <strong>"Cartão de Crédito"</strong> com tipo <strong>Saída</strong>; o pagamento
         da fatura usa a mesma categoria com tipo <strong>Entrada</strong>.</span>
+      </div>
+    </section>
+
+    <!-- ══ DOCUMENTOS ══ -->
+    <section class="card" id="documentos">
+      <h2><span aria-hidden="true">📂</span> Documentos</h2>
+      <p class="secao-desc">Notas fiscais e comprovantes guardados na nuvem</p>
+      <p>
+        A aba Documentos guarda os arquivos originais (não só os dados extraídos deles) das suas
+        notas fiscais e comprovantes, num espaço de armazenamento privado — cada conta só acessa
+        os próprios arquivos. Serve tanto para arquivar comprovantes que você queira consultar
+        depois, quanto para reaproveitar a leitura por IA sem precisar enviar o mesmo arquivo de novo.
+      </p>
+
+      <h3 id="documentos-guardar">Guardar um arquivo</h3>
+      <p>
+        Existem duas formas de um arquivo chegar até essa aba:
+      </p>
+      <ul>
+        <li>
+          <strong>Ao analisar com a IA</strong> — na aba Lançamentos, com o checkbox
+          <strong>"Também guardar este arquivo na aba Documentos"</strong> marcado (é o padrão),
+          o arquivo é salvo automaticamente assim que a análise termina.
+        </li>
+        <li>
+          <strong>Guardar sem analisar</strong> — na própria aba Documentos, clique em
+          <span class="btn-demo btn-demo-primary">📤 Guardar Novo Arquivo</span> para arquivar um
+          documento sem gastar uma leitura de IA agora. Útil quando você só quer arquivar algo
+          pra consultar depois.
+        </li>
+      </ul>
+      <p>Formatos aceitos: imagem, PDF, TXT, XML e XLSX.</p>
+
+      <h3 id="documentos-acoes">Analisar, baixar e excluir</h3>
+      <p>Cada documento na lista tem três ações disponíveis:</p>
+      <table class="tabela-campos">
+        <thead><tr><th>Ação</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td class="campo-nome">🔎 Analisar</td><td>Baixa o arquivo de volta e envia para a IA, preenchendo o formulário de lançamento — o app troca automaticamente para a aba Lançamentos para você acompanhar e revisar o resultado.</td></tr>
+          <tr><td class="campo-nome">⬇️ Baixar</td><td>Baixa o arquivo original direto para o seu dispositivo, sem passar pela IA — para quando você só precisa do documento em si.</td></tr>
+          <tr><td class="campo-nome">🗑️ Excluir</td><td>Remove o arquivo permanentemente da nuvem, com uma confirmação antes. Essa ação não afeta nenhum lançamento já salvo.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="documentos-busca">Buscar documentos</h3>
+      <p>
+        O campo <strong>"Buscar por nome do arquivo"</strong>, no topo da aba, filtra a lista
+        conforme você digita. Como muitos comprovantes chegam com nomes genéricos (ex.:
+        <code>comprovante.pdf</code>), também dá pra filtrar por <strong>período</strong> — os
+        campos <strong>"Guardado de"</strong> e <strong>"Guardado até"</strong> combinam com a busca
+        por nome. Use <strong>Limpar Filtro</strong> para voltar a ver todos os documentos.
+      </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Guardar o arquivo é opcional e independente da análise por IA — você pode analisar
+        um documento sem guardá-lo (desmarque o checkbox), guardar sem analisar, ou os dois juntos.</span>
       </div>
     </section>
 
@@ -652,9 +729,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
       <h3>O Leitor de Notas com IA não preencheu nada, ou deu erro</h3>
       <p>
-        Confira se o arquivo é uma imagem legível, PDF, TXT ou XML. Documentos muito escuros,
-        cortados ou de baixa qualidade podem não ser lidos corretamente — nesse caso, preencha o
-        formulário manualmente. Se o erro persistir, tente novamente em alguns instantes.
+        Confira se o arquivo é uma imagem legível, PDF, TXT, XML ou XLSX (ou se o texto colado não
+        está vazio). Documentos muito escuros, cortados ou de baixa qualidade podem não ser lidos
+        corretamente — nesse caso, preencha o formulário manualmente. Se o erro persistir, tente
+        novamente em alguns instantes.
+      </p>
+
+      <h3>Não consigo analisar ou baixar um documento guardado</h3>
+      <p>
+        O app usa um link temporário e privado para buscar o arquivo de volta na hora de analisar
+        ou baixar — se a conexão cair no meio do processo, tente novamente clicando na mesma ação.
+        Se o documento tiver sido excluído por engano, não é possível recuperá-lo: nesse caso, será
+        preciso enviar o arquivo original de novo, se ainda o tiver salvo em outro lugar.
       </p>
 
       <h3>Apareceram lançamentos duplicados</h3>
@@ -672,8 +758,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
       <div class="divider"></div>
       <p style="color:var(--text3);font-size:12px;">
-        Guia atualizado conforme a versão mais recente do app. Caso encontre algo que não bata com
-        o que você vê na tela, é sinal de que o app evoluiu — pode pedir uma atualização deste guia.
+        Guia atualizado conforme a versão mais recente do app (confira o número no rodapé da tela
+        principal, ex.: v1.0.0). Caso encontre algo que não bata com o que você vê na tela, é sinal
+        de que o app evoluiu — pode pedir uma atualização deste guia.
       </p>
     </section>
 

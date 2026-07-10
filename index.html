@@ -993,10 +993,23 @@ select option{background:#1e2436;}
       <span id="documentos-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
 
-    <div class="form-group" style="max-width:420px;margin-bottom:14px;">
-      <label for="documentos-busca">Buscar por nome do arquivo</label>
-      <input type="search" id="documentos-busca" placeholder="Ex.: mercado, nota, uber..."
-             autocomplete="off" oninput="filtrarDocumentosArmazenados()">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div class="form-group" style="max-width:420px;flex:1;min-width:200px;margin:0;">
+        <label for="documentos-busca">Buscar por nome do arquivo</label>
+        <input type="search" id="documentos-busca" placeholder="Ex.: mercado, nota, uber..."
+               autocomplete="off" oninput="filtrarDocumentosArmazenados()">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="documentos-data-de">Guardado de</label>
+        <input type="date" id="documentos-data-de" oninput="filtrarDocumentosArmazenados()">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="documentos-data-ate">Guardado até</label>
+        <input type="date" id="documentos-data-ate" oninput="filtrarDocumentosArmazenados()">
+      </div>
+      <div style="display:flex;align-items:end;">
+        <button type="button" class="btn btn-secondary" onclick="limparFiltroDocumentos()">Limpar Filtro</button>
+      </div>
     </div>
 
     <ul id="documentos-armazenados-lista" class="doc-lista" aria-label="Documentos guardados na nuvem"></ul>
@@ -1161,7 +1174,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.0.0 · 10/07/2026
+  Controle Financeiro · v1.1.0 · 10/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -2028,11 +2041,29 @@ function mostrarStatusDocumentos(msg, isError) {
 }
 
 function filtrarDocumentosArmazenados() {
-  const termo = (document.getElementById('documentos-busca').value || '').trim().toLowerCase();
-  const filtrados = termo
-    ? documentosArmazenados.filter(doc => doc.nome_arquivo.toLowerCase().includes(termo))
-    : documentosArmazenados;
+  const termo   = (document.getElementById('documentos-busca').value || '').trim().toLowerCase();
+  const dataDe  = document.getElementById('documentos-data-de').value;
+  const dataAte = document.getElementById('documentos-data-ate').value;
+
+  const filtrados = documentosArmazenados.filter(doc => {
+    if(termo && !doc.nome_arquivo.toLowerCase().includes(termo)) return false;
+    if(doc.criado_em) {
+      const dataDoc = doc.criado_em.slice(0, 10); // AAAA-MM-DD, comparável direto como texto
+      if(dataDe && dataDoc < dataDe) return false;
+      if(dataAte && dataDoc > dataAte) return false;
+    }
+    return true;
+  });
+
   renderizarDocumentosArmazenados(filtrados);
+}
+
+function limparFiltroDocumentos() {
+  document.getElementById('documentos-busca').value = '';
+  document.getElementById('documentos-data-de').value = '';
+  document.getElementById('documentos-data-ate').value = '';
+  renderizarDocumentosArmazenados(documentosArmazenados);
+  anunciar('Filtro de documentos limpo.');
 }
 
 function renderizarDocumentosArmazenados(lista) {

@@ -4,6 +4,16 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.1.0 — 10/07/2026
+
+- Aba Documentos: além de buscar por nome do arquivo, agora dá pra filtrar por período (data em
+  que o documento foi guardado, de/até). Útil quando o nome do arquivo é genérico demais (ex.:
+  "comprovante.pdf") e não ajuda a diferenciar.
+- Botão "Limpar Filtro" para voltar a ver todos os documentos de uma vez.
+- Wiki atualizado: nova seção "Documentos" cobrindo guardar/analisar/baixar/excluir/buscar, e
+  correções na Visão Geral e na aba Saldos (o app agora tem 4 abas, não 3, e o Resumo em Tempo
+  Real ficou sempre visível no topo em vez de exclusivo da aba Saldos).
+
 ## v1.0.0 — 10/07/2026
 
 Primeira versão com número de versão rastreado. Este marco reúne tudo que já estava em produção
