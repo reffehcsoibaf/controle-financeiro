@@ -158,6 +158,20 @@ input.negativo{color:var(--red);}
 .config-lista-add{display:flex;gap:8px;max-width:420px;}
 .config-lista-add input{flex:1;}
 
+/* ── DOCUMENTOS ARMAZENADOS ── */
+.doc-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.doc-lista li{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:8px 12px;font-size:13px;
+}
+.doc-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.doc-nome{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;}
+.doc-meta{font-size:11px;color:var(--text3);}
+.doc-acoes{display:flex;gap:6px;flex-shrink:0;}
+.doc-acoes .btn{padding:6px 10px;font-size:12px;}
+.doc-lista-vazio{font-size:12px;color:var(--text3);}
+
 /* ── SELECT COM BOTÕES ── */
 .select-wrapper{display:flex;gap:6px;align-items:center;}
 .select-wrapper select{flex:1;min-width:0;}
@@ -614,6 +628,7 @@ select option{background:#1e2436;}
   <div class="tabs-nav" role="tablist" aria-label="Seções do Controle Financeiro" id="tabs-nav" onkeydown="navegarAbasTeclado(event)">
     <button type="button" role="tab" id="tab-btn-lancamentos" aria-selected="true" aria-controls="painel-lancamentos" tabindex="0" onclick="mudarAba('lancamentos')"><span aria-hidden="true">📋</span> Lançamentos</button>
     <button type="button" role="tab" id="tab-btn-saldos" aria-selected="false" aria-controls="painel-saldos" tabindex="-1" onclick="mudarAba('saldos')"><span aria-hidden="true">📊</span> Saldos</button>
+    <button type="button" role="tab" id="tab-btn-documentos" aria-selected="false" aria-controls="painel-documentos" tabindex="-1" onclick="mudarAba('documentos')"><span aria-hidden="true">📂</span> Documentos</button>
     <button type="button" role="tab" id="tab-btn-config" aria-selected="false" aria-controls="painel-config" tabindex="-1" onclick="mudarAba('config')"><span aria-hidden="true">⚙️</span> Configurações</button>
   </div>
 
@@ -637,11 +652,7 @@ select option{background:#1e2436;}
     </div>
   </div>
 
-  <!-- ══════ PAINEL: SALDOS ══════ -->
-  <div id="painel-saldos" role="tabpanel" aria-labelledby="tab-btn-saldos" tabindex="0" hidden>
-
-  <!-- ══ SALDOS ══ -->
-
+  <!-- ══ RESUMO EM TEMPO REAL (sempre visível, em qualquer aba) ══ -->
   <section class="card" aria-labelledby="titulo-saldos">
     <h2 class="card-title" id="titulo-saldos"><span aria-hidden="true">📊</span> Resumo em Tempo Real</h2>
     <div class="saldos-grid" role="list">
@@ -664,6 +675,9 @@ select option{background:#1e2436;}
     </div>
   </section>
 
+  <!-- ══════ PAINEL: SALDOS ══════ -->
+  <div id="painel-saldos" role="tabpanel" aria-labelledby="tab-btn-saldos" tabindex="0" hidden>
+
   <!-- ══ CONTAS E CARTÕES ══ -->
   <section class="card" aria-labelledby="titulo-contas">
     <h2 class="card-title" id="titulo-contas"><span aria-hidden="true">💳</span> Contas e Cartões</h2>
@@ -685,8 +699,8 @@ select option{background:#1e2436;}
   <section class="card" aria-labelledby="titulo-leitor">
     <h2 class="card-title" id="titulo-leitor"><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-      Envie uma imagem, PDF, TXT ou XML de uma nota fiscal ou comprovante. A IA vai ler o documento e
-      pré-preencher o formulário de lançamento abaixo. Confira sempre os campos antes de salvar.
+      Envie uma imagem, PDF, TXT, XML ou XLSX de uma nota fiscal ou comprovante — ou cole o texto abaixo.
+      A IA vai ler o conteúdo e pré-preencher o formulário de lançamento. Confira sempre os campos antes de salvar.
     </p>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <label for="input-leitor-ia"
@@ -698,14 +712,33 @@ select option{background:#1e2436;}
              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <span aria-hidden="true">📎</span> Selecionar Documento
       </label>
-      <input type="file" id="input-leitor-ia" accept="image/*,.pdf,.txt,.xml"
+      <input type="file" id="input-leitor-ia" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
              aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática"
              onchange="lerDocumentoIA(event)">
       <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
+
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="leitor-ia-salvar-tambem" checked style="width:auto;">
+      <label for="leitor-ia-salvar-tambem" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
+        Também guardar este arquivo na aba Documentos
+      </label>
+    </div>
+
+    <div class="form-group" style="margin-top:14px;">
+      <label for="leitor-ia-texto">Ou cole o texto do comprovante</label>
+      <textarea id="leitor-ia-texto" rows="4" placeholder="Cole aqui o texto do e-mail, mensagem ou comprovante..."></textarea>
+      <button type="button" class="btn btn-secondary" id="btn-leitor-ia-texto"
+              style="margin-top:8px;" onclick="analisarTextoColado()">
+        <span aria-hidden="true">🔎</span> Analisar Texto
+      </button>
+    </div>
+
     <div id="leitor-ia-sugestoes" aria-live="polite" style="margin-top:10px;"></div>
   </section>
+
+
 
   <!-- ══ FORMULÁRIO ══ -->
   <section class="card" aria-labelledby="titulo-form">
@@ -820,6 +853,9 @@ select option{background:#1e2436;}
               </span>
             </div>
           </div>
+          <p style="font-size:12px;color:var(--text3);margin:4px 0 8px;">
+            O sinal do botão Entrada/Saída acima vale para o total. Para descontos, adicione um item com valor negativo.
+          </p>
 
           <p id="itens-vazio-msg" style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">
             Nenhum item adicionado. Use o botão abaixo para lançamentos compostos por múltiplos valores e categorias.
@@ -922,6 +958,46 @@ select option{background:#1e2436;}
 
   </div>
   <!-- fim #painel-lancamentos -->
+
+  <!-- ══════ PAINEL: DOCUMENTOS ══════ -->
+  <div id="painel-documentos" role="tabpanel" aria-labelledby="tab-btn-documentos" tabindex="0" hidden>
+
+  <!-- ══ DOCUMENTOS ARMAZENADOS ══ -->
+  <section class="card" aria-labelledby="titulo-documentos">
+    <h2 class="card-title" id="titulo-documentos"><span aria-hidden="true">📂</span> Documentos Armazenados</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Notas fiscais e comprovantes guardados na nuvem. Analise qualquer um deles com a IA quando quiser,
+      baixe o arquivo original, ou apenas guarde um novo documento sem analisar agora.
+    </p>
+
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <label for="input-leitor-guardar"
+             class="btn btn-primary"
+             role="button"
+             tabindex="0"
+             id="btn-leitor-guardar"
+             aria-label="Selecionar arquivo para guardar na nuvem, sem analisar agora"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+        <span aria-hidden="true">📤</span> Guardar Novo Arquivo
+      </label>
+      <input type="file" id="input-leitor-guardar" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
+             aria-label="Selecionar arquivo para guardar na nuvem"
+             onchange="guardarArquivoSemAnalisar(event)">
+      <span id="documentos-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
+    </div>
+
+    <div class="form-group" style="max-width:420px;margin-bottom:14px;">
+      <label for="documentos-busca">Buscar por nome do arquivo</label>
+      <input type="search" id="documentos-busca" placeholder="Ex.: mercado, nota, uber..."
+             autocomplete="off" oninput="filtrarDocumentosArmazenados()">
+    </div>
+
+    <ul id="documentos-armazenados-lista" class="doc-lista" aria-label="Documentos guardados na nuvem"></ul>
+  </section>
+
+  </div>
+  <!-- fim #painel-documentos -->
 
   <!-- ══════ PAINEL: CONFIGURAÇÕES ══════ -->
   <div id="painel-config" role="tabpanel" aria-labelledby="tab-btn-config" tabindex="0" hidden>
@@ -1113,6 +1189,8 @@ const OPCOES_PADRAO = {
 let opcoesSelects = JSON.parse(JSON.stringify(OPCOES_PADRAO));
 // Configuração de contas/cartões por nome de banco: { tipo, saldo_inicial, limite_total }
 let contasConfig = {};
+// Documentos (notas/comprovantes) guardados no Supabase Storage
+let documentosArmazenados = [];
 
 // ═══════════════════════════════════════════════════
 //  ARIA LIVE
@@ -1290,6 +1368,7 @@ async function iniciarAppLogado() {
   await carregarOpcoesSupabase();
   await carregarContasConfigSupabase();
   await carregarLancamentosSupabase();
+  await carregarDocumentosArmazenados();
 
   renderizarTodosSelects();
   renderizarTodosFiltros();
@@ -1306,8 +1385,8 @@ async function iniciarAppLogado() {
 // ═══════════════════════════════════════════════════
 //  NAVEGAÇÃO POR ABAS
 // ═══════════════════════════════════════════════════
-const ABAS = ['lancamentos', 'saldos', 'config'];
-const ROTULO_ABA = { lancamentos: 'Lançamentos', saldos: 'Saldos', config: 'Configurações' };
+const ABAS = ['lancamentos', 'saldos', 'documentos', 'config'];
+const ROTULO_ABA = { lancamentos: 'Lançamentos', saldos: 'Saldos', documentos: 'Documentos', config: 'Configurações' };
 let abaAtual = 'lancamentos';
 
 function mudarAba(nome) {
@@ -1766,8 +1845,10 @@ function prepararArquivoParaIA(file) {
 
     const isImagem = tipoMime.startsWith('image/');
     const isPDF    = tipoMime === 'application/pdf' || ext === 'pdf';
+    const isXLSX   = ext === 'xlsx' || ext === 'xls' ||
+                      tipoMime.indexOf('spreadsheet') !== -1 || tipoMime === 'application/vnd.ms-excel';
     const isXML    = ext === 'xml' || tipoMime === 'text/xml' || tipoMime === 'application/xml';
-    const isTexto  = !isImagem && !isPDF && (tipoMime.startsWith('text/') || ext === 'txt' || isXML);
+    const isTexto  = !isImagem && !isPDF && !isXLSX && (tipoMime.startsWith('text/') || ext === 'txt' || isXML);
 
     if(isImagem || isPDF) {
       const reader = new FileReader();
@@ -1781,6 +1862,30 @@ function prepararArquivoParaIA(file) {
       };
       reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
       reader.readAsDataURL(file);
+    } else if(isXLSX) {
+      // Planilha: extraímos o conteúdo como texto (CSV por aba) no navegador
+      // e mandamos para a IA pelo mesmo caminho de texto — sem precisar de
+      // nenhuma mudança no worker do Cloudflare.
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const wb = XLSX.read(reader.result, { type: 'binary' });
+          let textoExtraido = '';
+          wb.SheetNames.forEach(nomeAba => {
+            const csv = XLSX.utils.sheet_to_csv(wb.Sheets[nomeAba]);
+            textoExtraido += '--- Planilha: ' + nomeAba + ' ---\n' + csv + '\n\n';
+          });
+          if(!textoExtraido.trim()) {
+            reject(new Error('A planilha parece estar vazia.'));
+            return;
+          }
+          resolve({ tipo: 'texto', conteudo: textoExtraido.slice(0, 50000), mimeType: 'text/plain' });
+        } catch(e) {
+          reject(new Error('Não foi possível ler a planilha. Verifique se o arquivo não está corrompido.'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+      reader.readAsBinaryString(file);
     } else if(isTexto) {
       const reader = new FileReader();
       reader.onload = () => resolve({
@@ -1791,9 +1896,33 @@ function prepararArquivoParaIA(file) {
       reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
       reader.readAsText(file, 'UTF-8');
     } else {
-      reject(new Error('Formato não suportado. Envie uma imagem, PDF, TXT ou XML.'));
+      reject(new Error('Formato não suportado. Envie uma imagem, PDF, TXT, XML ou XLSX.'));
     }
   });
+}
+
+// Envia o conteúdo (de arquivo ou texto colado) para a IA e aplica o resultado ao formulário.
+// Compartilhada entre lerDocumentoIA (arquivo) e analisarTextoColado (texto livre).
+async function processarConteudoIA(tipo, conteudo, mimeType, nomeArquivo) {
+  limparSugestoesIA();
+  mostrarStatusLeitorIA('Lendo documento com IA, aguarde...');
+  anunciar('Lendo documento com IA. Aguarde.');
+
+  const resp = await fetch('/api/ler-documento', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo })
+  });
+
+  let json;
+  try { json = await resp.json(); } catch(e) { json = null; }
+
+  if(!resp.ok || !json || !json.ok) {
+    const msgErro = (json && json.erro) || 'Falha ao ler o documento (' + resp.status + ').';
+    throw new Error(msgErro);
+  }
+
+  aplicarDadosIAaoFormulario(json.dados || {});
 }
 
 async function lerDocumentoIA(event) {
@@ -1801,31 +1930,25 @@ async function lerDocumentoIA(event) {
   const file = input.files && input.files[0];
   if(!file) return;
 
-  limparSugestoesIA();
-  mostrarStatusLeitorIA('Lendo documento com IA, aguarde...');
-  anunciar('Lendo documento com IA. Aguarde.');
-
   const btn = document.getElementById('btn-leitor-ia');
   if(btn) btn.setAttribute('aria-disabled', 'true');
 
+  const salvarTambem = document.getElementById('leitor-ia-salvar-tambem').checked;
+
   try {
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
+    await processarConteudoIA(tipo, conteudo, mimeType, file.name);
 
-    const resp = await fetch('/api/ler-documento', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo: file.name })
-    });
-
-    let json;
-    try { json = await resp.json(); } catch(e) { json = null; }
-
-    if(!resp.ok || !json || !json.ok) {
-      const msgErro = (json && json.erro) || 'Falha ao ler o documento (' + resp.status + ').';
-      throw new Error(msgErro);
+    if(salvarTambem) {
+      try {
+        await uploadDocumentoStorage(file);
+        anunciar('Arquivo também guardado na nuvem.');
+      } catch(erroSalvar) {
+        // A análise já foi feita; um erro ao guardar não deve travar o fluxo,
+        // só avisa e deixa o formulário preenchido normalmente.
+        anunciar('Documento analisado, mas houve erro ao guardar o arquivo: ' + erroSalvar.message, true);
+      }
     }
-
-    aplicarDadosIAaoFormulario(json.dados || {});
   } catch(err) {
     mostrarStatusLeitorIA('Erro: ' + err.message, true);
     anunciar('Erro ao ler documento: ' + err.message, true);
@@ -1833,6 +1956,248 @@ async function lerDocumentoIA(event) {
     if(btn) btn.removeAttribute('aria-disabled');
     input.value = '';
   }
+}
+
+async function analisarTextoColado() {
+  const textarea = document.getElementById('leitor-ia-texto');
+  const texto = textarea.value.trim();
+  if(!texto) {
+    anunciar('Cole ou digite um texto para analisar.', true);
+    textarea.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-leitor-ia-texto');
+  if(btn) btn.disabled = true;
+
+  try {
+    await processarConteudoIA('texto', texto, 'text/plain', 'texto colado');
+  } catch(err) {
+    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    anunciar('Erro ao analisar texto: ' + err.message, true);
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  DOCUMENTOS ARMAZENADOS (Supabase Storage)
+// ═══════════════════════════════════════════════════
+function fmtTamanhoArquivo(bytes) {
+  if(!bytes && bytes !== 0) return '';
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function fmtDataHoraDoc(isoStr) {
+  if(!isoStr) return '';
+  try {
+    return new Date(isoStr).toLocaleString('pt-BR', {
+      day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+    });
+  } catch(e) { return ''; }
+}
+
+async function carregarDocumentosArmazenados() {
+  const { data, error } = await sb.from('documentos_armazenados')
+    .select('*')
+    .order('criado_em', { ascending: false });
+  if(error) {
+    mostrarToast('Erro ao carregar documentos guardados: ' + error.message, true);
+    return;
+  }
+  documentosArmazenados = data || [];
+  renderizarDocumentosArmazenados();
+}
+
+function mostrarStatusDocumentos(msg, isError) {
+  const el = document.getElementById('documentos-status');
+  if(el) { el.textContent = msg; el.style.color = isError ? 'var(--red)' : 'var(--text2)'; }
+}
+
+function filtrarDocumentosArmazenados() {
+  const termo = (document.getElementById('documentos-busca').value || '').trim().toLowerCase();
+  const filtrados = termo
+    ? documentosArmazenados.filter(doc => doc.nome_arquivo.toLowerCase().includes(termo))
+    : documentosArmazenados;
+  renderizarDocumentosArmazenados(filtrados);
+}
+
+function renderizarDocumentosArmazenados(lista) {
+  const container = document.getElementById('documentos-armazenados-lista');
+  if(!container) return;
+  const itens = lista || documentosArmazenados;
+
+  if(!documentosArmazenados.length) {
+    container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento guardado ainda.</li>';
+    return;
+  }
+  if(!itens.length) {
+    container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento encontrado para essa busca.</li>';
+    return;
+  }
+
+  container.innerHTML = itens.map(doc => (
+    '<li>' +
+      '<div class="doc-info">' +
+        '<span class="doc-nome" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</span>' +
+        '<span class="doc-meta">'+fmtDataHoraDoc(doc.criado_em)+
+          (doc.tamanho_bytes ? ' · '+fmtTamanhoArquivo(doc.tamanho_bytes) : '')+'</span>' +
+      '</div>' +
+      '<div class="doc-acoes">' +
+        '<button type="button" class="btn btn-secondary" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
+          'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>' +
+        '<button type="button" class="btn btn-secondary" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
+          'aria-label="Baixar '+escaparHTML(doc.nome_arquivo)+'">⬇️ Baixar</button>' +
+        '<button type="button" class="btn-icon" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
+          'aria-label="Excluir '+escaparHTML(doc.nome_arquivo)+'">🗑️</button>' +
+      '</div>' +
+    '</li>'
+  )).join('');
+}
+
+// Envia o arquivo bruto para o bucket privado "documentos" e registra os metadados.
+// Cada usuário só acessa a própria pasta (política RLS baseada no user_id no caminho).
+async function uploadDocumentoStorage(file) {
+  const nomeSeguro = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const caminho = usuarioAtual.id + '/' + Date.now() + '-' + nomeSeguro;
+
+  const { error: erroUpload } = await sb.storage.from('documentos').upload(caminho, file, {
+    contentType: file.type || 'application/octet-stream',
+    upsert: false
+  });
+  if(erroUpload) throw new Error('Falha ao enviar o arquivo: ' + erroUpload.message);
+
+  const { data: registro, error: erroInsert } = await sb.from('documentos_armazenados').insert({
+    user_id: usuarioAtual.id,
+    nome_arquivo: file.name,
+    caminho: caminho,
+    mime_type: file.type || null,
+    tamanho_bytes: file.size || null
+  }).select().single();
+
+  if(erroInsert) {
+    // Remove o arquivo órfão do storage já que o registro de metadados falhou
+    await sb.storage.from('documentos').remove([caminho]);
+    throw new Error('Falha ao registrar o documento: ' + erroInsert.message);
+  }
+
+  documentosArmazenados.unshift(registro);
+  filtrarDocumentosArmazenados();
+}
+
+async function guardarArquivoSemAnalisar(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if(!file) return;
+
+  const btn = document.getElementById('btn-leitor-guardar');
+  if(btn) btn.setAttribute('aria-disabled', 'true');
+  mostrarStatusDocumentos('Guardando arquivo na nuvem, aguarde...');
+  anunciar('Guardando arquivo na nuvem. Aguarde.');
+
+  try {
+    await uploadDocumentoStorage(file);
+    mostrarStatusDocumentos('Arquivo "' + file.name + '" guardado com sucesso.');
+    anunciar('Arquivo "' + file.name + '" guardado na nuvem.');
+    mostrarToast('Documento guardado.');
+  } catch(err) {
+    mostrarStatusDocumentos('Erro: ' + err.message, true);
+    anunciar('Erro ao guardar arquivo: ' + err.message, true);
+  } finally {
+    if(btn) btn.removeAttribute('aria-disabled');
+    input.value = '';
+  }
+}
+
+// Baixa o arquivo original direto para o dispositivo, sem enviar para a IA.
+async function baixarDocumentoArmazenado(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+
+  mostrarStatusDocumentos('Baixando ' + doc.nome_arquivo + '...');
+  anunciar('Baixando ' + doc.nome_arquivo + '. Aguarde.');
+
+  try {
+    const { data: blob, error } = await sb.storage.from('documentos').download(doc.caminho);
+    if(error) throw new Error(error.message);
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.nome_arquivo;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    mostrarStatusDocumentos('Download de ' + doc.nome_arquivo + ' concluído.');
+    anunciar('Download de ' + doc.nome_arquivo + ' concluído.');
+  } catch(err) {
+    mostrarStatusDocumentos('Erro: ' + err.message, true);
+    anunciar('Erro ao baixar documento: ' + err.message, true);
+    mostrarToast('Erro ao baixar documento.', true);
+  }
+}
+
+// Analisar um documento já guardado: muda para a aba Lançamentos (onde o
+// formulário e o status da IA ficam visíveis) e reaproveita o mesmo fluxo
+// usado para um arquivo recém-selecionado.
+async function analisarDocumentoArmazenado(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+
+  mudarAba('documentos'); // mantém contexto até confirmar o download
+  mostrarStatusDocumentos('Baixando documento guardado, aguarde...');
+  anunciar('Baixando documento guardado. Aguarde.');
+
+  try {
+    const { data: assinado, error: erroSigned } = await sb.storage
+      .from('documentos').createSignedUrl(doc.caminho, 60);
+    if(erroSigned) throw new Error(erroSigned.message);
+
+    const resp = await fetch(assinado.signedUrl);
+    if(!resp.ok) throw new Error('Não foi possível baixar o arquivo (HTTP ' + resp.status + ').');
+    const blob = await resp.blob();
+    const file = new File([blob], doc.nome_arquivo, { type: doc.mime_type || blob.type });
+
+    mostrarStatusDocumentos('Documento baixado. Enviando para a IA...');
+    mudarAba('lancamentos');
+
+    const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
+    await processarConteudoIA(tipo, conteudo, mimeType, file.name);
+  } catch(err) {
+    mostrarStatusDocumentos('Erro: ' + err.message, true);
+    mostrarStatusLeitorIA('Erro: ' + err.message, true);
+    anunciar('Erro ao analisar documento guardado: ' + err.message, true);
+  }
+}
+
+async function excluirDocumentoArmazenado(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+  if(!confirm('Excluir o documento "' + doc.nome_arquivo + '"? Essa ação não pode ser desfeita.')) return;
+
+  const { error: erroStorage } = await sb.storage.from('documentos').remove([doc.caminho]);
+  if(erroStorage) {
+    anunciar('Erro ao excluir arquivo: ' + erroStorage.message, true);
+    mostrarToast('Erro ao excluir arquivo.', true);
+    return;
+  }
+
+  const { error: erroDb } = await sb.from('documentos_armazenados')
+    .delete().eq('id', id).eq('user_id', usuarioAtual.id);
+  if(erroDb) {
+    anunciar('Erro ao excluir registro: ' + erroDb.message, true);
+    mostrarToast('Erro ao excluir documento.', true);
+    return;
+  }
+
+  documentosArmazenados = documentosArmazenados.filter(d => d.id !== id);
+  filtrarDocumentosArmazenados();
+  anunciar('Documento "' + doc.nome_arquivo + '" excluído.');
+  mostrarToast('Documento excluído.');
 }
 
 // Tenta encontrar, dentro das opções já cadastradas pelo usuário, uma opção
@@ -2202,7 +2567,7 @@ function adicionarItem(dados) {
     '<div class="form-group">' +
       '<label for="item-val-'+id+'">Valor do item <span class="sr-only">(item '+idx+')</span></label>' +
       '<input type="number" id="item-val-'+id+'" step="0.01"' +
-             ' placeholder="Ex.: -50,00 ou 120,00"' +
+             ' placeholder="Ex.: 50,00 (ou -10,00 para desconto)"' +
              ' aria-describedby="itens-total-badge"' +
              ' value="'+(dados&&dados.valor!==''?dados.valor:'')+'"' +
              ' oninput="onItemValorInput('+id+', this)" autocomplete="off">' +
@@ -2356,11 +2721,13 @@ function atualizarNotaValor() {
   const total = itensFormulario.reduce((s,item)=>{
     const v=parseFloat(item.valor); return s+(isNaN(v)?0:v);
   },0);
+  const totalAbs = Math.abs(total);
+  const sinal = obterTipoValor()==='saida' ? -1 : 1;
   const campoValor = document.getElementById('f-valor');
-  campoValor.value = total.toFixed(2);
+  campoValor.value = totalAbs.toFixed(2);
   colorirValor(campoValor);
   nota.style.display = '';
-  nota.innerHTML = 'Valor calculado automaticamente pela soma dos itens: <span>'+fmtValor(total)+'</span>';
+  nota.innerHTML = 'Valor calculado automaticamente pela soma dos itens: <span>'+fmtValor(totalAbs*sinal)+'</span>';
 }
 
 function limparItens() {
@@ -2392,6 +2759,7 @@ function definirTipoValor(tipo) {
   document.getElementById('f-tipo-saida').setAttribute('aria-checked', tipo==='saida' ? 'true' : 'false');
   document.getElementById('f-tipo-entrada').setAttribute('aria-checked', tipo==='entrada' ? 'true' : 'false');
   colorirValor(document.getElementById('f-valor'));
+  atualizarNotaValor();
   anunciar(tipo==='saida' ? 'Tipo definido como Saída (despesa).' : 'Tipo definido como Entrada (receita).');
 }
 
@@ -2400,14 +2768,8 @@ function obterTipoValor() {
 }
 
 function colorirValor(el) {
-  // Quando há itens, o campo é só uma exibição calculada da soma deles
-  // (cada item pode ter seu próprio sinal), então mantemos a lógica antiga.
-  if(itensFormulario.length > 0) {
-    const v = parseFloat(el.value);
-    el.classList.toggle('negativo', !isNaN(v) && v<0);
-    return;
-  }
-  // Sem itens: o campo só aceita valor absoluto — o sinal vem do toggle Entrada/Saída
+  // O campo sempre guarda um valor absoluto — o sinal final vem do toggle
+  // Entrada/Saída, tanto para lançamentos simples quanto para os com itens.
   if(el.value.startsWith('-')) el.value = el.value.slice(1);
   const v = parseFloat(el.value);
   el.classList.toggle('negativo', obterTipoValor()==='saida' && !isNaN(v) && v>0);
@@ -2422,9 +2784,10 @@ async function salvarLancamento() {
   }
   let valor;
   if(itensFormulario.length>0) {
-    valor = itensFormulario.reduce((s,item)=>{
+    const somaItens = itensFormulario.reduce((s,item)=>{
       const v=parseFloat(item.valor); return s+(isNaN(v)?0:v);
     },0);
+    valor = obterTipoValor()==='saida' ? -Math.abs(somaItens) : Math.abs(somaItens);
   } else {
     const valorStr = document.getElementById('f-valor').value;
     const valorAbs = parseFloat(valorStr);
@@ -2548,6 +2911,7 @@ function editarLancamento(id) {
   document.getElementById('f-devedor').value         = l.devedor||'';
   limparItens();
   if(l.itens && l.itens.length>0) {
+    definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
     l.itens.forEach(item=>{
       itensFormulario.push({id:proximoItemId++, valor:item.valor, categoria:item.categoria, descricao:item.descricao});
       adicionarItem(itensFormulario[itensFormulario.length-1]);
