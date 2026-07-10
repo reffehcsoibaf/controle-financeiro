@@ -1,0 +1,70 @@
+# Changelog — Controle Financeiro
+
+Todas as mudanças relevantes do app ficam registradas aqui, da mais recente para a mais antiga.
+O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
+está publicada e comparar com o que está descrito aqui.
+
+## v1.0.0 — 10/07/2026
+
+Primeira versão com número de versão rastreado. Este marco reúne tudo que já estava em produção
+até esta data:
+
+### Leitor de Notas e Comprovantes (IA)
+- Leitura automática de notas fiscais e comprovantes via IA, com pré-preenchimento do formulário de
+  lançamento (data, valor, banco, categoria, forma de pagamento, credor, devedor, descrição).
+- Suporte a imagem, PDF, TXT, XML e XLSX, além de texto colado diretamente (sem precisar de arquivo).
+- Estratégia de provedor: tenta Google Gemini primeiro (gratuito) e usa Anthropic Claude como fallback
+  automático se o Gemini falhar.
+- Sugestões da IA que não batem com opções já cadastradas (banco, categoria etc.) aparecem com botão
+  de adicionar rápido.
+
+### Lançamentos
+- Campo de valor com seletor "Entrada / Saída" — não é mais preciso digitar sinal negativo; o sinal é
+  aplicado automaticamente conforme o tipo escolhido, tanto em lançamentos simples quanto com itens.
+- Lançamentos com múltiplos itens: cada item pode ter valor negativo para representar desconto,
+  descontado do total antes de aplicar o sinal geral do lançamento.
+- Parcelamento com o mesmo seletor Entrada/Saída, herdando o tipo do lançamento principal.
+- Descrição em campo multilinhas.
+
+### Contas e Cartões
+- Configuração de cada Banco/Cartão como Conta Corrente (com saldo inicial) ou Cartão de Crédito
+  (com limite total).
+- Saldo de conta corrente e limite de cartão calculados automaticamente a partir dos lançamentos
+  (Categoria "Cartão de Crédito" + Entrada/Saída definem o consumo e a quitação de fatura).
+
+### Documentos Armazenados
+- Upload de notas/comprovantes para um bucket privado no Supabase Storage, com metadados numa tabela
+  própria (nome, tamanho, data).
+- Cada usuário só acessa os próprios arquivos (RLS por pasta).
+- Ações por documento: analisar com IA, baixar o arquivo original, ou excluir.
+- Busca por nome de arquivo.
+
+### Navegação e organização
+- App reorganizado em abas: Lançamentos, Saldos, Documentos e Configurações — funciona igual em
+  desktop e celular, com navegação por teclado (setas, Home/End) e anúncios para leitor de tela.
+- Resumo em Tempo Real (saldo total, pago, pendente, contagem) sempre visível no topo, em qualquer aba.
+- Aba Configurações reúne exportar/importar XLSX, remover duplicatas, e gerenciamento das listas
+  (Banco, Categoria, Credor, Devedor, Forma de Pagamento, Parcela, Estabelecimento).
+
+### Infraestrutura
+- Migrado de Netlify para Cloudflare Workers (arquivos estáticos + rota `/api/ler-documento`).
+- Chaves de API (Gemini, Anthropic) nunca ficam no navegador — vivem só como variáveis de ambiente
+  no Cloudflare.
+
+---
+
+## Como usar este changelog daqui pra frente
+
+A cada mudança relevante entregue, um novo bloco de versão é adicionado no topo deste arquivo,
+seguindo o padrão:
+
+```
+## vX.Y.Z — DD/MM/AAAA
+- O que mudou, em linguagem direta.
+```
+
+- **X (major)**: mudança estrutural grande ou que quebra algo do funcionamento anterior.
+- **Y (minor)**: novo recurso.
+- **Z (patch)**: correção de bug ou ajuste pequeno.
+
+O rodapé do app (`index.html`) é atualizado junto, na mesma entrega, para sempre bater com este arquivo.
