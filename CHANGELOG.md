@@ -4,6 +4,13 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.1.1 — 12/07/2026
+
+- Correção: o Leitor de Notas e Comprovantes (IA) agora também extrai e preenche o campo
+  "Data Vencimento" quando o documento é um boleto ou fatura com essa informação. Antes, a IA só
+  identificava a data de emissão/transação — a data de vencimento nunca era procurada nem
+  preenchida no formulário.
+
 ## v1.1.0 — 10/07/2026
 
 - Aba Documentos: além de buscar por nome do arquivo, agora dá pra filtrar por período (data em

@@ -1174,7 +1174,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.1.0 · 10/07/2026
+  Controle Financeiro · v1.1.1 · 12/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -2261,6 +2261,15 @@ function aplicarDadosIAaoFormulario(dados) {
     if(dataValida) {
       document.getElementById('f-data-origem').value = dados.data;
       preenchidos.push('Data');
+    }
+  }
+
+  // Data de Vencimento (boletos e faturas)
+  if(dados.data_vencimento) {
+    const dataVencValida = /^\d{4}-\d{2}-\d{2}$/.test(dados.data_vencimento);
+    if(dataVencValida) {
+      document.getElementById('f-data-vencimento').value = dados.data_vencimento;
+      preenchidos.push('Data Vencimento');
     }
   }
 

@@ -24,6 +24,7 @@ Analise o documento enviado e devolva APENAS um objeto JSON (sem markdown, sem c
 
 {
   "data": "AAAA-MM-DD ou null",
+  "data_vencimento": "AAAA-MM-DD ou null (data de vencimento do boleto/fatura, se houver — é uma data DIFERENTE da data de emissão/transação, geralmente escrita como 'vencimento', 'venc.', 'data de vencimento' ou 'pagável até')",
   "valor": número absoluto (positivo, use ponto decimal), exatamente como consta no documento; null se não identificar,
   "tipo_transacao": "debito" | "credito" | "indefinido" (debito = despesa/pagamento/compra; credito = receita/recebimento; use "indefinido" se não tiver certeza),
   "banco": "nome do banco, instituição financeira ou cartão identificado, ou null",
@@ -39,6 +40,9 @@ Analise o documento enviado e devolva APENAS um objeto JSON (sem markdown, sem c
 Regras importantes:
 - Nunca invente dados que não estejam no documento. Se não tiver certeza de um campo, use null.
 - "data" deve ser a data da transação/emissão do documento, não a data atual.
+- "data_vencimento" só deve ser preenchida se o documento explicitamente mostrar uma data de
+  vencimento (comum em boletos e faturas). Se o documento for um comprovante de pagamento já
+  efetuado (Pix, recibo, etc.) sem menção a vencimento, deixe "data_vencimento" como null.
 - Datas no formato brasileiro (DD/MM/AAAA) devem ser convertidas para AAAA-MM-DD.
 - Se o documento tiver vários itens/valores, use o valor TOTAL da transação.
 - Responda SOMENTE com o JSON, nada mais.`;
