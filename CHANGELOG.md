@@ -4,12 +4,16 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
-## v1.1.1 — 12/07/2026
+## v1.2.0 — 12/07/2026
 
-- Correção: o Leitor de Notas e Comprovantes (IA) agora também extrai e preenche o campo
-  "Data Vencimento" quando o documento é um boleto ou fatura com essa informação. Antes, a IA só
-  identificava a data de emissão/transação — a data de vencimento nunca era procurada nem
-  preenchida no formulário.
+- Atalhos de teclado **Alt+1** a **Alt+4** para pular direto para qualquer aba (Lançamentos,
+  Saldos, Documentos, Configurações) de qualquer lugar da tela, sem precisar navegar até a barra
+  de abas primeiro. O foco vai para a aba escolhida e o leitor de tela anuncia a troca.
+- Nova página `changelog.html`, com o mesmo estilo visual do guia de uso, mostrando o histórico de
+  versões de forma organizada (sem precisar abrir o `CHANGELOG.md` bruto).
+- Link para o changelog adicionado ao lado do link "Ajuda" no cabeçalho do app, na tela de login
+  (ao lado do link do guia de uso), e no cabeçalho do próprio guia de uso — os três se
+  interligam.
 
 ## v1.1.0 — 10/07/2026
 

@@ -555,6 +555,7 @@ select option{background:#1e2436;}
     </div>
 
     <a href="wiki.html" target="_blank" class="login-guia-link">📖 O que é o Controle Financeiro? Veja o guia de uso</a>
+    <a href="changelog.html" target="_blank" class="login-guia-link">🗒️ Veja o histórico de mudanças (changelog)</a>
 
     <div class="auth-tabs" role="tablist" aria-label="Escolha entre entrar ou criar conta">
       <button type="button" class="auth-tab active" id="tab-login" role="tab"
@@ -621,6 +622,9 @@ select option{background:#1e2436;}
     <span class="user-email" id="user-email-display" aria-label="Usuário logado"></span>
     <a href="wiki.html" id="btn-ajuda" class="btn-logout" style="text-decoration:none;" aria-label="Abrir guia de uso do app">
       <span aria-hidden="true">📖</span> Ajuda
+    </a>
+    <a href="changelog.html" id="btn-changelog" class="btn-logout" style="text-decoration:none;" aria-label="Ver histórico de mudanças do app">
+      <span aria-hidden="true">🗒️</span> Changelog
     </a>
     <button type="button" id="btn-logout" class="btn-logout" onclick="fazerLogout()" aria-label="Sair da conta">
       <span aria-hidden="true">🚪</span> Sair
@@ -1174,7 +1178,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.1.1 · 12/07/2026
+  Controle Financeiro · v1.2.0 · 12/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1386,6 +1390,7 @@ async function iniciarAppLogado() {
 
   iniciarRelogio();
   registrarEventosModais();
+  registrarAtalhosGlobaisAbas();
 
   mostrarToast('Carregando seus dados...');
 
@@ -1439,6 +1444,27 @@ function navegarAbasTeclado(e) {
     mudarAba(novo);
     document.getElementById('tab-btn-' + novo).focus();
   }
+}
+
+// ═══════════════════════════════════════════════════
+//  ATALHOS DE TECLADO GLOBAIS — Alt+1 a Alt+4 trocam de aba
+//  Funciona em qualquer lugar da tela principal (não precisa
+//  estar com foco na navegação de abas). Ignorado se o app
+//  ainda não estiver logado/visível.
+// ═══════════════════════════════════════════════════
+const ATALHO_ABA_POR_TECLA = { '1':'lancamentos', '2':'saldos', '3':'documentos', '4':'config' };
+
+function registrarAtalhosGlobaisAbas() {
+  document.addEventListener('keydown', function(e) {
+    if(!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
+    const alvo = ATALHO_ABA_POR_TECLA[e.key];
+    if(!alvo) return;
+    if(document.getElementById('app-principal').style.display === 'none') return;
+    e.preventDefault();
+    mudarAba(alvo);
+    const btn = document.getElementById('tab-btn-' + alvo);
+    if(btn) btn.focus();
+  });
 }
 
 function registrarEventosModais() {
@@ -2261,15 +2287,6 @@ function aplicarDadosIAaoFormulario(dados) {
     if(dataValida) {
       document.getElementById('f-data-origem').value = dados.data;
       preenchidos.push('Data');
-    }
-  }
-
-  // Data de Vencimento (boletos e faturas)
-  if(dados.data_vencimento) {
-    const dataVencValida = /^\d{4}-\d{2}-\d{2}$/.test(dados.data_vencimento);
-    if(dataVencValida) {
-      document.getElementById('f-data-vencimento').value = dados.data_vencimento;
-      preenchidos.push('Data Vencimento');
     }
   }
 

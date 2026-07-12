@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle Financeiro — Changelog</title>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#171b26;--bg3:#1e2436;--card:#1a1f2e;
+  --border:#2a3050;--border2:#3a4568;
+  --text:#e8eaf2;--text2:#9aa3be;--text3:#6b7590;
+  --accent:#4f7cff;--accent2:#3a5fcc;
+  --green:#22c55e;--green2:#16a34a;
+  --red:#ef4444;--amber:#f59e0b;--purple:#a78bfa;--teal:#14b8a6;
+  --radius:10px;--radius-sm:6px;--radius-lg:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:3px;}
+.skip-link{
+  position:absolute;top:-100px;left:8px;background:var(--accent);color:#fff;
+  padding:8px 16px;border-radius:var(--radius-sm);font-weight:600;
+  z-index:9999;text-decoration:none;transition:top .1s;
+}
+.skip-link:focus{top:8px;}
+
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
+
+/* ── HEADER ── */
+.app-header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 24px;display:flex;align-items:center;
+  justify-content:space-between;height:56px;position:sticky;top:0;z-index:100;
+  flex-wrap:wrap;gap:8px;
+}
+.app-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.btn-voltar-app, .btn-guia{
+  background:var(--accent);border:none;color:#fff;
+  padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;
+  text-decoration:none;outline:none;
+}
+.btn-guia{background:transparent;border:1px solid var(--border);color:var(--text2);}
+.btn-guia:hover{border-color:var(--accent);color:var(--accent);}
+.btn-voltar-app:hover{background:var(--accent2);}
+.btn-voltar-app:focus-visible, .btn-guia:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ── LAYOUT ── */
+.wiki-shell{
+  max-width:900px;margin:0 auto;padding:24px 20px 80px;
+  display:flex;flex-direction:column;gap:24px;
+}
+
+.intro-card{
+  background:linear-gradient(135deg, rgba(79,124,255,.12), rgba(167,139,250,.08));
+  border:1px solid rgba(79,124,255,.25);border-radius:var(--radius-lg);
+  padding:24px;
+}
+.intro-card h1{font-size:22px;font-weight:700;margin-bottom:8px;color:var(--text);}
+.intro-card p{color:var(--text2);font-size:14px;max-width:680px;}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;}
+.card p{color:var(--text2);margin-bottom:10px;}
+.card ul, .card ol{color:var(--text2);margin:0 0 12px 0;padding-left:22px;display:flex;flex-direction:column;gap:6px;}
+.card li{padding-left:2px;}
+.card strong{color:var(--text);font-weight:600;}
+.card code{
+  background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  padding:1px 6px;font-size:12px;color:var(--teal);font-family:'Consolas',monospace;
+}
+
+/* ── VERSÕES ── */
+.versao-bloco{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:22px 24px;
+}
+.versao-bloco.atual{border-color:rgba(79,124,255,.4);}
+.versao-cabecalho{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;
+}
+.versao-numero{
+  font-size:18px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+.versao-badge{
+  background:rgba(79,124,255,.15);color:var(--accent);
+  border:1px solid rgba(79,124,255,.3);
+  border-radius:20px;padding:2px 11px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+.versao-data{color:var(--text3);font-size:12px;}
+.versao-secao{margin-top:14px;}
+.versao-secao h3{
+  font-size:13px;font-weight:700;color:var(--accent);
+  margin-bottom:6px;display:flex;align-items:center;gap:6px;
+}
+.versao-secao ul{color:var(--text2);margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:13px;}
+.versao-secao ul li strong{color:var(--text);}
+.versao-secao code{
+  background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  padding:1px 5px;font-size:12px;color:var(--teal);font-family:'Consolas',monospace;
+}
+
+.divider{height:1px;background:var(--border);margin:6px 0;}
+
+/* ── BOTÃO VOLTAR AO TOPO ── */
+.voltar-topo{
+  position:fixed;bottom:24px;right:24px;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  text-decoration:none;outline:none;
+}
+.voltar-topo:hover{background:var(--accent2);}
+.voltar-topo:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<a href="#conteudo-principal" class="skip-link">Pular para o conteúdo</a>
+
+<header class="app-header" role="banner">
+  <div class="app-logo">
+    <div class="logo-icon" aria-hidden="true">🗒️</div>
+    <span>Controle Financeiro — Changelog</span>
+  </div>
+  <div class="header-right">
+    <a href="wiki.html" class="btn-guia">
+      <span aria-hidden="true">📖</span> Guia de Uso
+    </a>
+    <a href="index.html" class="btn-voltar-app">
+      <span aria-hidden="true">💰</span> Abrir o App
+    </a>
+  </div>
+</header>
+
+<div class="wiki-shell">
+
+  <main id="conteudo-principal">
+
+    <div class="intro-card">
+      <h1>🗒️ Histórico de Mudanças</h1>
+      <p>
+        Aqui ficam registradas todas as mudanças relevantes entregues no Controle Financeiro,
+        da mais recente para a mais antiga. O número de versão no topo desta página sempre bate
+        com o número mostrado no rodapé do app — assim dá pra conferir se você está com a versão
+        mais atual e o que mudou desde a última vez que usou.
+      </p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+      <!-- ══ v1.1.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-1-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-1-0"><span aria-hidden="true">🏷️</span> v1.1.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">10/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📂</span> Aba Documentos</h3>
+          <ul>
+            <li>Além de buscar por nome do arquivo, agora dá pra filtrar por <strong>período</strong> (data em que o documento foi guardado, de/até) — útil quando o nome do arquivo é genérico demais (ex.: <code>comprovante.pdf</code>) e não ajuda a diferenciar.</li>
+            <li>Botão <strong>"Limpar Filtro"</strong> para voltar a ver todos os documentos de uma vez.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📖</span> Guia de Uso</h3>
+          <ul>
+            <li>Nova seção <strong>"Documentos"</strong> cobrindo guardar, analisar, baixar, excluir e buscar.</li>
+            <li>Correções na Visão Geral e na aba Saldos: o app agora tem <strong>4 abas</strong>, não 3, e o <strong>Resumo em Tempo Real</strong> ficou sempre visível no topo em vez de exclusivo da aba Saldos.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.0.0 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-0-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-0-0"><span aria-hidden="true">🏷️</span> v1.0.0</span>
+          <span class="versao-data">10/07/2026</span>
+        </div>
+        <p style="color:var(--text3);font-size:12px;margin-bottom:14px;">
+          Primeira versão com número de versão rastreado. Este marco reúne tudo que já estava em
+          produção até esta data.
+        </p>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h3>
+          <ul>
+            <li>Leitura automática de notas fiscais e comprovantes via IA, com pré-preenchimento do formulário de lançamento (data, valor, banco, categoria, forma de pagamento, credor, devedor, descrição).</li>
+            <li>Suporte a imagem, PDF, TXT, XML e XLSX, além de texto colado diretamente (sem precisar de arquivo).</li>
+            <li>Estratégia de provedor: tenta Google Gemini primeiro (gratuito) e usa Anthropic Claude como fallback automático se o Gemini falhar.</li>
+            <li>Sugestões da IA que não batem com opções já cadastradas (banco, categoria etc.) aparecem com botão de adicionar rápido.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">➕</span> Lançamentos</h3>
+          <ul>
+            <li>Campo de valor com seletor <strong>"Entrada / Saída"</strong> — não é mais preciso digitar sinal negativo; o sinal é aplicado automaticamente conforme o tipo escolhido, tanto em lançamentos simples quanto com itens.</li>
+            <li>Lançamentos com múltiplos itens: cada item pode ter valor negativo para representar desconto, descontado do total antes de aplicar o sinal geral do lançamento.</li>
+            <li>Parcelamento com o mesmo seletor Entrada/Saída, herdando o tipo do lançamento principal.</li>
+            <li>Descrição em campo multilinhas.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Contas e Cartões</h3>
+          <ul>
+            <li>Configuração de cada Banco/Cartão como Conta Corrente (com saldo inicial) ou Cartão de Crédito (com limite total).</li>
+            <li>Saldo de conta corrente e limite de cartão calculados automaticamente a partir dos lançamentos (Categoria "Cartão de Crédito" + Entrada/Saída definem o consumo e a quitação de fatura).</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📂</span> Documentos Armazenados</h3>
+          <ul>
+            <li>Upload de notas/comprovantes para um bucket privado no Supabase Storage, com metadados numa tabela própria (nome, tamanho, data).</li>
+            <li>Cada usuário só acessa os próprios arquivos (RLS por pasta).</li>
+            <li>Ações por documento: analisar com IA, baixar o arquivo original, ou excluir.</li>
+            <li>Busca por nome de arquivo.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🗂️</span> Navegação e organização</h3>
+          <ul>
+            <li>App reorganizado em abas: <strong>Lançamentos, Saldos, Documentos e Configurações</strong> — funciona igual em desktop e celular, com navegação por teclado (setas, Home/End) e anúncios para leitor de tela.</li>
+            <li><strong>Resumo em Tempo Real</strong> (saldo total, pago, pendente, contagem) sempre visível no topo, em qualquer aba.</li>
+            <li>Aba Configurações reúne exportar/importar XLSX, remover duplicatas, e gerenciamento das listas (Banco, Categoria, Credor, Devedor, Forma de Pagamento, Parcela, Estabelecimento).</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🛠️</span> Infraestrutura</h3>
+          <ul>
+            <li>Migrado de Netlify para Cloudflare Workers (arquivos estáticos + rota <code>/api/ler-documento</code>).</li>
+            <li>Chaves de API (Gemini, Anthropic) nunca ficam no navegador — vivem só como variáveis de ambiente no Cloudflare.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+
+    <section class="card" aria-labelledby="sobre-changelog">
+      <h2 id="sobre-changelog" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <span aria-hidden="true">ℹ️</span> Sobre este changelog
+      </h2>
+      <p>
+        A cada mudança relevante entregue, um novo bloco de versão é adicionado no topo desta
+        página, seguindo o padrão de versionamento:
+      </p>
+      <ul>
+        <li><strong>X (major)</strong> — mudança estrutural grande ou que quebra algo do funcionamento anterior.</li>
+        <li><strong>Y (minor)</strong> — novo recurso.</li>
+        <li><strong>Z (patch)</strong> — correção de bug ou ajuste pequeno.</li>
+      </ul>
+      <p style="margin-bottom:0;">
+        O rodapé do app (tela principal) é sempre atualizado junto, na mesma entrega, para bater
+        com o que está descrito aqui.
+      </p>
+    </section>
+
+  </main>
+</div>
+
+<a href="#conteudo-principal" class="voltar-topo" aria-label="Voltar ao topo da página" title="Voltar ao topo">↑</a>
+
+</body>
+</html>
