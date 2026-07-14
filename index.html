@@ -117,7 +117,7 @@ input.negativo{color:var(--red);}
 
 /* ── CONTAS E CARTÕES ── */
 .conta-row{
-  display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:8px;align-items:end;
+  display:grid;grid-template-columns:1.1fr .9fr .9fr auto auto;gap:8px;align-items:end;
   padding:10px 0;border-bottom:1px solid var(--border);
 }
 .conta-row:last-child{border-bottom:none;}
@@ -494,6 +494,21 @@ input[type="checkbox"]:checked::after{
 .btn-parcelar{background:var(--purple);color:#fff;}
 .btn-parcelar:hover{background:#8b5cf6;}
 .btn-parcelar:focus-visible{outline-color:var(--purple);}
+
+/* ── PAGINAÇÃO ── */
+.pag-nav{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+}
+.pag-info{font-size:12px;color:var(--text3);}
+.pag-botoes{display:flex;gap:8px;flex-wrap:wrap;}
+.pag-botoes .btn{padding:7px 12px;font-size:12px;}
+.pag-botoes .btn:disabled{opacity:.4;}
+@media(max-width:640px){
+  .pag-nav{flex-direction:column;align-items:stretch;}
+  .pag-botoes{justify-content:space-between;}
+  .pag-botoes .btn{flex:1;}
+}
 
 /* ── EMPTY STATE ── */
 .empty-state{text-align:center;padding:48px 20px;color:var(--text3);}
@@ -964,6 +979,15 @@ select option{background:#1e2436;}
         </tbody>
       </table>
     </div>
+    <nav class="pag-nav" id="pag-nav" aria-label="Paginação de lançamentos" style="display:none;">
+      <span class="pag-info" id="pag-info" aria-live="polite" aria-atomic="true"></span>
+      <div class="pag-botoes">
+        <button type="button" class="btn btn-secondary" id="pag-primeira" onclick="irParaPagina(1)" aria-label="Ir para a primeira página">⏮ Primeira</button>
+        <button type="button" class="btn btn-secondary" id="pag-anterior" onclick="irParaPagina(paginaAtual-1)" aria-label="Ir para a página anterior">◀ Anterior</button>
+        <button type="button" class="btn btn-secondary" id="pag-proxima" onclick="irParaPagina(paginaAtual+1)" aria-label="Ir para a próxima página">Próxima ▶</button>
+        <button type="button" class="btn btn-secondary" id="pag-ultima" onclick="irParaPagina(totalPaginas())" aria-label="Ir para a última página">Última ⏭</button>
+      </div>
+    </nav>
   </section>
 
   </div>
@@ -1024,6 +1048,22 @@ select option{background:#1e2436;}
 
   <!-- ══════ PAINEL: CONFIGURAÇÕES ══════ -->
   <div id="painel-config" role="tabpanel" aria-labelledby="tab-btn-config" tabindex="0" hidden>
+
+  <!-- ══ PREFERÊNCIAS DE EXIBIÇÃO ══ -->
+  <section class="card" aria-labelledby="titulo-exibicao">
+    <h2 class="card-title" id="titulo-exibicao"><span aria-hidden="true">🖥️</span> Exibição</h2>
+    <div class="form-group" style="max-width:260px;">
+      <label for="cfg-itens-por-pagina">Itens por página (Lançamentos)</label>
+      <select id="cfg-itens-por-pagina" onchange="alterarItensPorPagina(this.value)">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+        <option value="0">Mostrar todos (sem paginação)</option>
+      </select>
+    </div>
+  </section>
 
   <!-- ══ EXPORTAR / IMPORTAR / DUPLICADOS ══ -->
   <section class="card" aria-labelledby="titulo-dados">
@@ -1178,7 +1218,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.2.0 · 12/07/2026
+  Controle Financeiro · v1.3.0 · 14/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1198,6 +1238,10 @@ let usuarioAtual         = null; // objeto user do Supabase Auth
 let lancamentos           = [];
 let lancamentosFiltrados  = [];
 let editandoId            = null;
+
+// Paginação da tabela de Lançamentos. 0 = sem paginação (mostrar todos).
+let itensPorPagina = parseInt(localStorage.getItem('cf_itens_por_pagina')) || 50;
+let paginaAtual     = 1;
 let modalCampo            = null;
 let modalOrigemBotaoId    = null;
 
@@ -1391,6 +1435,9 @@ async function iniciarAppLogado() {
   iniciarRelogio();
   registrarEventosModais();
   registrarAtalhosGlobaisAbas();
+
+  const selItensPag = document.getElementById('cfg-itens-por-pagina');
+  if(selItensPag) selItensPag.value = String(itensPorPagina);
 
   mostrarToast('Carregando seus dados...');
 
@@ -3100,7 +3147,7 @@ function aplicarFiltrosSilencioso() {
   document.getElementById('table-info').textContent=
     lancamentosFiltrados.length+' registro'+(lancamentosFiltrados.length!==1?'s':'');
 }
-function aplicarFiltros() { aplicarFiltrosSilencioso(); renderizarTabela(); }
+function aplicarFiltros() { paginaAtual = 1; aplicarFiltrosSilencioso(); renderizarTabela(); }
 function limparFiltros() {
   ['fi-origem-de','fi-origem-ate','fi-venc-de','fi-venc-ate'].forEach(id=>document.getElementById(id).value='');
   ['fi-status','fi-banco','fi-forma','fi-estabelecimento','fi-categoria','fi-credor','fi-devedor'].forEach(id=>document.getElementById(id).value='');
@@ -3127,10 +3174,26 @@ function renderizarTabela() {
     return;
   }
   const qtd=lancamentosFiltrados.length;
-  info.textContent=qtd+' registro'+(qtd!==1?'s':'');
+
+  const totalPag = totalPaginas();
+  if(paginaAtual > totalPag) paginaAtual = totalPag;
+  if(paginaAtual < 1) paginaAtual = 1;
+
+  const pagina = itensPorPagina>0
+    ? lancamentosFiltrados.slice((paginaAtual-1)*itensPorPagina, paginaAtual*itensPorPagina)
+    : lancamentosFiltrados;
+
+  if(itensPorPagina>0 && qtd>0){
+    const de = (paginaAtual-1)*itensPorPagina + 1;
+    const ate = Math.min(paginaAtual*itensPorPagina, qtd);
+    info.textContent = de+'–'+ate+' de '+qtd+' registro'+(qtd!==1?'s':'');
+  } else {
+    info.textContent=qtd+' registro'+(qtd!==1?'s':'');
+  }
+  renderizarPaginacao(totalPag, qtd);
 
   const linhas=[];
-  lancamentosFiltrados.forEach(l=>{
+  pagina.forEach(l=>{
     const temItens = l.itens && l.itens.length>0;
     const eParcelado = l.parcela && /^\d+\/\d+$/.test(l.parcela);
     const chkLabel = l.pago?'Pago — clique para marcar como pendente':'Pendente — clique para marcar como pago';
@@ -3193,6 +3256,49 @@ function renderizarTabela() {
 }
 
 // ═══════════════════════════════════════════════════
+//  PAGINAÇÃO DA TABELA DE LANÇAMENTOS
+// ═══════════════════════════════════════════════════
+function totalPaginas(){
+  return itensPorPagina>0 ? Math.max(1, Math.ceil(lancamentosFiltrados.length/itensPorPagina)) : 1;
+}
+
+function renderizarPaginacao(totalPag, qtd){
+  const nav = document.getElementById('pag-nav');
+  const info = document.getElementById('pag-info');
+  if(itensPorPagina<=0 || qtd===0 || totalPag<=1){
+    nav.style.display='none';
+    return;
+  }
+  nav.style.display='';
+  info.textContent='Página '+paginaAtual+' de '+totalPag;
+  document.getElementById('pag-primeira').disabled  = paginaAtual<=1;
+  document.getElementById('pag-anterior').disabled  = paginaAtual<=1;
+  document.getElementById('pag-proxima').disabled   = paginaAtual>=totalPag;
+  document.getElementById('pag-ultima').disabled    = paginaAtual>=totalPag;
+}
+
+function irParaPagina(n){
+  const totalPag = totalPaginas();
+  if(n<1) n=1;
+  if(n>totalPag) n=totalPag;
+  if(n===paginaAtual) return;
+  paginaAtual = n;
+  renderizarTabela();
+  document.getElementById('titulo-tabela').scrollIntoView({behavior:'smooth', block:'start'});
+  anunciar('Página '+paginaAtual+' de '+totalPag+'.');
+}
+
+function alterarItensPorPagina(valor){
+  itensPorPagina = parseInt(valor) || 0;
+  localStorage.setItem('cf_itens_por_pagina', String(itensPorPagina));
+  paginaAtual = 1;
+  renderizarTabela();
+  anunciar(itensPorPagina>0
+    ? 'Agora mostrando '+itensPorPagina+' itens por página.'
+    : 'Agora mostrando todos os lançamentos, sem paginação.');
+}
+
+// ═══════════════════════════════════════════════════
 //  SALDOS
 // ═══════════════════════════════════════════════════
 function atualizarSaldos(){
@@ -3250,12 +3356,30 @@ function renderizarContasConfig() {
         '<button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" ' +
           'onclick="salvarContaConfig(\''+idSafe+'\', \''+escaparParaJS(nome)+'\')" '+(tipo===''?'disabled':'')+
           ' id="'+idSafe+'-btn-salvar">Salvar</button>' +
+        '<button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" ' +
+          'onclick="auditarConta(\''+escaparParaJS(nome)+'\')" ' +
+          'aria-label="Ver todos os lançamentos de '+escaparHTML(nome)+' usados no cálculo do saldo">' +
+          '<span aria-hidden="true">🔍</span> Ver Lançamentos</button>' +
         '<div class="conta-resultado" id="'+idSafe+'-resultado"></div>' +
       '</div>'
     );
   }).join('');
 
   atualizarContas();
+}
+
+// Filtra a aba Lançamentos pelo banco/cartão informado e leva o usuário até lá — é
+// exatamente o mesmo conjunto de lançamentos (l.banco === nomeBanco) usado por
+// atualizarContas() para somar o saldo/limite, então serve para auditar visualmente
+// (data por data, entrada/saída, itens múltiplos, possíveis duplicatas) por que o
+// saldo calculado não bate com a realidade.
+function auditarConta(nomeBanco) {
+  mudarAba('lancamentos');
+  limparFiltros();
+  document.getElementById('fi-banco').value = nomeBanco;
+  aplicarFiltros();
+  anunciar('Mostrando todos os lançamentos de ' + nomeBanco + ', ordenados por data — o mesmo conjunto usado no cálculo do saldo. Revise o sinal (entrada ou saída), o status (pago ou pendente) e a coluna Valor de cada um.', true);
+  setTimeout(() => document.getElementById('titulo-tabela').scrollIntoView({behavior:'smooth', block:'start'}), 300);
 }
 
 function onTipoContaChange(idSafe) {

@@ -4,6 +4,17 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.3.0 — 14/07/2026
+
+- **Paginação na tabela de Lançamentos**: a lista agora é dividida em páginas em vez de carregar
+  tudo de uma vez. Barra de navegação abaixo da tabela com botões Primeira, Anterior, Próxima e
+  Última página, e indicação de "X–Y de Z registros".
+- Nova opção **"Itens por página"** na aba Configurações (seção "Exibição"), com escolha entre
+  10, 25, 50, 100, 200 ou "Mostrar todos (sem paginação)". A preferência fica salva no navegador.
+- Aba **Saldos**: novo botão **"🔍 Ver Lançamentos"** em cada conta/cartão configurado — filtra a
+  aba Lançamentos exatamente pelo mesmo conjunto de registros usado no cálculo do saldo/limite
+  daquela conta, para conferir data por data se o valor calculado bate com a realidade.
+
 ## v1.2.0 — 12/07/2026
 
 - Atalhos de teclado **Alt+1** a **Alt+4** para pular direto para qualquer aba (Lançamentos,
