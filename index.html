@@ -797,7 +797,7 @@ select option{background:#1e2436;}
       </label>
       <input type="file" id="input-leitor-ia" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
-             aria-label="Selecionar arquivo de nota fiscal ou comprovante para leitura automática"
+             tabindex="-1" aria-hidden="true"
              onchange="lerDocumentoIA(event)">
       <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
@@ -1030,7 +1030,7 @@ select option{background:#1e2436;}
       </label>
       <input type="file" id="input-leitor-guardar" accept="image/*,.pdf,.txt,.xml,.xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
-             aria-label="Selecionar arquivo para guardar na nuvem"
+             tabindex="-1" aria-hidden="true"
              onchange="guardarArquivoSemAnalisar(event)">
       <span id="documentos-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
@@ -1093,7 +1093,7 @@ select option{background:#1e2436;}
       </label>
       <input type="file" id="input-import" accept=".xlsx,.xls"
              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"
-             aria-label="Selecionar arquivo XLSX para importar"
+             tabindex="-1" aria-hidden="true"
              onchange="lerArquivoXLSX(event)">
       <button type="button" class="btn btn-success" onclick="exportarPlanilha()" aria-label="Exportar lançamentos para arquivo XLSX"><span aria-hidden="true">📤</span> Exportar XLSX</button>
       <button type="button" class="btn btn-secondary" id="btn-limpar-duplicatas" onclick="limparDuplicatasExistentes()" aria-label="Procurar e remover lançamentos duplicados na nuvem"><span aria-hidden="true">🧹</span> Remover Duplicatas</button>
@@ -1232,7 +1232,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.4.0 · 15/07/2026
+  Controle Financeiro · v1.4.1 · 15/07/2026
 </footer>
 
 </div><!-- /app-principal -->

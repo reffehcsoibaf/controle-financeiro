@@ -4,6 +4,16 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.4.1 — 15/07/2026
+
+- **Correção de acessibilidade**: os três botões de seleção de arquivo (Leitor de Notas IA,
+  Guardar Novo Arquivo e Importar XLSX) geravam **dois pontos de foco** para uma única ação —
+  o botão estilizado e, logo em seguida, o `<input type="file">` real (que o NVDA anunciava
+  como "...Nenhum arquivo escolhido"). O input real agora fica fora da navegação por Tab e fora
+  da árvore de acessibilidade (`tabindex="-1"` + `aria-hidden="true"`); o botão continua
+  funcionando normalmente (clique e Enter/Espaço), só que sem duplicar o anúncio no leitor de
+  tela.
+
 ## v1.4.0 — 15/07/2026
 
 - **Novas abas dedicadas**: o formulário "Novo Lançamento" (com o Leitor de Notas por IA) e os
