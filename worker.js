@@ -45,6 +45,15 @@ Regras importantes:
   efetuado (Pix, recibo, etc.) sem menção a vencimento, deixe "data_vencimento" como null.
 - Datas no formato brasileiro (DD/MM/AAAA) devem ser convertidas para AAAA-MM-DD.
 - Se o documento tiver vários itens/valores, use o valor TOTAL da transação.
+- **Banco "Next"**: se o banco/instituição identificado for a fintech Next — mesmo que apareça no
+  documento junto com o nome do parceiro emissor do cartão (ex.: "Next Bradesco", "Next 237
+  Bradesco S.A.", "Next Bradescard", ou qualquer variação parecida contendo "Next") — preencha o
+  campo "banco" apenas com o texto "Next", sem o restante do nome do parceiro.
+- **Nomes de credor/devedor**: se o nome vier em CAIXA ALTA ou com capitalização irregular (comum
+  em comprovantes bancários, ex.: "FABIO SCHEFFER MORAES"), converta para Capitalização Padrão de
+  Nome Próprio (primeira letra de cada palavra em maiúscula; preposições como "de", "da", "dos",
+  "e" ficam em minúscula), preservando exatamente as letras do documento — não adicione, remova
+  nem "corrija" acentos que não estejam claramente legíveis no documento original.
 - Responda SOMENTE com o JSON, nada mais.`;
 
 const TEXTO_INSTRUCAO_ARQUIVO = 'Extraia os dados deste comprovante/nota conforme as instruções.';

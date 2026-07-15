@@ -4,6 +4,21 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.4.0 — 15/07/2026
+
+- **Novas abas dedicadas**: o formulário "Novo Lançamento" (com o Leitor de Notas por IA) e os
+  "Filtros" saíram da aba Lançamentos e ganharam abas próprias. A aba Lançamentos agora mostra só
+  a tabela. Atalhos de teclado atualizados para **Alt+1** a **Alt+6** (Lançamentos, Novo
+  Lançamento, Filtros, Saldos, Documentos, Configurações). O botão "🔍 Ver Lançamentos" (aba
+  Saldos) e o botão "✏️ Editar" (na tabela) agora levam automaticamente até a aba certa.
+- **Leitor de Notas com IA — banco Next**: comprovantes do banco Next (que costumam vir com o
+  nome do parceiro emissor junto, ex.: "Next Bradesco", "Next 237 Bradesco S.A.") agora marcam
+  direto a opção "Next" já cadastrada no campo Banco/Cartão, em vez de sugerir uma opção nova.
+- **Leitor de Notas com IA — nomes de Credor/Devedor**: nomes que vêm em CAIXA ALTA ou com
+  acentuação diferente da cadastrada (ex.: "FABIO SCHEFFER MORAES" no comprovante vs. "Fábio
+  Scheffer Moraes" já cadastrado) agora são reconhecidos como a mesma pessoa e a opção já
+  cadastrada é selecionada automaticamente.
+
 ## v1.3.0 — 14/07/2026
 
 - **Paginação na tabela de Lançamentos**: a lista agora é dividida em páginas em vez de carregar

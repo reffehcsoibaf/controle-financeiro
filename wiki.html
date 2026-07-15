@@ -203,7 +203,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="toc-title">Sumário</div>
     <nav>
       <a href="#visao-geral">Visão Geral</a>
-      <a href="#abas">As 4 Abas do App</a>
+      <a href="#abas">As 6 Abas do App</a>
       <a href="#conta">Conta e Acesso</a>
       <a href="#conta-criar" class="sub">Criar conta e entrar</a>
       <a href="#conta-migracao" class="sub">Migração de dados antigos</a>
@@ -258,29 +258,35 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         cartão de crédito, filtros avançados e sincronização na nuvem via Supabase — seus dados
         ficam disponíveis em qualquer dispositivo onde você fizer login.
       </p>
-      <p>A tela principal é organizada em <strong>quatro abas</strong>: Lançamentos, Saldos, Documentos e Configurações. O Resumo em Tempo Real fica sempre visível no topo, em qualquer aba.</p>
+      <p>A tela principal é organizada em <strong>seis abas</strong>: Lançamentos, Novo Lançamento, Filtros, Saldos, Documentos e Configurações. O Resumo em Tempo Real fica sempre visível no topo, em qualquer aba.</p>
     </section>
 
-    <!-- ══ AS 4 ABAS ══ -->
+    <!-- ══ AS 6 ABAS ══ -->
     <section class="card" id="abas">
-      <h2><span aria-hidden="true">🗂️</span> As 4 Abas do App</h2>
+      <h2><span aria-hidden="true">🗂️</span> As 6 Abas do App</h2>
       <p class="secao-desc">Como o app está organizado hoje</p>
       <table class="tabela-campos">
         <thead><tr><th>Aba</th><th>O que você encontra nela</th></tr></thead>
         <tbody>
-          <tr><td class="campo-nome">📋 Lançamentos</td><td>Leitor de Notas com IA, formulário de Novo Lançamento, Filtros e a tabela de lançamentos.</td></tr>
+          <tr><td class="campo-nome">📋 Lançamentos</td><td>A tabela de lançamentos, com paginação e as ações de editar/excluir/marcar como pago.</td></tr>
+          <tr><td class="campo-nome">➕ Novo Lançamento</td><td>Leitor de Notas com IA e o formulário para cadastrar (ou editar) um lançamento, incluindo itens múltiplos e parcelamento.</td></tr>
+          <tr><td class="campo-nome">🔍 Filtros</td><td>Todos os filtros da tabela de Lançamentos (data, status, banco, forma, estabelecimento, categoria, credor, devedor).</td></tr>
           <tr><td class="campo-nome">📊 Saldos</td><td>Contas e Cartões (saldo de contas correntes e limite de cartões de crédito).</td></tr>
           <tr><td class="campo-nome">📂 Documentos</td><td>Notas fiscais e comprovantes guardados na nuvem — analisar, baixar ou excluir, com busca por nome.</td></tr>
-          <tr><td class="campo-nome">⚙️ Configurações</td><td>Exportar/Importar planilhas, remover duplicatas e Gerenciar Listas (Banco, Categoria, Credor, etc.).</td></tr>
+          <tr><td class="campo-nome">⚙️ Configurações</td><td>Exportar/Importar planilhas, remover duplicatas, Exibição (itens por página) e Gerenciar Listas (Banco, Categoria, Credor, etc.).</td></tr>
         </tbody>
       </table>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
-        <span>Você pode navegar entre as abas pelo teclado: com o foco em uma aba, use as setas ← e → para trocar de aba.</span>
+        <span>Você pode navegar entre as abas pelo teclado de duas formas: com o foco em uma aba, use as setas ← e → (ou Home/End); ou, de qualquer lugar da tela, use <strong>Alt+1</strong> a <strong>Alt+6</strong> para pular direto para a aba correspondente (na ordem da tabela acima).</span>
       </div>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span>O <strong>Resumo em Tempo Real</strong> (Total Geral, Pago, Pendente e Registros visíveis) não pertence a nenhuma aba específica — ele fica sempre visível no topo da tela, não importa em qual aba você esteja.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Ao clicar em <strong>✏️ Editar</strong> numa linha da tabela, o app leva você automaticamente até a aba <strong>Novo Lançamento</strong> com o formulário já preenchido para atualização.</span>
       </div>
     </section>
 
@@ -339,7 +345,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <h2><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
       <p class="secao-desc">Preenchimento automático a partir de uma nota fiscal ou comprovante</p>
       <p>
-        Na aba <strong>Lançamentos</strong>, logo acima do formulário, você encontra o botão
+        Na aba <strong>Novo Lançamento</strong>, logo acima do formulário, você encontra o botão
         <span class="btn-demo btn-demo-primary">📎 Selecionar Documento</span>. Ele aceita imagem
         (foto ou print), PDF, TXT, XML ou <strong>XLSX</strong> (planilha). Também é possível colar o
         texto do comprovante diretamente, sem precisar de arquivo — veja o campo
@@ -371,12 +377,22 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span>O checkbox <strong>"Também guardar este arquivo na aba Documentos"</strong>, marcado por padrão, salva uma cópia do arquivo enviado na nuvem ao mesmo tempo em que ele é analisado — você não precisa enviar duas vezes. Veja a seção <a href="#documentos">Documentos</a> para mais detalhes.</span>
       </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Reconhecimento inteligente de opções já cadastradas:</strong> se o comprovante for do banco <strong>Next</strong> — mesmo aparecendo junto com o nome do parceiro emissor (ex.: "Next Bradesco", "Next 237 Bradesco S.A.") — o app já marca a opção <strong>"Next"</strong> cadastrada, sem sugerir uma nova. O mesmo vale para nomes de <strong>Credor/Devedor</strong>: se o comprovante trouxer o nome em CAIXA ALTA ou sem os mesmos acentos da opção já cadastrada (ex.: "FABIO SCHEFFER MORAES" no comprovante vs. "Fábio Scheffer Moraes" cadastrado), o app reconhece como a mesma pessoa e seleciona a opção existente.</span>
+      </div>
     </section>
 
     <!-- ══ LANÇAMENTOS ══ -->
     <section class="card" id="lancamentos">
       <h2><span aria-hidden="true">➕</span> Lançamentos</h2>
-      <p class="secao-desc">Cadastro, edição e organização dos seus registros financeiros</p>
+      <p class="secao-desc">Cadastro (aba Novo Lançamento), tabela (aba Lançamentos) e organização dos seus registros financeiros</p>
+      <p>
+        O cadastro e a edição de lançamentos acontecem na aba <strong>Novo Lançamento</strong>; a
+        aba <strong>Lançamentos</strong> mostra a tabela com tudo que já foi salvo. Ao clicar em
+        <strong>✏️ Editar</strong> numa linha da tabela, o app leva você automaticamente para a aba
+        Novo Lançamento com o formulário já preenchido.
+      </p>
 
       <h3 id="lanc-campos">Campos do formulário</h3>
       <table class="tabela-campos">
@@ -528,7 +544,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <section class="card" id="filtros">
       <h2><span aria-hidden="true">🔍</span> Filtros</h2>
       <p class="secao-desc">Como refinar a visualização da tabela de lançamentos</p>
-      <p>Na aba Lançamentos, a seção de Filtros permite combinar:</p>
+      <p>Na aba <strong>Filtros</strong>, própria e separada da tabela, você combina:</p>
       <ul>
         <li>Intervalo de <strong>Data Origem</strong> (de/até)</li>
         <li>Intervalo de <strong>Data Vencimento</strong> (de/até)</li>
@@ -537,8 +553,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </ul>
       <p>
         Clique em <strong>Filtrar</strong> para aplicar ou <strong>Limpar Filtros</strong> para
-        voltar a ver tudo. Os totais do <strong>Resumo em Tempo Real</strong>, sempre visível no topo
-        da tela, refletem sempre o que está filtrado, não o total absoluto da conta.
+        voltar a ver tudo. Depois de filtrar, troque para a aba <strong>Lançamentos</strong> (ou use
+        <strong>Alt+1</strong>) para ver o resultado na tabela. Os totais do <strong>Resumo em Tempo
+        Real</strong>, sempre visível no topo da tela, refletem sempre o que está filtrado, não o
+        total absoluto da conta.
       </p>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>

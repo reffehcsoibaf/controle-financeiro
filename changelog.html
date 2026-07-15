@@ -156,11 +156,36 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.4.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-4-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-4-0"><span aria-hidden="true">🏷️</span> v1.4.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">15/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🗂️</span> Navegação e Abas</h3>
+          <ul>
+            <li>O formulário <strong>"Novo Lançamento"</strong> (junto com o Leitor de Notas por IA) e os <strong>Filtros</strong> saíram de dentro da aba Lançamentos e agora são abas próprias. A aba Lançamentos mostra só a tabela.</li>
+            <li>Atalhos de teclado atualizados: agora são <strong>Alt+1</strong> a <strong>Alt+6</strong>, cobrindo as seis abas (Lançamentos, Novo Lançamento, Filtros, Saldos, Documentos, Configurações).</li>
+            <li>O botão <strong>"✏️ Editar"</strong> na tabela e o botão <strong>"🔍 Ver Lançamentos"</strong> (aba Saldos) agora levam automaticamente até a aba certa.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h3>
+          <ul>
+            <li><strong>Banco Next</strong>: comprovantes desse banco — que costumam vir com o nome do parceiro emissor junto (ex.: "Next Bradesco", "Next 237 Bradesco S.A.") — agora marcam direto a opção <strong>"Next"</strong> já cadastrada no campo Banco/Cartão, em vez de sugerir uma opção nova.</li>
+            <li><strong>Nomes de Credor/Devedor</strong>: nomes que vêm em CAIXA ALTA ou sem os mesmos acentos da opção cadastrada (ex.: "FABIO SCHEFFER MORAES" no comprovante vs. "Fábio Scheffer Moraes" já cadastrado) agora são reconhecidos como a mesma pessoa, e a opção já cadastrada é selecionada automaticamente.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.3.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-3-0">
+      <section class="versao-bloco" aria-labelledby="v1-3-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-3-0"><span aria-hidden="true">🏷️</span> v1.3.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">14/07/2026</span>
         </div>
 

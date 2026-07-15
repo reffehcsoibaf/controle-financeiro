@@ -557,7 +557,7 @@ select option{background:#1e2436;}
 <body>
 <div id="aria-live"      aria-live="polite"    aria-atomic="true" class="sr-only"></div>
 <div id="aria-assertive" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
-<a href="#form-lancamento" class="skip-link">Pular para o formulário de lançamento</a>
+<a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
 
 <!-- ══════════════════════════════════════════
      TELA DE AUTENTICAÇÃO (login / cadastro)
@@ -652,6 +652,8 @@ select option{background:#1e2436;}
   <!-- ══ NAVEGAÇÃO POR ABAS ══ -->
   <div class="tabs-nav" role="tablist" aria-label="Seções do Controle Financeiro" id="tabs-nav" onkeydown="navegarAbasTeclado(event)">
     <button type="button" role="tab" id="tab-btn-lancamentos" aria-selected="true" aria-controls="painel-lancamentos" tabindex="0" onclick="mudarAba('lancamentos')"><span aria-hidden="true">📋</span> Lançamentos</button>
+    <button type="button" role="tab" id="tab-btn-novolanc" aria-selected="false" aria-controls="painel-novolanc" tabindex="-1" onclick="mudarAba('novolanc')"><span aria-hidden="true">➕</span> Novo Lançamento</button>
+    <button type="button" role="tab" id="tab-btn-filtros" aria-selected="false" aria-controls="painel-filtros" tabindex="-1" onclick="mudarAba('filtros')"><span aria-hidden="true">🔍</span> Filtros</button>
     <button type="button" role="tab" id="tab-btn-saldos" aria-selected="false" aria-controls="painel-saldos" tabindex="-1" onclick="mudarAba('saldos')"><span aria-hidden="true">📊</span> Saldos</button>
     <button type="button" role="tab" id="tab-btn-documentos" aria-selected="false" aria-controls="painel-documentos" tabindex="-1" onclick="mudarAba('documentos')"><span aria-hidden="true">📂</span> Documentos</button>
     <button type="button" role="tab" id="tab-btn-config" aria-selected="false" aria-controls="painel-config" tabindex="-1" onclick="mudarAba('config')"><span aria-hidden="true">⚙️</span> Configurações</button>
@@ -719,6 +721,62 @@ select option{background:#1e2436;}
 
   <!-- ══════ PAINEL: LANÇAMENTOS ══════ -->
   <div id="painel-lancamentos" role="tabpanel" aria-labelledby="tab-btn-lancamentos" tabindex="0">
+
+  <!-- ══ TABELA ══ -->
+  <section class="card" aria-labelledby="titulo-tabela">
+    <div class="table-header">
+      <div>
+        <h2 class="card-title" id="titulo-tabela" style="margin-bottom:4px;"><span aria-hidden="true">📋</span> Lançamentos</h2>
+        <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
+      </div>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
+      <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
+        <thead>
+          <tr>
+            <th scope="col">Pago</th>
+            <th scope="col">Status</th>
+            <th scope="col">Data Origem</th>
+            <th scope="col">Data Venc.</th>
+            <th scope="col">Valor</th>
+            <th scope="col">Banco / Cartão</th>
+            <th scope="col">Estabelecimento</th>
+            <th scope="col">Forma Pgto</th>
+            <th scope="col">Parcela</th>
+            <th scope="col">Descrição</th>
+            <th scope="col">Categoria</th>
+            <th scope="col">Credor</th>
+            <th scope="col">Devedor</th>
+            <th scope="col">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-body">
+          <tr><td colspan="14">
+            <div class="empty-state" role="status">
+              <div class="empty-icon" aria-hidden="true">📭</div>
+              <p>Nenhum lançamento cadastrado.</p>
+              <p style="margin-top:6px;font-size:12px;color:var(--text3);">Use a aba "Novo Lançamento" para adicionar.</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <nav class="pag-nav" id="pag-nav" aria-label="Paginação de lançamentos" style="display:none;">
+      <span class="pag-info" id="pag-info" aria-live="polite" aria-atomic="true"></span>
+      <div class="pag-botoes">
+        <button type="button" class="btn btn-secondary" id="pag-primeira" onclick="irParaPagina(1)" aria-label="Ir para a primeira página">⏮ Primeira</button>
+        <button type="button" class="btn btn-secondary" id="pag-anterior" onclick="irParaPagina(paginaAtual-1)" aria-label="Ir para a página anterior">◀ Anterior</button>
+        <button type="button" class="btn btn-secondary" id="pag-proxima" onclick="irParaPagina(paginaAtual+1)" aria-label="Ir para a próxima página">Próxima ▶</button>
+        <button type="button" class="btn btn-secondary" id="pag-ultima" onclick="irParaPagina(totalPaginas())" aria-label="Ir para a última página">Última ⏭</button>
+      </div>
+    </nav>
+  </section>
+
+  </div>
+  <!-- fim #painel-lancamentos -->
+
+  <!-- ══════ PAINEL: NOVO LANÇAMENTO ══════ -->
+  <div id="painel-novolanc" role="tabpanel" aria-labelledby="tab-btn-novolanc" tabindex="0" hidden>
 
   <!-- ══ LEITOR DE NOTAS E COMPROVANTES (IA) ══ -->
   <section class="card" aria-labelledby="titulo-leitor">
@@ -915,6 +973,12 @@ select option{background:#1e2436;}
     </form>
   </section>
 
+  </div>
+  <!-- fim #painel-novolanc -->
+
+  <!-- ══════ PAINEL: FILTROS ══════ -->
+  <div id="painel-filtros" role="tabpanel" aria-labelledby="tab-btn-filtros" tabindex="0" hidden>
+
   <!-- ══ FILTROS ══ -->
   <section class="card" aria-labelledby="titulo-filtros">
     <h2 class="card-title" id="titulo-filtros"><span aria-hidden="true">🔍</span> Filtros</h2>
@@ -940,58 +1004,8 @@ select option{background:#1e2436;}
     </div>
   </section>
 
-  <!-- ══ TABELA ══ -->
-  <section class="card" aria-labelledby="titulo-tabela">
-    <div class="table-header">
-      <div>
-        <h2 class="card-title" id="titulo-tabela" style="margin-bottom:4px;"><span aria-hidden="true">📋</span> Lançamentos</h2>
-        <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
-      </div>
-    </div>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
-      <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
-        <thead>
-          <tr>
-            <th scope="col">Pago</th>
-            <th scope="col">Status</th>
-            <th scope="col">Data Origem</th>
-            <th scope="col">Data Venc.</th>
-            <th scope="col">Valor</th>
-            <th scope="col">Banco / Cartão</th>
-            <th scope="col">Estabelecimento</th>
-            <th scope="col">Forma Pgto</th>
-            <th scope="col">Parcela</th>
-            <th scope="col">Descrição</th>
-            <th scope="col">Categoria</th>
-            <th scope="col">Credor</th>
-            <th scope="col">Devedor</th>
-            <th scope="col">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabela-body">
-          <tr><td colspan="14">
-            <div class="empty-state" role="status">
-              <div class="empty-icon" aria-hidden="true">📭</div>
-              <p>Nenhum lançamento cadastrado.</p>
-              <p style="margin-top:6px;font-size:12px;color:var(--text3);">Use o formulário acima para adicionar.</p>
-            </div>
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-    <nav class="pag-nav" id="pag-nav" aria-label="Paginação de lançamentos" style="display:none;">
-      <span class="pag-info" id="pag-info" aria-live="polite" aria-atomic="true"></span>
-      <div class="pag-botoes">
-        <button type="button" class="btn btn-secondary" id="pag-primeira" onclick="irParaPagina(1)" aria-label="Ir para a primeira página">⏮ Primeira</button>
-        <button type="button" class="btn btn-secondary" id="pag-anterior" onclick="irParaPagina(paginaAtual-1)" aria-label="Ir para a página anterior">◀ Anterior</button>
-        <button type="button" class="btn btn-secondary" id="pag-proxima" onclick="irParaPagina(paginaAtual+1)" aria-label="Ir para a próxima página">Próxima ▶</button>
-        <button type="button" class="btn btn-secondary" id="pag-ultima" onclick="irParaPagina(totalPaginas())" aria-label="Ir para a última página">Última ⏭</button>
-      </div>
-    </nav>
-  </section>
-
   </div>
-  <!-- fim #painel-lancamentos -->
+  <!-- fim #painel-filtros -->
 
   <!-- ══════ PAINEL: DOCUMENTOS ══════ -->
   <div id="painel-documentos" role="tabpanel" aria-labelledby="tab-btn-documentos" tabindex="0" hidden>
@@ -1218,7 +1232,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.3.0 · 14/07/2026
+  Controle Financeiro · v1.4.0 · 15/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1461,8 +1475,8 @@ async function iniciarAppLogado() {
 // ═══════════════════════════════════════════════════
 //  NAVEGAÇÃO POR ABAS
 // ═══════════════════════════════════════════════════
-const ABAS = ['lancamentos', 'saldos', 'documentos', 'config'];
-const ROTULO_ABA = { lancamentos: 'Lançamentos', saldos: 'Saldos', documentos: 'Documentos', config: 'Configurações' };
+const ABAS = ['lancamentos', 'novolanc', 'filtros', 'saldos', 'documentos', 'config'];
+const ROTULO_ABA = { lancamentos: 'Lançamentos', novolanc: 'Novo Lançamento', filtros: 'Filtros', saldos: 'Saldos', documentos: 'Documentos', config: 'Configurações' };
 let abaAtual = 'lancamentos';
 
 function mudarAba(nome) {
@@ -1494,12 +1508,12 @@ function navegarAbasTeclado(e) {
 }
 
 // ═══════════════════════════════════════════════════
-//  ATALHOS DE TECLADO GLOBAIS — Alt+1 a Alt+4 trocam de aba
+//  ATALHOS DE TECLADO GLOBAIS — Alt+1 a Alt+6 trocam de aba
 //  Funciona em qualquer lugar da tela principal (não precisa
 //  estar com foco na navegação de abas). Ignorado se o app
 //  ainda não estiver logado/visível.
 // ═══════════════════════════════════════════════════
-const ATALHO_ABA_POR_TECLA = { '1':'lancamentos', '2':'saldos', '3':'documentos', '4':'config' };
+const ATALHO_ABA_POR_TECLA = { '1':'lancamentos', '2':'novolanc', '3':'filtros', '4':'saldos', '5':'documentos', '6':'config' };
 
 function registrarAtalhosGlobaisAbas() {
   document.addEventListener('keydown', function(e) {
@@ -2278,7 +2292,7 @@ async function analisarDocumentoArmazenado(id) {
     const file = new File([blob], doc.nome_arquivo, { type: doc.mime_type || blob.type });
 
     mostrarStatusDocumentos('Documento baixado. Enviando para a IA...');
-    mudarAba('lancamentos');
+    mudarAba('novolanc');
 
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
     await processarConteudoIA(tipo, conteudo, mimeType, file.name);
@@ -2315,13 +2329,41 @@ async function excluirDocumentoArmazenado(id) {
   mostrarToast('Documento excluído.');
 }
 
+// Remove acentos/diacríticos e normaliza espaços — usado para comparar nomes que
+// podem vir do comprovante com grafia diferente da cadastrada (maiúsculas, sem
+// acento, espaçamento extra etc.), sem NUNCA inventar ou alterar dado nenhum:
+// é só uma comparação mais tolerante, o valor cadastrado (já digitado por você)
+// é sempre o que acaba sendo usado.
+function normalizarTexto(txt) {
+  return String(txt || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .trim().toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 // Tenta encontrar, dentro das opções já cadastradas pelo usuário, uma opção
-// equivalente (ignorando maiúsculas/minúsculas e espaços) ao valor sugerido pela IA
+// equivalente ao valor sugerido pela IA. A comparação ignora maiúsculas/minúsculas,
+// acentos e espaços extras — por isso "FABIO SCHEFFER MORAES" (como pode vir de um
+// comprovante) já bate com "Fábio Scheffer Moraes" cadastrado, por exemplo.
+//
+// Caso especial do banco "Next": comprovantes desse banco costumam vir com o nome
+// do parceiro emissor junto (ex.: "Next Bradesco", "Next 237 Bradesco S.A."). Se o
+// campo for "banco", a sugestão contiver a palavra "next" e você já tiver "Next"
+// cadastrado, o app marca direto essa opção — não sugere criar uma nova.
 function encontrarOpcaoEquivalente(campo, valorSugerido) {
   if(!valorSugerido) return null;
-  const alvo = valorSugerido.trim().toLowerCase();
+  const alvo = normalizarTexto(valorSugerido);
   const lista = opcoesSelects[campo] || [];
-  return lista.find(op => op.trim().toLowerCase() === alvo) || null;
+
+  const exata = lista.find(op => normalizarTexto(op) === alvo);
+  if(exata) return exata;
+
+  if(campo === 'banco' && /\bnext\b/.test(alvo)) {
+    const next = lista.find(op => normalizarTexto(op) === 'next');
+    if(next) return next;
+  }
+
+  return null;
 }
 
 function aplicarDadosIAaoFormulario(dados) {
@@ -3039,9 +3081,10 @@ function editarLancamento(id) {
     colorirValor(valEl);
   }
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">✏️</span> Atualizar Lançamento';
+  mudarAba('novolanc');
   window.scrollTo({top:0,behavior:'smooth'});
   setTimeout(()=>document.getElementById('f-data-origem').focus(),320);
-  anunciar('Formulário preenchido para edição: '+fmtData(l.dataOrigem)+', '+fmtValor(l.valor)+'.');
+  anunciar('Formulário preenchido para edição na aba Novo Lançamento: '+fmtData(l.dataOrigem)+', '+fmtValor(l.valor)+'.');
 }
 
 async function excluirLancamento(id) {
@@ -3374,11 +3417,11 @@ function renderizarContasConfig() {
 // (data por data, entrada/saída, itens múltiplos, possíveis duplicatas) por que o
 // saldo calculado não bate com a realidade.
 function auditarConta(nomeBanco) {
-  mudarAba('lancamentos');
   limparFiltros();
   document.getElementById('fi-banco').value = nomeBanco;
   aplicarFiltros();
-  anunciar('Mostrando todos os lançamentos de ' + nomeBanco + ', ordenados por data — o mesmo conjunto usado no cálculo do saldo. Revise o sinal (entrada ou saída), o status (pago ou pendente) e a coluna Valor de cada um.', true);
+  mudarAba('lancamentos');
+  anunciar('Mostrando todos os lançamentos de ' + nomeBanco + ', ordenados por data — o mesmo conjunto usado no cálculo do saldo. Revise o sinal (entrada ou saída), o status (pago ou pendente) e a coluna Valor de cada um. O filtro aplicado fica visível na aba Filtros.', true);
   setTimeout(() => document.getElementById('titulo-tabela').scrollIntoView({behavior:'smooth', block:'start'}), 300);
 }
 
