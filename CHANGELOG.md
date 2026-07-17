@@ -4,6 +4,16 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.4.2 — 17/07/2026
+
+- **Correção em Saldos**: os botões "Salvar" e "🔍 Ver Lançamentos" de cada conta/cartão podiam,
+  em casos raros, operar sobre um nome de banco montado de forma diferente do valor realmente
+  cadastrado — o nome era remontado dentro do próprio comando de clique, um caminho separado e
+  mais frágil do que o usado no resto da tela. Isso já tinha sido corrigido numa versão anterior,
+  mas a correção não tinha chegado a esta base (que seguiu de um ponto anterior do
+  desenvolvimento). Ambos os botões agora sempre leem o nome do banco/cartão do mesmo lugar usado
+  para exibi-lo na tela, eliminando esse tipo de descompasso.
+
 ## v1.4.1 — 15/07/2026
 
 - **Correção de acessibilidade**: os três botões de seleção de arquivo (Leitor de Notas IA,

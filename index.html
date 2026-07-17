@@ -1232,7 +1232,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.4.1 · 15/07/2026
+  Controle Financeiro · v1.4.2 · 17/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1449,6 +1449,7 @@ async function iniciarAppLogado() {
   iniciarRelogio();
   registrarEventosModais();
   registrarAtalhosGlobaisAbas();
+  registrarEventosContasConfig();
 
   const selItensPag = document.getElementById('cfg-itens-por-pagina');
   if(selItensPag) selItensPag.value = String(itensPorPagina);
@@ -3396,11 +3397,9 @@ function renderizarContasConfig() {
             (tipo===''?'disabled':'') +
             '>' +
         '</div>' +
-        '<button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" ' +
-          'onclick="salvarContaConfig(\''+idSafe+'\', \''+escaparParaJS(nome)+'\')" '+(tipo===''?'disabled':'')+
-          ' id="'+idSafe+'-btn-salvar">Salvar</button>' +
-        '<button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" ' +
-          'onclick="auditarConta(\''+escaparParaJS(nome)+'\')" ' +
+        '<button type="button" class="btn btn-secondary btn-salvar-conta" style="padding:8px 14px;font-size:12px;" '+(tipo===''?'disabled':'')+
+          ' id="'+idSafe+'-btn-salvar" data-id-safe="'+idSafe+'">Salvar</button>' +
+        '<button type="button" class="btn btn-secondary btn-auditar-conta" style="padding:8px 14px;font-size:12px;" ' +
           'aria-label="Ver todos os lançamentos de '+escaparHTML(nome)+' usados no cálculo do saldo">' +
           '<span aria-hidden="true">🔍</span> Ver Lançamentos</button>' +
         '<div class="conta-resultado" id="'+idSafe+'-resultado"></div>' +
@@ -3409,6 +3408,29 @@ function renderizarContasConfig() {
   }).join('');
 
   atualizarContas();
+}
+
+// Delegação de eventos dos botões de cada linha de Conta/Cartão (Salvar e Ver
+// Lançamentos). Usa sempre o atributo data-banco do .conta-row — a MESMA string
+// já usada para renderizar o nome na tela — em vez de remontar o texto dentro de
+// um onclick, que é uma fonte de descompasso caso o nome tenha caractere especial.
+function registrarEventosContasConfig() {
+  const container = document.getElementById('contas-config-lista');
+  if(!container || container.dataset.eventosRegistrados) return;
+  container.dataset.eventosRegistrados = 'true';
+  container.addEventListener('click', (e) => {
+    const btnSalvar = e.target.closest('.btn-salvar-conta');
+    if(btnSalvar) {
+      const row = btnSalvar.closest('.conta-row');
+      salvarContaConfig(btnSalvar.dataset.idSafe, row.dataset.banco);
+      return;
+    }
+    const btnAuditar = e.target.closest('.btn-auditar-conta');
+    if(btnAuditar) {
+      const row = btnAuditar.closest('.conta-row');
+      auditarConta(row.dataset.banco);
+    }
+  });
 }
 
 // Filtra a aba Lançamentos pelo banco/cartão informado e leva o usuário até lá — é

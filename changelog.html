@@ -156,11 +156,26 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.4.2 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-4-2">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-4-2"><span aria-hidden="true">🏷️</span> v1.4.2</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">17/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🐛</span> Correção</h3>
+          <ul>
+            <li>Em <strong>Saldos</strong>, os botões <strong>"Salvar"</strong> e <strong>"🔍 Ver Lançamentos"</strong> de cada conta/cartão podiam, em casos raros, operar sobre um nome de banco montado de forma diferente do valor realmente cadastrado — o nome era remontado dentro do próprio comando de clique, um caminho separado e mais frágil do que o usado no resto da tela. Ambos os botões agora sempre leem o nome do banco/cartão do mesmo lugar usado para exibi-lo na tela, eliminando esse tipo de descompasso.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.4.1 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-4-1">
+      <section class="versao-bloco" aria-labelledby="v1-4-1">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-4-1"><span aria-hidden="true">🏷️</span> v1.4.1</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">15/07/2026</span>
         </div>
 
