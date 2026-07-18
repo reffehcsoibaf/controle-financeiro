@@ -4,6 +4,38 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.5.2 — 17/07/2026
+
+- **Ordem das abas alterada**: "Novo Lançamento" agora é a 1ª aba (e a que abre por padrão ao
+  entrar no app) e "Lançamentos" (a tabela) passou a ser a 2ª. As demais abas mantêm a mesma
+  posição. Os atalhos de teclado foram remapeados de acordo: **Alt+1** agora abre Novo Lançamento
+  e **Alt+2** abre Lançamentos.
+- Guia de Uso atualizado para refletir a nova ordem e os atalhos corretos.
+
+## v1.5.1 — 17/07/2026
+
+- **Mudança no cálculo do limite de Cartão de Crédito**: agora o app usa **só o campo
+  Banco/Cartão** — não exige mais que a Categoria seja "Cartão de Crédito". Isso libera a
+  Categoria pra descrever o gasto de verdade (Alimentação, Transporte, etc.) em compras no
+  cartão, sem prejudicar o cálculo do limite. Continua contando lançamentos Pago e Pendente
+  (compra parcelada e fatura em aberto consomem limite mesmo antes de "Pago").
+- Guia de Uso (Saldos → Contas e Cartões) atualizado para refletir essa mudança e a correção da
+  v1.5.0 (saldo de conta corrente só considera lançamentos Pago).
+
+## v1.5.0 — 17/07/2026
+
+- **Correção no saldo de Conta Corrente**: o cálculo agora considera **apenas os lançamentos
+  marcados como Pago**. Lançamentos Pendentes são coisas agendadas/previstas que ainda não
+  aconteceram de verdade na conta, então não devem mais afetar o "Saldo atual" exibido em Saldos.
+  (O limite de Cartão de Crédito **não** mudou nesse ponto — pendentes continuam contando, porque
+  normalmente representam compra já feita com fatura em aberto.)
+- **Correção no limite de Cartão de Crédito**: a comparação que identifica lançamentos como
+  "Cartão de Crédito" (usada para calcular o limite consumido) agora ignora diferenças de acento,
+  maiúscula/minúscula e espaços extras — a mesma técnica de comparação tolerante já usada pelo
+  Leitor de Notas por IA. Antes, qualquer diferença sutil no texto da Categoria (por exemplo, um
+  acento digitado de forma diferente) fazia a comparação falhar silenciosamente, e o limite nunca
+  mudava, não importava o que fosse lançado.
+
 ## v1.4.2 — 17/07/2026
 
 - **Correção em Saldos**: os botões "Salvar" e "🔍 Ver Lançamentos" de cada conta/cartão podiam,

@@ -651,8 +651,8 @@ select option{background:#1e2436;}
 
   <!-- ══ NAVEGAÇÃO POR ABAS ══ -->
   <div class="tabs-nav" role="tablist" aria-label="Seções do Controle Financeiro" id="tabs-nav" onkeydown="navegarAbasTeclado(event)">
-    <button type="button" role="tab" id="tab-btn-lancamentos" aria-selected="true" aria-controls="painel-lancamentos" tabindex="0" onclick="mudarAba('lancamentos')"><span aria-hidden="true">📋</span> Lançamentos</button>
-    <button type="button" role="tab" id="tab-btn-novolanc" aria-selected="false" aria-controls="painel-novolanc" tabindex="-1" onclick="mudarAba('novolanc')"><span aria-hidden="true">➕</span> Novo Lançamento</button>
+    <button type="button" role="tab" id="tab-btn-novolanc" aria-selected="true" aria-controls="painel-novolanc" tabindex="0" onclick="mudarAba('novolanc')"><span aria-hidden="true">➕</span> Novo Lançamento</button>
+    <button type="button" role="tab" id="tab-btn-lancamentos" aria-selected="false" aria-controls="painel-lancamentos" tabindex="-1" onclick="mudarAba('lancamentos')"><span aria-hidden="true">📋</span> Lançamentos</button>
     <button type="button" role="tab" id="tab-btn-filtros" aria-selected="false" aria-controls="painel-filtros" tabindex="-1" onclick="mudarAba('filtros')"><span aria-hidden="true">🔍</span> Filtros</button>
     <button type="button" role="tab" id="tab-btn-saldos" aria-selected="false" aria-controls="painel-saldos" tabindex="-1" onclick="mudarAba('saldos')"><span aria-hidden="true">📊</span> Saldos</button>
     <button type="button" role="tab" id="tab-btn-documentos" aria-selected="false" aria-controls="painel-documentos" tabindex="-1" onclick="mudarAba('documentos')"><span aria-hidden="true">📂</span> Documentos</button>
@@ -719,64 +719,8 @@ select option{background:#1e2436;}
   </div>
   <!-- fim #painel-saldos -->
 
-  <!-- ══════ PAINEL: LANÇAMENTOS ══════ -->
-  <div id="painel-lancamentos" role="tabpanel" aria-labelledby="tab-btn-lancamentos" tabindex="0">
-
-  <!-- ══ TABELA ══ -->
-  <section class="card" aria-labelledby="titulo-tabela">
-    <div class="table-header">
-      <div>
-        <h2 class="card-title" id="titulo-tabela" style="margin-bottom:4px;"><span aria-hidden="true">📋</span> Lançamentos</h2>
-        <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
-      </div>
-    </div>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
-      <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
-        <thead>
-          <tr>
-            <th scope="col">Pago</th>
-            <th scope="col">Status</th>
-            <th scope="col">Data Origem</th>
-            <th scope="col">Data Venc.</th>
-            <th scope="col">Valor</th>
-            <th scope="col">Banco / Cartão</th>
-            <th scope="col">Estabelecimento</th>
-            <th scope="col">Forma Pgto</th>
-            <th scope="col">Parcela</th>
-            <th scope="col">Descrição</th>
-            <th scope="col">Categoria</th>
-            <th scope="col">Credor</th>
-            <th scope="col">Devedor</th>
-            <th scope="col">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="tabela-body">
-          <tr><td colspan="14">
-            <div class="empty-state" role="status">
-              <div class="empty-icon" aria-hidden="true">📭</div>
-              <p>Nenhum lançamento cadastrado.</p>
-              <p style="margin-top:6px;font-size:12px;color:var(--text3);">Use a aba "Novo Lançamento" para adicionar.</p>
-            </div>
-          </td></tr>
-        </tbody>
-      </table>
-    </div>
-    <nav class="pag-nav" id="pag-nav" aria-label="Paginação de lançamentos" style="display:none;">
-      <span class="pag-info" id="pag-info" aria-live="polite" aria-atomic="true"></span>
-      <div class="pag-botoes">
-        <button type="button" class="btn btn-secondary" id="pag-primeira" onclick="irParaPagina(1)" aria-label="Ir para a primeira página">⏮ Primeira</button>
-        <button type="button" class="btn btn-secondary" id="pag-anterior" onclick="irParaPagina(paginaAtual-1)" aria-label="Ir para a página anterior">◀ Anterior</button>
-        <button type="button" class="btn btn-secondary" id="pag-proxima" onclick="irParaPagina(paginaAtual+1)" aria-label="Ir para a próxima página">Próxima ▶</button>
-        <button type="button" class="btn btn-secondary" id="pag-ultima" onclick="irParaPagina(totalPaginas())" aria-label="Ir para a última página">Última ⏭</button>
-      </div>
-    </nav>
-  </section>
-
-  </div>
-  <!-- fim #painel-lancamentos -->
-
   <!-- ══════ PAINEL: NOVO LANÇAMENTO ══════ -->
-  <div id="painel-novolanc" role="tabpanel" aria-labelledby="tab-btn-novolanc" tabindex="0" hidden>
+  <div id="painel-novolanc" role="tabpanel" aria-labelledby="tab-btn-novolanc" tabindex="0">
 
   <!-- ══ LEITOR DE NOTAS E COMPROVANTES (IA) ══ -->
   <section class="card" aria-labelledby="titulo-leitor">
@@ -975,6 +919,62 @@ select option{background:#1e2436;}
 
   </div>
   <!-- fim #painel-novolanc -->
+
+  <!-- ══════ PAINEL: LANÇAMENTOS ══════ -->
+  <div id="painel-lancamentos" role="tabpanel" aria-labelledby="tab-btn-lancamentos" tabindex="0" hidden>
+
+  <!-- ══ TABELA ══ -->
+  <section class="card" aria-labelledby="titulo-tabela">
+    <div class="table-header">
+      <div>
+        <h2 class="card-title" id="titulo-tabela" style="margin-bottom:4px;"><span aria-hidden="true">📋</span> Lançamentos</h2>
+        <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
+      </div>
+    </div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
+      <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
+        <thead>
+          <tr>
+            <th scope="col">Pago</th>
+            <th scope="col">Status</th>
+            <th scope="col">Data Origem</th>
+            <th scope="col">Data Venc.</th>
+            <th scope="col">Valor</th>
+            <th scope="col">Banco / Cartão</th>
+            <th scope="col">Estabelecimento</th>
+            <th scope="col">Forma Pgto</th>
+            <th scope="col">Parcela</th>
+            <th scope="col">Descrição</th>
+            <th scope="col">Categoria</th>
+            <th scope="col">Credor</th>
+            <th scope="col">Devedor</th>
+            <th scope="col">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-body">
+          <tr><td colspan="14">
+            <div class="empty-state" role="status">
+              <div class="empty-icon" aria-hidden="true">📭</div>
+              <p>Nenhum lançamento cadastrado.</p>
+              <p style="margin-top:6px;font-size:12px;color:var(--text3);">Use a aba "Novo Lançamento" para adicionar.</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <nav class="pag-nav" id="pag-nav" aria-label="Paginação de lançamentos" style="display:none;">
+      <span class="pag-info" id="pag-info" aria-live="polite" aria-atomic="true"></span>
+      <div class="pag-botoes">
+        <button type="button" class="btn btn-secondary" id="pag-primeira" onclick="irParaPagina(1)" aria-label="Ir para a primeira página">⏮ Primeira</button>
+        <button type="button" class="btn btn-secondary" id="pag-anterior" onclick="irParaPagina(paginaAtual-1)" aria-label="Ir para a página anterior">◀ Anterior</button>
+        <button type="button" class="btn btn-secondary" id="pag-proxima" onclick="irParaPagina(paginaAtual+1)" aria-label="Ir para a próxima página">Próxima ▶</button>
+        <button type="button" class="btn btn-secondary" id="pag-ultima" onclick="irParaPagina(totalPaginas())" aria-label="Ir para a última página">Última ⏭</button>
+      </div>
+    </nav>
+  </section>
+
+  </div>
+  <!-- fim #painel-lancamentos -->
 
   <!-- ══════ PAINEL: FILTROS ══════ -->
   <div id="painel-filtros" role="tabpanel" aria-labelledby="tab-btn-filtros" tabindex="0" hidden>
@@ -1232,7 +1232,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.4.2 · 17/07/2026
+  Controle Financeiro · v1.5.2 · 17/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1476,9 +1476,9 @@ async function iniciarAppLogado() {
 // ═══════════════════════════════════════════════════
 //  NAVEGAÇÃO POR ABAS
 // ═══════════════════════════════════════════════════
-const ABAS = ['lancamentos', 'novolanc', 'filtros', 'saldos', 'documentos', 'config'];
+const ABAS = ['novolanc', 'lancamentos', 'filtros', 'saldos', 'documentos', 'config'];
 const ROTULO_ABA = { lancamentos: 'Lançamentos', novolanc: 'Novo Lançamento', filtros: 'Filtros', saldos: 'Saldos', documentos: 'Documentos', config: 'Configurações' };
-let abaAtual = 'lancamentos';
+let abaAtual = 'novolanc';
 
 function mudarAba(nome) {
   if(!ABAS.includes(nome)) return;
@@ -1514,7 +1514,7 @@ function navegarAbasTeclado(e) {
 //  estar com foco na navegação de abas). Ignorado se o app
 //  ainda não estiver logado/visível.
 // ═══════════════════════════════════════════════════
-const ATALHO_ABA_POR_TECLA = { '1':'lancamentos', '2':'novolanc', '3':'filtros', '4':'saldos', '5':'documentos', '6':'config' };
+const ATALHO_ABA_POR_TECLA = { '1':'novolanc', '2':'lancamentos', '3':'filtros', '4':'saldos', '5':'documentos', '6':'config' };
 
 function registrarAtalhosGlobaisAbas() {
   document.addEventListener('keydown', function(e) {
@@ -3360,7 +3360,6 @@ function atualizarSaldos(){
 // ═══════════════════════════════════════════════════
 //  CONTAS E CARTÕES (saldo em conta / limite de crédito)
 // ═══════════════════════════════════════════════════
-const CATEGORIA_CARTAO = 'cartão de crédito';
 
 function renderizarContasConfig() {
   const container = document.getElementById('contas-config-lista');
@@ -3515,12 +3514,21 @@ function atualizarContas() {
     const doBanco = lancamentos.filter(l => l.banco === nomeBanco);
 
     if(cfg.tipo === 'conta_corrente') {
-      const saldoAtual = (cfg.saldo_inicial || 0) + doBanco.reduce((s,l)=>s+l.valor,0);
+      // Só lançamentos PAGOS representam dinheiro que de fato entrou ou saiu da
+      // conta. Um lançamento Pendente é algo agendado/previsto — ainda não
+      // aconteceu de verdade, então não deve mexer no saldo atual.
+      const doBancoPago = doBanco.filter(l => l.pago);
+      const saldoAtual = (cfg.saldo_inicial || 0) + doBancoPago.reduce((s,l)=>s+l.valor,0);
       el.textContent = 'Saldo atual: ' + fmtValor(saldoAtual);
       el.classList.toggle('alerta', saldoAtual < 0);
     } else if(cfg.tipo === 'cartao_credito') {
-      const doCartao = doBanco.filter(l => (l.categoria||'').trim().toLowerCase() === CATEGORIA_CARTAO);
-      const limiteUsado = Math.max(0, -doCartao.reduce((s,l)=>s+l.valor,0));
+      // Todo lançamento com este Banco/Cartão conta para o limite — sem exigir
+      // nenhuma Categoria específica. Assim a Categoria fica livre para descrever
+      // o gasto de verdade (Alimentação, Transporte etc.), e é só a escolha do
+      // Banco/Cartão que decide se aquilo consome o limite deste cartão.
+      // Pendente CONTA (ao contrário da conta corrente), porque no cartão
+      // normalmente significa "já comprado, fatura em aberto".
+      const limiteUsado = Math.max(0, -doBanco.reduce((s,l)=>s+l.valor,0));
       const limiteTotal = cfg.limite_total || 0;
       const limiteRestante = limiteTotal - limiteUsado;
       el.textContent = 'Limite restante: ' + fmtValor(limiteRestante) + ' de ' + fmtValor(limiteTotal) + ' (usado: ' + fmtValor(limiteUsado) + ')';

@@ -268,8 +268,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <table class="tabela-campos">
         <thead><tr><th>Aba</th><th>O que você encontra nela</th></tr></thead>
         <tbody>
+          <tr><td class="campo-nome">➕ Novo Lançamento</td><td>Leitor de Notas com IA e o formulário para cadastrar (ou editar) um lançamento, incluindo itens múltiplos e parcelamento. É a aba que abre primeiro ao entrar no app.</td></tr>
           <tr><td class="campo-nome">📋 Lançamentos</td><td>A tabela de lançamentos, com paginação e as ações de editar/excluir/marcar como pago.</td></tr>
-          <tr><td class="campo-nome">➕ Novo Lançamento</td><td>Leitor de Notas com IA e o formulário para cadastrar (ou editar) um lançamento, incluindo itens múltiplos e parcelamento.</td></tr>
           <tr><td class="campo-nome">🔍 Filtros</td><td>Todos os filtros da tabela de Lançamentos (data, status, banco, forma, estabelecimento, categoria, credor, devedor).</td></tr>
           <tr><td class="campo-nome">📊 Saldos</td><td>Contas e Cartões (saldo de contas correntes e limite de cartões de crédito).</td></tr>
           <tr><td class="campo-nome">📂 Documentos</td><td>Notas fiscais e comprovantes guardados na nuvem — analisar, baixar ou excluir, com busca por nome.</td></tr>
@@ -554,7 +554,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <p>
         Clique em <strong>Filtrar</strong> para aplicar ou <strong>Limpar Filtros</strong> para
         voltar a ver tudo. Depois de filtrar, troque para a aba <strong>Lançamentos</strong> (ou use
-        <strong>Alt+1</strong>) para ver o resultado na tabela. Os totais do <strong>Resumo em Tempo
+        <strong>Alt+2</strong>) para ver o resultado na tabela. Os totais do <strong>Resumo em Tempo
         Real</strong>, sempre visível no topo da tela, refletem sempre o que está filtrado, não o
         total absoluto da conta.
       </p>
@@ -583,14 +583,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         Permite configurar cada Banco/Cartão cadastrado como um de dois tipos:
       </p>
       <ul>
-        <li><strong>Conta Corrente</strong> — acompanha o saldo, somando entradas e subtraindo saídas.</li>
-        <li><strong>Cartão de Crédito</strong> — acompanha o limite disponível.</li>
+        <li><strong>Conta Corrente</strong> — acompanha o saldo, somando apenas os lançamentos marcados como <strong>Pago</strong> (entradas somam, saídas subtraem). Lançamentos Pendentes ainda não afetam o saldo, já que representam algo agendado que ainda não aconteceu de verdade na conta.</li>
+        <li><strong>Cartão de Crédito</strong> — acompanha o limite disponível, somando <strong>todos</strong> os lançamentos daquele Banco/Cartão, Pago ou Pendente (compra parcelada e fatura em aberto normalmente ainda não estão marcadas como Pago, mas já consomem limite de verdade).</li>
       </ul>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
-        <span>Para o limite do cartão ser recalculado corretamente: compras no cartão devem usar a
-        Categoria <strong>"Cartão de Crédito"</strong> com tipo <strong>Saída</strong>; o pagamento
-        da fatura usa a mesma categoria com tipo <strong>Entrada</strong>.</span>
+        <span>Para o limite do cartão ser calculado, o único requisito é escolher o <strong>Banco/Cartão</strong> certo no lançamento (o mesmo nome configurado aqui como "Cartão de Crédito") — tipo <strong>Saída</strong> para compras, <strong>Entrada</strong> para o pagamento da fatura. A <strong>Categoria</strong> do lançamento é livre e não precisa ser "Cartão de Crédito": pode (e deve) descrever o gasto de verdade, como Alimentação ou Transporte.</span>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span>Como o cálculo do limite usa só o campo Banco/Cartão, qualquer lançamento com aquele mesmo Banco/Cartão selecionado entra na conta — inclusive, por exemplo, uma devolução ou estorno. Se algo não devia contar, confira se o Banco/Cartão selecionado nele está certo.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">🔍</span>
+        <span>Se o saldo ou o limite calculado não bater com a realidade, use o botão <strong>"🔍 Ver Lançamentos"</strong> ao lado da conta/cartão, em Saldos — ele filtra a aba Lançamentos exatamente pelo mesmo conjunto de registros usado no cálculo, pra você conferir data por data.</span>
       </div>
     </section>
 

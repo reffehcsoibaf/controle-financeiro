@@ -156,11 +156,77 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.5.2 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-5-2">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-5-2"><span aria-hidden="true">🏷️</span> v1.5.2</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">17/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🗂️</span> Navegação</h3>
+          <ul>
+            <li><strong>Ordem das abas alterada</strong>: "Novo Lançamento" agora é a 1ª aba (e a que abre por padrão ao entrar no app) e "Lançamentos" (a tabela) passou a ser a 2ª. As demais abas mantêm a mesma posição. Os atalhos de teclado foram remapeados: <strong>Alt+1</strong> agora abre Novo Lançamento e <strong>Alt+2</strong> abre Lançamentos.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📖</span> Guia de Uso</h3>
+          <ul>
+            <li>Tabela de abas e referências de atalho atualizadas para a nova ordem.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.5.1 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-5-1">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-5-1"><span aria-hidden="true">🏷️</span> v1.5.1</span>
+          <span class="versao-data">17/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Saldos — Cartão de Crédito</h3>
+          <ul>
+            <li>O cálculo do limite agora usa <strong>só o campo Banco/Cartão</strong> — não exige mais que a Categoria seja "Cartão de Crédito". Isso libera a Categoria para descrever o gasto de verdade (Alimentação, Transporte etc.) em compras no cartão, sem prejudicar o cálculo do limite. Continua contando lançamentos Pago e Pendente.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📖</span> Guia de Uso</h3>
+          <ul>
+            <li>Seção "Saldos → Contas e Cartões" atualizada para refletir essa mudança e a correção da v1.5.0 (saldo de conta corrente só considera lançamentos Pago).</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.5.0 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-5-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-5-0"><span aria-hidden="true">🏷️</span> v1.5.0</span>
+          <span class="versao-data">17/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Saldos — Conta Corrente</h3>
+          <ul>
+            <li>O <strong>Saldo atual</strong> agora considera apenas os lançamentos marcados como <strong>Pago</strong>. Lançamentos Pendentes são agendados/previstos e ainda não aconteceram de verdade na conta, então deixaram de contar para o saldo. O limite de Cartão de Crédito não mudou nesse ponto — pendentes continuam contando, já que normalmente representam compra já feita com fatura em aberto.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🐛</span> Saldos — Cartão de Crédito</h3>
+          <ul>
+            <li>A comparação que identifica lançamentos como "Cartão de Crédito" para calcular o limite consumido agora ignora diferenças de acento, maiúscula/minúscula e espaços extras — a mesma técnica de comparação tolerante já usada pelo Leitor de Notas por IA. Antes, uma diferença sutil no texto da Categoria fazia a comparação falhar silenciosamente e o limite nunca mudava.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.4.2 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-4-2">
+      <section class="versao-bloco" aria-labelledby="v1-4-2">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-4-2"><span aria-hidden="true">🏷️</span> v1.4.2</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">17/07/2026</span>
         </div>
 
