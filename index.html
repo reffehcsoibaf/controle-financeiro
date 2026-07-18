@@ -373,6 +373,12 @@ tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:var(--bg3);}
 tbody tr.pago-row{opacity:.65;}
+tbody tr.linha-lancamento{cursor:pointer;}
+tbody tr.linha-lancamento:focus{
+  outline:3px solid var(--accent);outline-offset:-2px;
+  background:var(--bg3);
+}
+tbody tr.linha-lancamento:focus.pago-row{opacity:1;}
 tbody tr.sub-row{background:rgba(79,124,255,.04);}
 tbody tr.sub-row:hover{background:rgba(79,124,255,.09);}
 tbody tr.sub-row td{padding:7px 12px;font-size:11px;color:var(--text2);}
@@ -931,6 +937,12 @@ select option{background:#1e2436;}
         <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
       </div>
     </div>
+    <p id="dica-atalhos-linha" style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Clique numa linha ou navegue até ela e pressione Enter para selecioná-la. Com a linha
+      selecionada: <strong>Alt+P</strong> marca/desmarca como pago, <strong>Alt+E</strong> edita,
+      <strong>Alt+X</strong> exclui. <strong>Alt+S</strong> salva o formulário de Novo Lançamento a
+      qualquer momento, mesmo em outra aba.
+    </p>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
       <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
         <thead>
@@ -1232,7 +1244,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.5.2 · 17/07/2026
+  Controle Financeiro · v1.6.0 · 18/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1449,6 +1461,7 @@ async function iniciarAppLogado() {
   iniciarRelogio();
   registrarEventosModais();
   registrarAtalhosGlobaisAbas();
+  registrarAtalhosAcoesLancamento();
   registrarEventosContasConfig();
 
   const selItensPag = document.getElementById('cfg-itens-por-pagina');
@@ -1526,6 +1539,55 @@ function registrarAtalhosGlobaisAbas() {
     mudarAba(alvo);
     const btn = document.getElementById('tab-btn-' + alvo);
     if(btn) btn.focus();
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  ATALHOS DE TECLADO — AÇÕES SOBRE O LANÇAMENTO
+//  Alt+S salva o formulário de Novo Lançamento, de qualquer aba.
+//  Alt+P / Alt+E / Alt+X agem sobre a linha da tabela de Lançamentos
+//  que estiver com o FOCO REAL do teclado no momento (não é preciso
+//  clicar — dá pra chegar até a linha pelo Tab, ou pelo modo de
+//  navegação por tabela do NVDA, e confirmar com Enter). Cada linha
+//  tem tabindex="0" e um identificador (data-lancamento-id) exatamente
+//  para isso: funciona como "selecionar a linha" antes de agir sobre
+//  ela, o mesmo princípio já validado no Banca Pro.
+// ═══════════════════════════════════════════════════
+function linhaLancamentoFocada() {
+  const el = document.activeElement;
+  return (el && el.matches && el.matches('tr[data-lancamento-id]')) ? el : null;
+}
+
+function registrarAtalhosAcoesLancamento() {
+  document.addEventListener('keydown', function(e) {
+    if(!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
+    if(document.getElementById('app-principal').style.display === 'none') return;
+    const tecla = e.key.toLowerCase();
+
+    if(tecla === 's') {
+      e.preventDefault();
+      salvarLancamento();
+      return;
+    }
+
+    if(tecla !== 'p' && tecla !== 'e' && tecla !== 'x') return;
+
+    const linha = linhaLancamentoFocada();
+    if(!linha) {
+      anunciar('Nenhuma linha de lançamento selecionada. Clique numa linha da tabela ou navegue até ela e pressione Enter antes de usar este atalho.', true);
+      return;
+    }
+    e.preventDefault();
+    const id = parseInt(linha.dataset.lancamentoId, 10);
+
+    if(tecla === 'p') {
+      const chk = linha.querySelector('input[type="checkbox"]');
+      if(chk) togglePago(id, chk);
+    } else if(tecla === 'e') {
+      editarLancamento(id);
+    } else if(tecla === 'x') {
+      excluirLancamento(id);
+    }
   });
 }
 
@@ -3122,7 +3184,7 @@ async function togglePago(id, chkEl) {
   if(tr){
     const badge=tr.querySelector('.badge-status');
     if(badge){badge.className='badge badge-status '+(l.pago?'badge-pago':'badge-pendente');badge.textContent=l.pago?'✓ Pago':'⏳ Pendente';}
-    tr.className=(l.pago?'pago-row':'')+(tr.classList.contains('has-subitems')?' has-subitems':'');
+    tr.classList.toggle('pago-row', l.pago);
     chkEl.setAttribute('aria-label',l.pago?'Pago — clique para marcar como pendente':'Pendente — clique para marcar como pago');
   }
   aplicarFiltrosSilencioso();
@@ -3140,7 +3202,7 @@ async function togglePago(id, chkEl) {
     if(tr){
       const badge=tr.querySelector('.badge-status');
       if(badge){badge.className='badge badge-status '+(l.pago?'badge-pago':'badge-pendente');badge.textContent=l.pago?'✓ Pago':'⏳ Pendente';}
-      tr.className=(l.pago?'pago-row':'')+(tr.classList.contains('has-subitems')?' has-subitems':'');
+      tr.classList.toggle('pago-row', l.pago);
     }
     aplicarFiltrosSilencioso();
     anunciar('Erro ao atualizar status. Revertido.', true);
@@ -3249,10 +3311,14 @@ function renderizarTabela() {
       : l.categoria||'—';
     const vNeg = l.valor<0;
 
+    const rotuloLinha = 'Lançamento: '+fmtData(l.dataOrigem)+', '+(l.banco||'sem banco informado')+', '+fmtValor(l.valor)+', '+(l.pago?'pago':'pendente')+'.';
+
     linhas.push(
-      '<tr class="'+(l.pago?'pago-row':'')+(temItens?' has-subitems':'')+'">' +
+      '<tr class="linha-lancamento'+(l.pago?' pago-row':'')+(temItens?' has-subitems':'')+'" '+
+        'tabindex="0" data-lancamento-id="'+l.id+'" '+
+        'aria-label="'+escaparHTML(rotuloLinha)+'" aria-describedby="dica-atalhos-linha">' +
       '<td><div class="chk-wrap"><label class="chk-label"><input type="checkbox"'+(l.pago?' checked':'')+
-        ' aria-label="'+chkLabel+'" onchange="togglePago('+l.id+',this)"></label></div></td>'+
+        ' tabindex="-1" aria-label="'+chkLabel+'" onchange="togglePago('+l.id+',this)"></label></div></td>'+
       '<td><span class="badge badge-status '+(l.pago?'badge-pago':'badge-pendente')+'" aria-hidden="true">'+(l.pago?'✓ Pago':'⏳ Pendente')+'</span>'+
           (temItens?'<span class="badge badge-multi" aria-label="'+l.itens.length+' itens">'+l.itens.length+' itens</span>':'')+
           (eParcelado?'<span class="badge badge-parcelado" aria-label="parcela '+l.parcela+'">'+l.parcela+'</span>':'')+
@@ -3269,9 +3335,9 @@ function renderizarTabela() {
       '<td>'+(l.credor||'—')+'</td>'+
       '<td>'+(l.devedor||'—')+'</td>'+
       '<td><div class="td-actions">'+
-        '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;"'+
+        '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
           ' onclick="editarLancamento('+l.id+')" aria-label="Editar lançamento: '+desc+'"><span aria-hidden="true">✏️</span></button>'+
-        '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;"'+
+        '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
           ' onclick="excluirLancamento('+l.id+')" aria-label="Excluir lançamento: '+desc+'"><span aria-hidden="true">🗑</span></button>'+
       '</div></td>'+
       '</tr>'

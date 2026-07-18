@@ -4,6 +4,22 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.6.0 — 18/07/2026
+
+- **Seleção de linha na tabela de Lançamentos**: cada linha agora pode ser selecionada — clique
+  nela, ou navegue até ela pelo teclado (Tab, ou o modo de navegação por tabela do NVDA,
+  Ctrl+Alt+Setas) e pressione Enter para dar foco real a ela. Isso habilita quatro novos atalhos
+  de teclado:
+  - **Alt+P** — marca/desmarca a linha selecionada como Pago (equivale a clicar na caixinha).
+  - **Alt+E** — edita a linha selecionada (leva até a aba Novo Lançamento já preenchida).
+  - **Alt+X** — exclui a linha selecionada (pede confirmação, como o botão 🗑).
+  - **Alt+S** — salva o formulário de Novo Lançamento a qualquer momento, mesmo estando em outra
+    aba.
+  Uma dica com essas quatro combinações aparece acima da tabela, na aba Lançamentos.
+- A caixinha "Pago" e os botões "✏️ Editar"/"🗑 Excluir" de cada linha continuam funcionando
+  normalmente por clique; o que mudou é que agora não fazem mais parte da navegação por Tab
+  isolada — a linha inteira é o ponto de parada do Tab, e as ações ficam nos atalhos acima.
+
 ## v1.5.2 — 17/07/2026
 
 - **Ordem das abas alterada**: "Novo Lançamento" agora é a 1ª aba (e a que abre por padrão ao

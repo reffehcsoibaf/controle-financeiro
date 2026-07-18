@@ -214,6 +214,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#lanc-entrada-saida" class="sub">Entrada e Saída</a>
       <a href="#lanc-listas" class="sub">Adicionar/remover opções rápido</a>
       <a href="#lanc-status" class="sub">Marcar como pago</a>
+      <a href="#lanc-selecao" class="sub">Selecionar linha e atalhos</a>
       <a href="#itens-multiplos">Itens Múltiplos</a>
       <a href="#parcelamento">Parcelamento Automático</a>
       <a href="#filtros">Filtros</a>
@@ -458,6 +459,33 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span class="badge badge-pago">✓ Pago</span> quando marcada. A mudança é salva
         automaticamente, e os totais do Resumo são recalculados na hora.
       </p>
+
+      <h3 id="lanc-selecao">Selecionar uma linha e atalhos de teclado</h3>
+      <p>
+        Cada linha da tabela de Lançamentos pode ser <strong>selecionada</strong>: clique nela, ou
+        chegue até ela pelo teclado — pelo Tab, ou pelo modo de navegação por tabela do NVDA
+        (Ctrl+Alt+Setas) — e pressione <strong>Enter</strong> para dar foco real a ela. A linha
+        selecionada fica destacada visualmente, e o NVDA anuncia um resumo dela (data, banco,
+        valor e status).
+      </p>
+      <p>Com uma linha selecionada, quatro atalhos ficam disponíveis:</p>
+      <table class="tabela-campos">
+        <thead><tr><th>Atalho</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td class="campo-nome">Alt+P</td><td>Marca ou desmarca a linha selecionada como Pago — equivale a clicar na caixinha.</td></tr>
+          <tr><td class="campo-nome">Alt+E</td><td>Edita a linha selecionada — leva direto até a aba Novo Lançamento, já com o formulário preenchido.</td></tr>
+          <tr><td class="campo-nome">Alt+X</td><td>Exclui a linha selecionada — pede confirmação antes, igual ao botão 🗑.</td></tr>
+          <tr><td class="campo-nome">Alt+S</td><td>Salva o formulário de Novo Lançamento — funciona a qualquer momento, mesmo se você estiver numa aba diferente.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Uma dica com esses quatro atalhos aparece sempre visível logo acima da tabela, na aba Lançamentos.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">🖱️</span>
+        <span>A caixinha "Pago" e os botões "✏️ Editar"/"🗑 Excluir" de cada linha continuam funcionando normalmente por clique do mouse. A diferença é que, navegando pelo teclado, o Tab agora para na linha inteira (não mais em cada botão separadamente) — as ações desses elementos passam a ser feitas pelos atalhos Alt+P/E/X.</span>
+      </div>
     </section>
 
     <!-- ══ ITENS MÚLTIPLOS ══ -->
