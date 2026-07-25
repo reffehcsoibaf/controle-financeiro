@@ -69,6 +69,41 @@ Regras importantes:
 
 const TEXTO_INSTRUCAO_ARQUIVO = 'Extraia os dados deste comprovante/nota conforme as instruções.';
 
+// ---- Checagem de acesso à IA: valida o token do usuário e confere ai_enabled ----
+async function checarAcessoIA(request, env) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const accessToken = authHeader.replace(/^Bearer\s+/i, '');
+
+  if (!accessToken) {
+    return { ok: false, status: 401, message: 'Sessão não encontrada. Faça login novamente.' };
+  }
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    return { ok: false, status: 500, message: 'Configuração do Supabase ausente no servidor.' };
+  }
+
+  const userResp = await fetch(env.SUPABASE_URL + '/auth/v1/user', {
+    headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + accessToken }
+  });
+  if (!userResp.ok) {
+    return { ok: false, status: 401, message: 'Sessão inválida ou expirada. Faça login novamente.' };
+  }
+  const userData = await userResp.json();
+
+  const profileResp = await fetch(
+    env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + userData.id + '&select=ai_enabled',
+    { headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + accessToken } }
+  );
+  if (!profileResp.ok) {
+    return { ok: false, status: 500, message: 'Não foi possível checar sua permissão de uso da IA.' };
+  }
+  const rows = await profileResp.json();
+  if (!rows.length || rows[0].ai_enabled !== true) {
+    return { ok: false, status: 403, message: 'O acesso às funcionalidades de IA está desativado para este usuário. Fale com o administrador.' };
+  }
+
+  return { ok: true };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -81,7 +116,7 @@ export default {
 
     const headers = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Content-Type': 'application/json',
     };
@@ -91,6 +126,11 @@ export default {
     }
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ ok: false, erro: 'Método não permitido.' }), { status: 405, headers });
+    }
+
+    const acesso = await checarAcessoIA(request, env);
+    if (!acesso.ok) {
+      return new Response(JSON.stringify({ ok: false, erro: acesso.message }), { status: acesso.status, headers });
     }
 
     let payload;

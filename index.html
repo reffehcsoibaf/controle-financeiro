@@ -729,7 +729,7 @@ select option{background:#1e2436;}
   <div id="painel-novolanc" role="tabpanel" aria-labelledby="tab-btn-novolanc" tabindex="0">
 
   <!-- ══ LEITOR DE NOTAS E COMPROVANTES (IA) ══ -->
-  <section class="card" aria-labelledby="titulo-leitor">
+  <section class="card" id="secao-leitor-ia" aria-labelledby="titulo-leitor">
     <h2 class="card-title" id="titulo-leitor"><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
       Envie uma imagem, PDF, TXT, XML ou XLSX de uma nota fiscal ou comprovante — ou cole o texto abaixo.
@@ -1274,6 +1274,15 @@ const SUPABASE_URL = 'https://arkhifcucqozrpofhceq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_fNGQLgpF3_tOycUEciaznw_b0o2FM8h';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Monta o header Authorization com o token da sessão atual, usado na chamada
+// à rota de IA do Worker (/api/ler-documento), que checa no servidor se este
+// usuário tem ai_enabled = true.
+async function headerAutorizacaoIA() {
+  const { data } = await sb.auth.getSession();
+  const token = data && data.session ? data.session.access_token : null;
+  return token ? { Authorization: 'Bearer ' + token } : {};
+}
+
 // ═══════════════════════════════════════════════════
 //  ESTADO GLOBAL
 // ═══════════════════════════════════════════════════
@@ -1468,6 +1477,7 @@ sb.auth.onAuthStateChange((_evento, session) => {
     document.getElementById('app-principal').style.display    = '';
     document.getElementById('user-email-display').textContent = usuarioAtual.email;
     iniciarAppLogado();
+    aplicarVisibilidadeIA();
   } else {
     usuarioAtual = null;
     document.getElementById('auth-screen').style.display  = '';
@@ -1486,6 +1496,31 @@ sb.auth.onAuthStateChange((_evento, session) => {
 //  função e dispara o carregamento.
 // ═══════════════════════════════════════════════════
 let appJaIniciado = false;
+
+// Esconde a seção do leitor de IA se este usuário estiver com
+// ai_enabled = false no perfil. A checagem real de segurança acontece no
+// servidor (Worker); isto é só para não mostrar uma função que vai ser
+// bloqueada ao usar.
+async function aplicarVisibilidadeIA() {
+  try {
+    const userId = usuarioAtual ? usuarioAtual.id : null;
+    if (!userId) return;
+
+    const { data: perfil, error } = await sb
+      .from('profiles')
+      .select('ai_enabled')
+      .eq('id', userId)
+      .single();
+
+    if (error) return; // em caso de erro, não esconde nada (evita falso negativo)
+
+    const habilitado = !perfil || perfil.ai_enabled !== false;
+    const secao = document.getElementById('secao-leitor-ia');
+    if (secao) secao.style.display = habilitado ? '' : 'none';
+  } catch (e) {
+    // silencioso: não bloqueia o uso do app por falha nesta checagem visual
+  }
+}
 
 async function iniciarAppLogado() {
   if(appJaIniciado) return;
@@ -2245,7 +2280,7 @@ async function processarConteudoIA(tipo, conteudo, mimeType, nomeArquivo) {
 
   const resp = await fetch('/api/ler-documento', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: Object.assign({ 'Content-Type': 'application/json' }, await headerAutorizacaoIA()),
     body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo, correcoesConhecidas: correcoesIA })
   });
 
