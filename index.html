@@ -752,7 +752,7 @@ select option{background:#1e2436;}
       <span id="leitor-ia-status" role="status" aria-live="polite" style="font-size:13px;color:var(--text2);"></span>
     </div>
 
-    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+    <div id="bloco-salvar-tambem" style="margin-top:10px;display:flex;align-items:center;gap:8px;">
       <input type="checkbox" id="leitor-ia-salvar-tambem" checked style="width:auto;">
       <label for="leitor-ia-salvar-tambem" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
         Também guardar este arquivo na aba Documentos
@@ -1030,7 +1030,7 @@ select option{background:#1e2436;}
       baixe o arquivo original, ou apenas guarde um novo documento sem analisar agora.
     </p>
 
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+    <div id="bloco-guardar-documento" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <label for="input-leitor-guardar"
              class="btn btn-primary"
              role="button"
@@ -1508,15 +1508,25 @@ async function aplicarVisibilidadeIA() {
 
     const { data: perfil, error } = await sb
       .from('profiles')
-      .select('ai_enabled')
+      .select('ai_enabled, documents_enabled')
       .eq('id', userId)
       .single();
 
     if (error) return; // em caso de erro, não esconde nada (evita falso negativo)
 
-    const habilitado = !perfil || perfil.ai_enabled !== false;
+    const iaHabilitada = !perfil || perfil.ai_enabled !== false;
     const secao = document.getElementById('secao-leitor-ia');
-    if (secao) secao.style.display = habilitado ? '' : 'none';
+    if (secao) secao.style.display = iaHabilitada ? '' : 'none';
+
+    // O envio de documentos é um controle separado do acesso à IA: mesmo
+    // com a IA ativada, o usuário pode estar sem permissão de enviar
+    // arquivos para o Storage (a proteção real está nas políticas RLS
+    // do bucket "documentos" e da tabela documentos_armazenados).
+    const documentosHabilitados = !perfil || perfil.documents_enabled !== false;
+    const blocoSalvarTambem = document.getElementById('bloco-salvar-tambem');
+    if (blocoSalvarTambem) blocoSalvarTambem.style.display = documentosHabilitados ? '' : 'none';
+    const blocoGuardarDocumento = document.getElementById('bloco-guardar-documento');
+    if (blocoGuardarDocumento) blocoGuardarDocumento.style.display = documentosHabilitados ? '' : 'none';
   } catch (e) {
     // silencioso: não bloqueia o uso do app por falha nesta checagem visual
   }
