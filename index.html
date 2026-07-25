@@ -1121,6 +1121,23 @@ select option{background:#1e2436;}
     <div id="config-listas-container"></div>
   </section>
 
+  <!-- ══ CORREÇÕES APRENDIDAS (IA) ══ -->
+  <section class="card" aria-labelledby="titulo-correcoes-ia">
+    <h2 class="card-title" id="titulo-correcoes-ia"><span aria-hidden="true">🧠</span> Correções Aprendidas (IA)</h2>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
+      Sempre que você corrige o Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor ou
+      Devedor que a IA sugeriu numa leitura de documento (antes de salvar), o app memoriza essa correção
+      aqui — nas próximas leituras, essa preferência é enviada para a IA priorizar em vez de repetir o
+      mesmo erro. Nada manual necessário: basta editar o campo errado normalmente antes de salvar.
+    </p>
+    <div id="correcoes-ia-lista"></div>
+    <div class="table-actions" style="margin-top:12px;">
+      <button type="button" class="btn btn-danger" onclick="limparTodasCorrecoesIA()" aria-label="Apagar todas as correções aprendidas">
+        <span aria-hidden="true">🗑️</span> Apagar Todas as Correções
+      </button>
+    </div>
+  </section>
+
   </div>
   <!-- fim #painel-config -->
 
@@ -1244,7 +1261,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.6.0 · 18/07/2026
+  Controle Financeiro · v1.7.0 · 24/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1275,6 +1292,22 @@ let modalOrigemBotaoId    = null;
 // Cada item: { id (local), valor, categoria, descricao }
 let itensFormulario = [];
 let proximoItemId   = 1;
+
+// Última extração da IA aplicada ao formulário — usada só para comparar com o
+// que o usuário efetivamente salvou (memória de correções da IA, ver mais abaixo).
+// É zerada assim que consumida por detectarECorrigirAprendizadoIA().
+let ultimaExtracaoIA = null;
+
+// Correções aprendidas: valores que a IA sugeriu e o usuário corrigiu manualmente
+// antes de salvar, em leituras anteriores. Carregadas do Supabase no login e
+// enviadas de volta ao Worker em toda nova leitura, para a IA priorizar a
+// preferência já confirmada em vez de repetir o mesmo erro de inferência.
+let correcoesIA = [];
+
+// Snapshot de "o lançamento que acabou de ser salvo tinha itens múltiplos?" —
+// usado só por detectarECorrigirAprendizadoIA() para saber se a Categoria raiz
+// é comparável ou não. Atualizado a cada salvarLancamento().
+let itensParaSalvarSnapshot = [];
 
 const CAMPOS_SELECT = ['banco','parcela','forma','estabelecimento','categoria','credor','devedor'];
 const CAMPOS_NOMES  = {
@@ -1473,11 +1506,13 @@ async function iniciarAppLogado() {
   await carregarContasConfigSupabase();
   await carregarLancamentosSupabase();
   await carregarDocumentosArmazenados();
+  await carregarCorrecoesIA();
 
   renderizarTodosSelects();
   renderizarTodosFiltros();
   renderizarContasConfig();
   renderizarListasConfig();
+  renderCorrecoesIA();
   aplicarFiltros();
   atualizarSaldos();
 
@@ -1971,6 +2006,132 @@ async function carregarLancamentosSupabase() {
 }
 
 // ═══════════════════════════════════════════════════
+//  MEMÓRIA DE CORREÇÕES DA IA
+//  Sempre que você corrige, antes de salvar, um dos 6 campos abaixo que o
+//  Leitor de Notas preencheu automaticamente, o app memoriza a correção aqui
+//  — nas próximas leituras, essa preferência é enviada ao Worker para a IA
+//  priorizar em vez de repetir o mesmo erro. Nada manual: basta editar o
+//  campo errado normalmente antes de salvar, como você já faria.
+//  Padrão adaptado do mesmo recurso já validado no Banca Pro.
+// ═══════════════════════════════════════════════════
+const CAMPOS_CORRECAO_IA = ['banco', 'estabelecimento', 'forma', 'categoria', 'credor', 'devedor'];
+
+function correcaoParaLinha(c) {
+  return { campo: c.campo, valor_errado: c.valorErrado, valor_correto: c.valorCorreto, contexto: c.contexto || null };
+}
+function linhaParaCorrecao(row) {
+  return {
+    id: row.id,
+    campo: row.campo,
+    valorErrado: row.valor_errado,
+    valorCorreto: row.valor_correto,
+    contexto: row.contexto || '',
+    criadoEm: row.criado_em
+  };
+}
+
+async function carregarCorrecoesIA() {
+  const { data, error } = await selecionarTudo('correcoes_ia', 'id');
+  if(error) {
+    // Tabela pode ainda não existir se o SQL de criação não foi rodado —
+    // falha silenciosa aqui não deve travar o app, só desativa o recurso.
+    console.warn('Não foi possível carregar correções aprendidas (tabela pode não existir ainda):', error.message);
+    correcoesIA = [];
+    return;
+  }
+  correcoesIA = (data || []).map(linhaParaCorrecao);
+}
+
+// Evita duplicar a mesma correção exata (campo+errado+correto) — se já existir,
+// apenas ignora silenciosamente em vez de criar linhas repetidas.
+async function registrarCorrecaoIA(campo, valorErrado, valorCorreto, contexto) {
+  if(!valorErrado || !valorCorreto || valorErrado === valorCorreto) return;
+  const jaExiste = correcoesIA.some(c => c.campo===campo && c.valorErrado===valorErrado && c.valorCorreto===valorCorreto);
+  if(jaExiste) return;
+  const nova = { campo, valorErrado, valorCorreto, contexto: contexto || '' };
+  const { data, error } = await sb.from('correcoes_ia').insert({ user_id: usuarioAtual.id, ...correcaoParaLinha(nova) }).select().single();
+  if(error) { console.warn('Não foi possível salvar correção aprendida:', error.message); return; }
+  nova.id = data.id;
+  nova.criadoEm = data.criado_em;
+  correcoesIA.push(nova);
+}
+
+async function excluirCorrecaoIA(id) {
+  const { error } = await sb.from('correcoes_ia').delete().eq('id', id).eq('user_id', usuarioAtual.id);
+  if(error) { mostrarToast('Erro ao excluir correção: ' + error.message, true); return; }
+  correcoesIA = correcoesIA.filter(c => c.id !== id);
+  renderCorrecoesIA();
+  anunciar('Correção removida.');
+  mostrarToast('Correção removida.');
+}
+
+async function limparTodasCorrecoesIA() {
+  if(!correcoesIA.length) return;
+  if(!confirm('Apagar todas as ' + correcoesIA.length + ' correções aprendidas? A IA volta a inferir do zero, sem lembrar dos ajustes feitos até agora.')) return;
+  const { error } = await sb.from('correcoes_ia').delete().eq('user_id', usuarioAtual.id);
+  if(error) { mostrarToast('Erro ao limpar correções: ' + error.message, true); return; }
+  correcoesIA = [];
+  renderCorrecoesIA();
+  anunciar('Correções aprendidas apagadas.');
+  mostrarToast('Correções aprendidas apagadas.');
+}
+
+// Compara os valores que a IA sugeriu na última extração (ultimaExtracaoIA) com
+// os valores efetivamente salvos no lançamento. Toda diferença, num dos 6 campos
+// rastreados, vira uma correção aprendida automaticamente — você não precisa
+// clicar em nada, só editar o campo errado antes de salvar, como já faria.
+async function detectarECorrigirAprendizadoIA(dadosSalvos) {
+  if(!ultimaExtracaoIA) return;
+  const ia = ultimaExtracaoIA;
+  const usouItens = itensParaSalvarSnapshot && itensParaSalvarSnapshot.length > 0;
+  const contexto = (dadosSalvos.estabelecimento || '').trim();
+
+  const mapaSugestaoIA = {
+    banco:           ia.banco,
+    estabelecimento: ia.estabelecimento,
+    forma:           ia.forma_pagamento,
+    // Categoria só é comparável quando o lançamento NÃO usou itens múltiplos
+    // (com itens, a categoria raiz não é salva e cada item tem a sua própria).
+    categoria:       usouItens ? null : ia.categoria_sugerida,
+    credor:          ia.credor,
+    devedor:         ia.devedor
+  };
+
+  const gravacoes = [];
+  CAMPOS_CORRECAO_IA.forEach(campo => {
+    const sugerido = mapaSugestaoIA[campo];
+    const salvo    = dadosSalvos[campo];
+    if(sugerido && salvo && String(sugerido).trim().toLowerCase() !== String(salvo).trim().toLowerCase()) {
+      gravacoes.push(registrarCorrecaoIA(campo, sugerido, salvo, contexto));
+    }
+  });
+  if(gravacoes.length) await Promise.all(gravacoes);
+  // Consumida: evita comparar de novo contra um lançamento futuro sem relação com esta extração.
+  ultimaExtracaoIA = null;
+}
+
+// Lista as correções aprendidas em Configurações, mais recentes primeiro, com
+// botão de exclusão individual — mesmo padrão visual das listas de opções.
+function renderCorrecoesIA() {
+  const container = document.getElementById('correcoes-ia-lista');
+  if(!container) return;
+  if(!correcoesIA.length) {
+    container.innerHTML = '<p class="config-lista-vazio">Nenhuma correção aprendida ainda.</p>';
+    return;
+  }
+  const ordenadas = correcoesIA.slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+  container.innerHTML = ordenadas.map(c => (
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
+      '<div>' +
+        '<strong>'+escaparHTML(CAMPOS_NOMES[c.campo]||c.campo)+':</strong> "'+escaparHTML(c.valorErrado)+'" → "'+escaparHTML(c.valorCorreto)+'"' +
+        (c.contexto ? '<br><span style="color:var(--text3);font-size:12px;">'+escaparHTML(c.contexto)+'</span>' : '') +
+      '</div>' +
+      '<button type="button" class="btn-icon remove" onclick="excluirCorrecaoIA('+c.id+')" aria-label="Excluir esta correção aprendida">🗑️</button>' +
+    '</div>'
+  )).join('');
+}
+
+// ═══════════════════════════════════════════════════
 //  SELECTS — RENDERIZAÇÃO
 // ═══════════════════════════════════════════════════
 function renderizarSelect(campo) {
@@ -2085,7 +2246,7 @@ async function processarConteudoIA(tipo, conteudo, mimeType, nomeArquivo) {
   const resp = await fetch('/api/ler-documento', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo })
+    body: JSON.stringify({ tipo, conteudo, mimeType, nomeArquivo, correcoesConhecidas: correcoesIA })
   });
 
   let json;
@@ -2442,6 +2603,15 @@ function aplicarDadosIAaoFormulario(dados) {
     }
   }
 
+  // Data de Vencimento (boletos/faturas — diferente da data de origem)
+  if(dados.data_vencimento) {
+    const vencValido = /^\d{4}-\d{2}-\d{2}$/.test(dados.data_vencimento);
+    if(vencValido) {
+      document.getElementById('f-data-vencimento').value = dados.data_vencimento;
+      preenchidos.push('Data Vencimento');
+    }
+  }
+
   // Tipo (entrada/saída) — define o sinal; se a IA não tiver certeza, mantém "Saída" (padrão)
   if(dados.tipo_transacao === 'credito') {
     definirTipoValor('entrada');
@@ -2451,8 +2621,35 @@ function aplicarDadosIAaoFormulario(dados) {
     preenchidos.push('Tipo (Saída)');
   }
 
-  // Valor (a IA devolve sempre em número absoluto; o sinal já foi tratado acima)
-  if(dados.valor !== null && dados.valor !== undefined && !isNaN(parseFloat(dados.valor))) {
+  // Itens múltiplos: só entram em jogo quando a IA identificou 2 ou mais
+  // produtos/serviços distintos no documento (ex.: nota de mercado). Com 1
+  // item só, ou sem itens, o lançamento continua simples como sempre foi.
+  const itensIA = Array.isArray(dados.itens) ? dados.itens.filter(i => i && !isNaN(parseFloat(i.valor))) : [];
+  const usarItens = itensIA.length >= 2;
+  let categoriasItemNaoReconhecidas = 0;
+
+  if(usarItens) {
+    limparItens();
+    itensIA.forEach(itemIA => {
+      const idLocal = proximoItemId++;
+      const valorAbs = Math.abs(parseFloat(itemIA.valor)).toFixed(2);
+      itensFormulario.push({ id: idLocal, valor: valorAbs, categoria: '', descricao: itemIA.descricao || '' });
+      adicionarItem(itensFormulario[itensFormulario.length - 1]);
+
+      if(itemIA.categoria_sugerida) {
+        const equivalenteCat = encontrarOpcaoEquivalente('categoria', itemIA.categoria_sugerida);
+        if(equivalenteCat) {
+          const selCat = document.getElementById('item-cat-' + idLocal);
+          if(selCat) { selCat.value = equivalenteCat; onItemCatChange(idLocal, selCat); }
+        } else {
+          categoriasItemNaoReconhecidas++;
+        }
+      }
+    });
+    atualizarNotaValor();
+    preenchidos.push('Itens (' + itensIA.length + ')');
+  } else if(dados.valor !== null && dados.valor !== undefined && !isNaN(parseFloat(dados.valor))) {
+    // Valor (a IA devolve sempre em número absoluto; o sinal já foi tratado acima)
     const campoValor = document.getElementById('f-valor');
     campoValor.value = Math.abs(parseFloat(dados.valor)).toFixed(2);
     colorirValor(campoValor);
@@ -2461,8 +2658,11 @@ function aplicarDadosIAaoFormulario(dados) {
   }
 
   // Campos de seleção (banco, estabelecimento, forma, categoria, credor, devedor)
+  // Quando há itens múltiplos, Categoria pertence a cada item — o campo principal
+  // é ignorado no salvamento, então nem tentamos preenchê-lo aqui.
   Object.keys(CAMPOS_IA_PARA_SELECT).forEach(campoIA => {
     const campoSelect = CAMPOS_IA_PARA_SELECT[campoIA];
+    if(usarItens && campoSelect === 'categoria') return;
     const sugestao = dados[campoIA];
     if(!sugestao) return;
 
@@ -2475,8 +2675,8 @@ function aplicarDadosIAaoFormulario(dados) {
     }
   });
 
-  // Descrição (campo livre)
-  if(dados.descricao) {
+  // Descrição (campo livre) — também ignorada quando há itens múltiplos
+  if(!usarItens && dados.descricao) {
     document.getElementById('f-descricao').value = dados.descricao;
     preenchidos.push('Descrição');
   }
@@ -2489,11 +2689,18 @@ function aplicarDadosIAaoFormulario(dados) {
   if(naoEncontrados.length) {
     msg += ' ' + naoEncontrados.length + ' sugestão(ões) da IA não bateram com opções já cadastradas — confira abaixo.';
   }
+  if(categoriasItemNaoReconhecidas > 0) {
+    msg += ' ' + categoriasItemNaoReconhecidas + ' categoria(s) de item não bateram com opções já cadastradas — selecione manualmente nos itens.';
+  }
   if(!dados.tipo_transacao || dados.tipo_transacao === 'indefinido') {
     msg += ' A IA não teve certeza se é Entrada ou Saída — confira o botão selecionado antes de salvar.';
   }
   mostrarStatusLeitorIA(msg);
   anunciar(msg);
+
+  // Guarda a extração para comparação posterior (memória de correções da IA) —
+  // consumida e zerada em detectarECorrigirAprendizadoIA(), chamada ao salvar.
+  ultimaExtracaoIA = dados;
 }
 
 // Mostra, abaixo do leitor, as sugestões da IA que não corresponderam a nenhuma
@@ -3041,6 +3248,7 @@ async function salvarLancamento() {
         descricao:i.descricao || null
       }))
     : [];
+  itensParaSalvarSnapshot = itensParaSalvar;
 
   const btnSalvar = document.getElementById('btn-salvar');
   const textoOriginal = btnSalvar.innerHTML;
@@ -3088,6 +3296,11 @@ async function salvarLancamento() {
     }
 
     btnSalvar.innerHTML = '<span aria-hidden="true">💾</span> Salvar Lançamento';
+    // Compara o que a IA sugeriu (se este lançamento veio de uma leitura por IA)
+    // com o que foi efetivamente salvo, e memoriza qualquer correção nos 6 campos
+    // rastreados, para não repetir o mesmo erro nas próximas leituras. Roda em
+    // segundo plano, sem atrasar a limpeza do formulário.
+    detectarECorrigirAprendizadoIA(dadosLancamento);
     limparFormulario();
     await carregarLancamentosSupabase();
     aplicarFiltros();

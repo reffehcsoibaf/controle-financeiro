@@ -156,11 +156,37 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.7.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-7-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-7-0"><span aria-hidden="true">🏷️</span> v1.7.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">24/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🧾</span> Leitor de Notas com IA — Itens Múltiplos Automáticos</h3>
+          <ul>
+            <li>Quando o documento enviado (nota fiscal, recibo etc.) listar <strong>2 ou mais produtos/serviços</strong> com valores individuais, o app agora preenche automaticamente a seção "Itens do Lançamento" com um item para cada um — valor, categoria (quando reconhecida) e descrição.</li>
+            <li>Documentos com apenas 1 item, ou comprovantes de pagamento único (Pix, transferência, boleto), continuam preenchendo o lançamento como simples — sem usar a seção de Itens, como sempre foi.</li>
+            <li>A <strong>Data Vencimento</strong> também passou a ser preenchida automaticamente pela IA, quando o documento for um boleto ou fatura com essa data explícita.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🧠</span> Nova Função: Memória de Correções da IA</h3>
+          <ul>
+            <li>Mesmo recurso já validado no Banca Pro, adaptado ao Controle Financeiro: sempre que você corrige, antes de salvar, um valor de <strong>Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor ou Devedor</strong> que o Leitor de Notas sugeriu, o app memoriza essa correção automaticamente — nada manual, é só editar o campo errado normalmente.</li>
+            <li>Nas próximas leituras, essas preferências já confirmadas são enviadas para a IA priorizar, em vez de repetir o mesmo erro de inferência.</li>
+            <li>Nova seção "🧠 Correções Aprendidas (IA)" na aba Configurações, com a lista de correções memorizadas e um botão para apagar tudo, se quiser que a IA volte a inferir do zero.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.6.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-6-0">
+      <section class="versao-bloco" aria-labelledby="v1-6-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-6-0"><span aria-hidden="true">🏷️</span> v1.6.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">18/07/2026</span>
         </div>
 

@@ -4,6 +4,28 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.7.0 — 24/07/2026
+
+- **Leitor de Notas com IA — itens múltiplos automáticos**: quando o documento enviado (nota
+  fiscal, recibo etc.) listar 2 ou mais produtos/serviços com valores individuais, o app agora
+  preenche automaticamente a seção "Itens do Lançamento" com um item para cada um, já com valor,
+  categoria (quando reconhecida entre as já cadastradas) e descrição. Documentos com apenas 1
+  item ou comprovantes de pagamento único (Pix, transferência, boleto) continuam preenchendo o
+  lançamento como simples, sem usar a seção de Itens — como sempre foi.
+- **Leitor de Notas com IA — Data Vencimento**: quando o documento for um boleto ou fatura com
+  data de vencimento explícita, esse campo também é preenchido automaticamente (antes só a Data
+  Origem era preenchida pela IA).
+- **Nova função: Memória de Correções da IA** — mesmo recurso já validado no Banca Pro, adaptado
+  ao Controle Financeiro. Sempre que você corrige, antes de salvar, um valor de Banco/Cartão,
+  Estabelecimento, Forma de Pagamento, Categoria, Credor ou Devedor que o Leitor de Notas sugeriu,
+  o app memoriza essa correção automaticamente. Nas próximas leituras, essas preferências já
+  confirmadas são enviadas para a IA priorizar em vez de repetir o mesmo erro de inferência. Nova
+  seção "🧠 Correções Aprendidas (IA)" na aba Configurações, com a lista de correções memorizadas
+  e um botão para apagar tudo, se quiser que a IA volte a inferir do zero.
+  **Requer rodar a migração SQL `migracao_correcoes_ia.sql` uma única vez no Supabase** (cria a
+  tabela `correcoes_ia`, com RLS por usuário) — sem isso, o recurso fica desativado
+  silenciosamente (o resto do app continua funcionando normalmente).
+
 ## v1.6.0 — 18/07/2026
 
 - **Seleção de linha na tabela de Lançamentos**: cada linha agora pode ser selecionada — clique

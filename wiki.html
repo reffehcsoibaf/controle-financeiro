@@ -229,6 +229,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#planilhas" class="sub">Exportar e Importar Planilhas</a>
       <a href="#duplicatas" class="sub">Lançamentos Duplicados</a>
       <a href="#gerenciar-listas" class="sub">Gerenciar Listas</a>
+      <a href="#correcoes-ia" class="sub">Correções Aprendidas (IA)</a>
       <a href="#acessibilidade">Acessibilidade</a>
       <a href="#problemas">Resolução de Problemas</a>
     </nav>
@@ -359,7 +360,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">2</div>
-          <div class="passo-texto">A IA analisa o conteúdo e extrai data, valor, banco/instituição, estabelecimento, forma de pagamento, categoria sugerida, credor, devedor e uma descrição curta.</div>
+          <div class="passo-texto">A IA analisa o conteúdo e extrai data, data de vencimento (quando houver), valor, banco/instituição, estabelecimento, forma de pagamento, categoria sugerida, credor, devedor e uma descrição curta.</div>
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">3</div>
@@ -381,6 +382,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="callout callout-ok">
         <span class="callout-icon" aria-hidden="true">✅</span>
         <span><strong>Reconhecimento inteligente de opções já cadastradas:</strong> se o comprovante for do banco <strong>Next</strong> — mesmo aparecendo junto com o nome do parceiro emissor (ex.: "Next Bradesco", "Next 237 Bradesco S.A.") — o app já marca a opção <strong>"Next"</strong> cadastrada, sem sugerir uma nova. O mesmo vale para nomes de <strong>Credor/Devedor</strong>: se o comprovante trouxer o nome em CAIXA ALTA ou sem os mesmos acentos da opção já cadastrada (ex.: "FABIO SCHEFFER MORAES" no comprovante vs. "Fábio Scheffer Moraes" cadastrado), o app reconhece como a mesma pessoa e seleciona a opção existente.</span>
+      </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Itens múltiplos automáticos:</strong> se o documento listar 2 ou mais produtos/serviços com valores individuais (ex.: uma nota de mercado), o app preenche sozinho a seção <a href="#itens-multiplos">Itens do Lançamento</a> — um item para cada produto, com valor, categoria (quando reconhecida entre as já cadastradas) e descrição. Com 1 item só, ou num comprovante de pagamento único (Pix, transferência, boleto), o lançamento continua simples, sem usar essa seção.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span><strong>A IA aprende com suas correções:</strong> toda vez que você corrige, antes de salvar, o Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor ou Devedor que a IA sugeriu, o app memoriza isso automaticamente e passa a priorizar essa preferência nas próximas leituras. Veja a seção <a href="#correcoes-ia">Correções Aprendidas (IA)</a>, na aba Configurações.</span>
       </div>
     </section>
 
@@ -497,6 +506,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         com categorias diferentes — por exemplo, uma nota de supermercado que misturou alimentação
         e produtos de limpeza.
       </p>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Preenchimento automático pela IA:</strong> se você usar o <a href="#leitor-ia">Leitor de Notas com IA</a> e o documento listar 2 ou mais produtos/serviços com valores individuais, essa seção é preenchida sozinha — um item por produto. Os passos abaixo são para quando você quer montar os itens manualmente (ou ajustar o que a IA já preencheu).</span>
+      </div>
       <div class="passos">
         <div class="passo">
           <div class="passo-num" aria-hidden="true">1</div>
@@ -748,6 +761,38 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         formulário de lançamento. Funciona igual aos botões <strong>+</strong> e <strong>−</strong>
         de cada campo, só que reunidos em um só lugar.
       </p>
+
+      <h3 id="correcoes-ia">Correções Aprendidas (IA)</h3>
+      <p>
+        Toda vez que o <a href="#leitor-ia">Leitor de Notas com IA</a> preenche automaticamente o
+        Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor ou Devedor de um
+        lançamento, e você corrige algum desses campos antes de clicar em Salvar, o app memoriza
+        essa correção — sem nenhuma ação extra sua, é só editar o campo errado normalmente.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Você lê um documento pela IA, ela sugere um valor para um dos 6 campos rastreados, mas o valor certo é outro — você corrige o campo diretamente no formulário, como sempre fez.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Ao clicar em <strong>Salvar Lançamento</strong>, o app compara o que a IA sugeriu com o que você efetivamente salvou. Se forem diferentes, a correção é guardada automaticamente na nuvem.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Nas próximas leituras de documento, essas correções já confirmadas são enviadas para a IA, que passa a priorizá-las em vez de repetir a mesma sugestão errada.</div>
+        </div>
+      </div>
+      <p>
+        A lista de correções memorizadas fica visível aqui em Configurações, na seção
+        <strong>"🧠 Correções Aprendidas (IA)"</strong>, com um botão <strong>🗑️</strong> para excluir
+        uma correção específica, ou <strong>🗑️ Apagar Todas as Correções</strong> para zerar tudo
+        de uma vez e deixar a IA voltar a inferir do zero.
+      </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>A correção vale de forma geral para aquele campo — por exemplo, se você corrigir uma Categoria uma vez, essa preferência passa a ser considerada em qualquer leitura futura onde fizer sentido, não só para o mesmo estabelecimento.</span>
+      </div>
     </section>
 
     <!-- ══ ACESSIBILIDADE ══ -->

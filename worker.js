@@ -25,15 +25,16 @@ Analise o documento enviado e devolva APENAS um objeto JSON (sem markdown, sem c
 {
   "data": "AAAA-MM-DD ou null",
   "data_vencimento": "AAAA-MM-DD ou null (data de vencimento do boleto/fatura, se houver — é uma data DIFERENTE da data de emissão/transação, geralmente escrita como 'vencimento', 'venc.', 'data de vencimento' ou 'pagável até')",
-  "valor": número absoluto (positivo, use ponto decimal), exatamente como consta no documento; null se não identificar,
+  "valor": número absoluto (positivo, use ponto decimal) — o valor TOTAL da transação, exatamente como consta no documento; null se não identificar,
   "tipo_transacao": "debito" | "credito" | "indefinido" (debito = despesa/pagamento/compra; credito = receita/recebimento; use "indefinido" se não tiver certeza),
   "banco": "nome do banco, instituição financeira ou cartão identificado, ou null",
   "estabelecimento": "nome do estabelecimento, loja ou empresa emissora, ou null",
   "forma_pagamento": "ex.: Pix, Cartão de Crédito, Cartão de Débito, Boleto, Dinheiro, Transferência, ou null",
-  "categoria_sugerida": "uma categoria de gasto/receita sugerida em poucas palavras (ex.: Alimentação, Transporte, Saúde, Mercado, Lazer, Salário), ou null",
+  "categoria_sugerida": "uma categoria de gasto/receita sugerida em poucas palavras para o lançamento como um todo (ex.: Alimentação, Transporte, Saúde, Mercado, Lazer, Salário), ou null — só preencha se NÃO for usar o campo \"itens\" abaixo",
   "credor": "quem recebe o valor (para quem foi pago), ou null",
   "devedor": "quem paga o valor (pagador/titular do documento), ou null",
-  "descricao": "descrição curta e objetiva do lançamento, ou null",
+  "descricao": "descrição curta e objetiva do lançamento, ou null — só preencha se NÃO for usar o campo \"itens\" abaixo",
+  "itens": [ { "valor": número positivo, "categoria_sugerida": "categoria deste item específico, ou null", "descricao": "descrição curta deste item específico, ou null" } ] — ou null,
   "observacoes": "qualquer detalhe relevante que não se encaixe nos campos acima, ou null"
 }
 
@@ -44,7 +45,17 @@ Regras importantes:
   vencimento (comum em boletos e faturas). Se o documento for um comprovante de pagamento já
   efetuado (Pix, recibo, etc.) sem menção a vencimento, deixe "data_vencimento" como null.
 - Datas no formato brasileiro (DD/MM/AAAA) devem ser convertidas para AAAA-MM-DD.
-- Se o documento tiver vários itens/valores, use o valor TOTAL da transação.
+- "valor" é sempre o TOTAL da transação, mesmo quando "itens" for preenchido.
+- **Campo "itens" (múltiplos produtos/serviços)**: preencha esta lista APENAS quando o documento
+  listar 2 (dois) ou mais produtos/serviços distintos com valores individuais — o caso típico é
+  uma nota fiscal de mercado ou de compra com vários produtos. Cada item deve ter seu próprio
+  "valor" (sempre positivo), uma "categoria_sugerida" e uma "descricao" curta do próprio item
+  (ex.: nome do produto). A soma dos valores dos itens deve bater com o "valor" total informado
+  no nível raiz. Quando "itens" tiver 2 ou mais elementos, deixe "categoria_sugerida" e
+  "descricao" do nível raiz como null (eles são ignorados nesse caso).
+  Se o documento tiver apenas 1 produto/serviço, ou for um comprovante de pagamento único (Pix,
+  transferência, boleto, mensalidade), deixe "itens" como null e preencha normalmente
+  "categoria_sugerida" e "descricao" no nível raiz.
 - **Banco "Next"**: se o banco/instituição identificado for a fintech Next — mesmo que apareça no
   documento junto com o nome do parceiro emissor do cartão (ex.: "Next Bradesco", "Next 237
   Bradesco S.A.", "Next Bradescard", ou qualquer variação parecida contendo "Next") — preencha o
@@ -98,10 +109,19 @@ export default {
 
     const documento = { tipo, conteudo, mimeType, nomeArquivo };
 
+    // ---- Correções aprendidas de leituras anteriores (memória de correções) ----
+    // O app envia aqui até algumas dezenas de correções que o próprio usuário já
+    // fez no passado (banco, estabelecimento, forma de pagamento, categoria, credor
+    // ou devedor que a IA sugeriu errado e o usuário corrigiu manualmente antes de
+    // salvar). Isso é enviado como texto avulso, FORA do bloco de system prompt (que
+    // fica em cache), para não invalidar o cache a cada correção nova e para não
+    // misturar dado específico do usuário com a instrução genérica.
+    const textoCorrecoes = montarTextoCorrecoes(payload?.correcoesConhecidas);
+
     // ---- 1ª TENTATIVA: GEMINI (grátis) ----
     if (env.GEMINI_API_KEY) {
       try {
-        const dados = await lerComGemini({ apiKey: env.GEMINI_API_KEY, documento });
+        const dados = await lerComGemini({ apiKey: env.GEMINI_API_KEY, documento, textoCorrecoes });
         return new Response(JSON.stringify({ ok: true, dados: { ...dados, _provedor: 'gemini' } }), { status: 200, headers });
       } catch (erroGemini) {
         console.log('[fallback] Gemini falhou, tentando Anthropic:', erroGemini.message);
@@ -120,7 +140,7 @@ export default {
     }
 
     try {
-      const dados = await lerComAnthropic({ apiKey: env.ANTHROPIC_API_KEY, documento });
+      const dados = await lerComAnthropic({ apiKey: env.ANTHROPIC_API_KEY, documento, textoCorrecoes });
       return new Response(JSON.stringify({ ok: true, dados: { ...dados, _provedor: 'anthropic' } }), { status: 200, headers });
     } catch (erroAnthropic) {
       return new Response(
@@ -130,6 +150,27 @@ export default {
     }
   },
 };
+
+// Nomes de exibição dos campos rastreados pela memória de correções — devem
+// bater com os mesmos nomes usados no front-end (CAMPOS_NOMES em index.html).
+const NOMES_CAMPO_CORRECAO = {
+  banco: 'Banco / Cartão',
+  estabelecimento: 'Estabelecimento',
+  forma: 'Forma de Pagamento',
+  categoria: 'Categoria',
+  credor: 'Credor',
+  devedor: 'Devedor',
+};
+
+function montarTextoCorrecoes(correcoesConhecidas) {
+  if (!Array.isArray(correcoesConhecidas) || correcoesConhecidas.length === 0) return null;
+  const linhas = correcoesConhecidas.slice(0, 60).map((c) => {
+    const campoLabel = NOMES_CAMPO_CORRECAO[c.campo] || c.campo;
+    const contexto = c.contexto ? ` (contexto: ${c.contexto})` : '';
+    return `- [${campoLabel}] Em vez de "${c.valorErrado}", o usuário já corrigiu para "${c.valorCorreto}"${contexto}.`;
+  }).join('\n');
+  return `CORREÇÕES APRENDIDAS DE LEITURAS ANTERIORES — o usuário já corrigiu manualmente estas sugestões da IA em documentos passados. Quando o documento atual tratar claramente do mesmo caso (mesmo estabelecimento, banco ou contexto), priorize a preferência já confirmada pelo usuário abaixo em vez da sua própria inferência para aquele campo. Se nenhuma linha combinar com o documento atual, ignore esta lista normalmente:\n${linhas}\n\nAgora, aplicando essas preferências quando fizerem sentido, extraia os dados do documento a seguir, seguindo todas as regras do system prompt.`;
+}
 
 // ==================== PROVEDOR: GEMINI ====================
 // Lista de modelos candidatos, em ordem de preferência. Se o Google
@@ -143,8 +184,11 @@ const MODELOS_GEMINI_CANDIDATOS = [
   'gemini-3.5-flash',
 ];
 
-async function lerComGemini({ apiKey, documento }) {
+async function lerComGemini({ apiKey, documento, textoCorrecoes }) {
   const parte = montarParteConteudo(documento);
+  // Correções aprendidas de leituras anteriores (memória de correções): entram como
+  // uma "part" de texto adicional, antes do conteúdo do documento em si.
+  const partesConteudo = textoCorrecoes ? [{ text: textoCorrecoes }, parte] : [parte];
   let ultimoErro = null;
 
   for (const modelo of MODELOS_GEMINI_CANDIDATOS) {
@@ -155,7 +199,7 @@ async function lerComGemini({ apiKey, documento }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: PROMPT_SISTEMA }] },
-          contents: [{ role: 'user', parts: [parte] }],
+          contents: [{ role: 'user', parts: partesConteudo }],
           generationConfig: { temperature: 0 },
         }),
       });
@@ -203,17 +247,20 @@ function montarParteConteudo(documento) {
 }
 
 // ==================== PROVEDOR: ANTHROPIC ====================
-async function lerComAnthropic({ apiKey, documento }) {
+async function lerComAnthropic({ apiKey, documento, textoCorrecoes }) {
   const contentBlocks = montarContentBlocksAnthropic(documento);
+  // Correções aprendidas de leituras anteriores (memória de correções): entram como
+  // um bloco de texto adicional, antes do conteúdo do documento em si.
+  const conteudoMensagem = textoCorrecoes ? [{ type: 'text', text: textoCorrecoes }, ...contentBlocks] : contentBlocks;
 
   const resposta = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
       model: 'claude-sonnet-5',
-      max_tokens: 1024,
+      max_tokens: 1536,
       system: PROMPT_SISTEMA,
-      messages: [{ role: 'user', content: contentBlocks }],
+      messages: [{ role: 'user', content: conteudoMensagem }],
     }),
   });
 
