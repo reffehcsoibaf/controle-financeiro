@@ -1476,8 +1476,7 @@ sb.auth.onAuthStateChange((_evento, session) => {
     document.getElementById('auth-screen').style.display     = 'none';
     document.getElementById('app-principal').style.display    = '';
     document.getElementById('user-email-display').textContent = usuarioAtual.email;
-    iniciarAppLogado();
-    aplicarVisibilidadeIA();
+    aplicarVisibilidadeIA().then(() => iniciarAppLogado());
   } else {
     usuarioAtual = null;
     document.getElementById('auth-screen').style.display  = '';
@@ -1515,8 +1514,14 @@ async function aplicarVisibilidadeIA() {
     if (error) return; // em caso de erro, não esconde nada (evita falso negativo)
 
     const iaHabilitada = !perfil || perfil.ai_enabled !== false;
+    iaHabilitadaAtual = iaHabilitada;
     const secao = document.getElementById('secao-leitor-ia');
     if (secao) secao.style.display = iaHabilitada ? '' : 'none';
+    // Re-renderiza a lista de documentos já carregada para aplicar/remover
+    // o botão "Analisar" conforme o novo estado de iaHabilitadaAtual.
+    if (typeof documentosArmazenados !== 'undefined' && documentosArmazenados.length) {
+      renderizarDocumentosArmazenados();
+    }
 
     // O envio de documentos é um controle separado do acesso à IA: mesmo
     // com a IA ativada, o usuário pode estar sem permissão de enviar
@@ -2422,6 +2427,11 @@ function limparFiltroDocumentos() {
   anunciar('Filtro de documentos limpo.');
 }
 
+// Guarda o último resultado conhecido de ai_enabled, para que a lista de
+// documentos (renderizada dinamicamente) saiba se deve incluir o botão
+// "Analisar". Começa true para não esconder nada antes da primeira checagem.
+let iaHabilitadaAtual = true;
+
 function renderizarDocumentosArmazenados(lista) {
   const container = document.getElementById('documentos-armazenados-lista');
   if(!container) return;
@@ -2444,8 +2454,10 @@ function renderizarDocumentosArmazenados(lista) {
           (doc.tamanho_bytes ? ' · '+fmtTamanhoArquivo(doc.tamanho_bytes) : '')+'</span>' +
       '</div>' +
       '<div class="doc-acoes">' +
-        '<button type="button" class="btn btn-secondary" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
-          'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>' +
+        (iaHabilitadaAtual ?
+          '<button type="button" class="btn btn-secondary" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
+            'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>'
+          : '') +
         '<button type="button" class="btn btn-secondary" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
           'aria-label="Baixar '+escaparHTML(doc.nome_arquivo)+'">⬇️ Baixar</button>' +
         '<button type="button" class="btn-icon" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
