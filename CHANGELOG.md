@@ -4,6 +4,25 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.8.0 — 26/07/2026
+
+- **Opção "Outro (digitar uma vez)" nas caixas combinadas**: os 7 campos de lista do formulário
+  de Novo Lançamento (Banco/Cartão, Estabelecimento, Forma de Pagamento, Parcela, Categoria,
+  Credor, Devedor) — e também a Categoria de cada item, nos lançamentos com Itens Múltiplos —
+  agora têm uma opção fixa no topo da lista: **"✏️ Outro (digitar uma vez)"**. Ao escolhê-la, um
+  campo de texto aparece ao lado para digitar um valor avulso, que é usado normalmente no
+  lançamento mas **nunca é gravado** nas listas permanentes (Gerenciar Listas). Serve para valores
+  que você só vai usar uma única vez e não vale a pena cadastrar (ex.: um estabelecimento
+  visitado uma vez só, ou uma observação pontual de banco/categoria).
+  - O leitor de tela anuncia automaticamente quando o campo de texto aparece, e o foco vai
+    direto para ele.
+  - Se você salvar (ou tentar salvar) sem digitar nada no campo "Outro", o app avisa e mantém o
+    foco ali, sem deixar o lançamento ir para a nuvem com um campo vazio.
+  - Ao editar um lançamento que tenha algum desses campos preenchido com um valor que não existe
+    (mais) nas listas cadastradas — seja porque foi salvo como texto avulso, seja porque a opção
+    foi removida depois — o formulário agora reconhece isso automaticamente e volta a mostrar o
+    texto original no modo "Outro", em vez de aparecer em branco.
+
 ## v1.7.0 — 24/07/2026
 
 - **Leitor de Notas com IA — itens múltiplos automáticos**: quando o documento enviado (nota

@@ -213,6 +213,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#lanc-campos" class="sub">Campos do formulário</a>
       <a href="#lanc-entrada-saida" class="sub">Entrada e Saída</a>
       <a href="#lanc-listas" class="sub">Adicionar/remover opções rápido</a>
+      <a href="#lanc-outro" class="sub">Texto avulso: "Outro"</a>
       <a href="#lanc-status" class="sub">Marcar como pago</a>
       <a href="#lanc-selecao" class="sub">Selecionar linha e atalhos</a>
       <a href="#itens-multiplos">Itens Múltiplos</a>
@@ -459,6 +460,37 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="callout callout-warn">
         <span class="callout-icon" aria-hidden="true">⚠️</span>
         <span>Remover uma opção da lista não exclui os lançamentos que já usam aquele valor — eles continuam exibindo o texto, só não aparece mais como opção para novos lançamentos.</span>
+      </div>
+
+      <h3 id="lanc-outro">Texto avulso: "Outro (digitar uma vez)"</h3>
+      <p>
+        Para valores que você só vai usar uma única vez — e não vale a pena cadastrar permanentemente
+        na lista — todos os campos de lista (Banco/Cartão, Estabelecimento, Forma de Pagamento,
+        Parcela, Categoria, Credor, Devedor, e também a Categoria de cada item em
+        <a href="#itens-multiplos">Itens Múltiplos</a>) têm uma opção fixa no topo:
+        <strong>"✏️ Outro (digitar uma vez)"</strong>.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Selecione <strong>"✏️ Outro (digitar uma vez)"</strong> na lista. Um campo de texto aparece logo abaixo, e o foco já vai direto para ele.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Digite o valor que quiser. Ele é usado normalmente no lançamento ao salvar.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Esse texto <strong>não é gravado</strong> na lista permanente de opções — na próxima vez que você abrir o campo, ele não vai aparecer entre as opções cadastradas.</div>
+        </div>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span>Se você selecionar "Outro" mas não digitar nada no campo de texto, o app avisa e não deixa salvar o lançamento até o campo ser preenchido (ou até você trocar para outra opção da lista).</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Se você editar depois um lançamento que usou "Outro" nele, o campo reconhece isso automaticamente e volta a mostrar o texto digitado, no modo "Outro" — mesmo que o valor nunca tenha existido nas listas cadastradas.</span>
       </div>
 
       <h3 id="lanc-status">Marcar como pago</h3>

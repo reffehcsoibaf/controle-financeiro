@@ -156,11 +156,30 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.8.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-8-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-8-0"><span aria-hidden="true">🏷️</span> v1.8.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">26/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">✏️</span> Opção "Outro (digitar uma vez)" nas Caixas Combinadas</h3>
+          <ul>
+            <li>Os 7 campos de lista do formulário de Novo Lançamento — <strong>Banco/Cartão, Estabelecimento, Forma de Pagamento, Parcela, Categoria, Credor e Devedor</strong> — e também a Categoria de cada item nos lançamentos com Itens Múltiplos, agora têm uma opção fixa no topo: <strong>"✏️ Outro (digitar uma vez)"</strong>.</li>
+            <li>Ao escolher essa opção, um campo de texto aparece ao lado para digitar um valor avulso. Esse texto é usado normalmente no lançamento, mas <strong>nunca é gravado</strong> nas listas permanentes (Gerenciar Listas) — ideal para valores de uso único que não valem a pena cadastrar.</li>
+            <li>O leitor de tela anuncia automaticamente quando o campo de texto aparece, com o foco indo direto para ele.</li>
+            <li>Tentar salvar com "Outro" selecionado mas sem texto digitado é bloqueado, com aviso e foco no campo pendente.</li>
+            <li>Editar um lançamento com algum campo salvo como texto avulso (ou cuja opção foi removida depois) agora exibe corretamente o texto original no modo "Outro", em vez de aparecer em branco.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.7.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-7-0">
+      <section class="versao-bloco" aria-labelledby="v1-7-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-7-0"><span aria-hidden="true">🏷️</span> v1.7.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">24/07/2026</span>
         </div>
 

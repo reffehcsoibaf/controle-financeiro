@@ -180,6 +180,7 @@ input.negativo{color:var(--red);}
 
 /* ── SELECT COM BOTÕES ── */
 .select-wrapper{display:flex;gap:6px;align-items:center;}
+.campo-outro-texto{margin-top:6px;}
 .select-wrapper select{flex:1;min-width:0;}
 .btn-icon{
   width:32px;height:32px;border-radius:var(--radius-sm);
@@ -811,64 +812,92 @@ select option{background:#1e2436;}
         <div class="form-group">
           <label for="f-banco">Banco / Cartão</label>
           <div class="select-wrapper">
-            <select id="f-banco" name="banco"></select>
+            <select id="f-banco" name="banco" onchange="onSelectPrincipalChange('banco', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-banco" onclick="openModal('banco')" aria-label="Adicionar novo banco ou cartão">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-banco" onclick="removeOption('f-banco','btn-rem-banco')" aria-label="Remover banco ou cartão selecionado">−</button>
           </div>
+          <input type="text" id="f-banco-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Banco / Cartão — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group">
           <label for="f-estabelecimento">Estabelecimento</label>
           <div class="select-wrapper">
-            <select id="f-estabelecimento" name="estabelecimento"></select>
+            <select id="f-estabelecimento" name="estabelecimento" onchange="onSelectPrincipalChange('estabelecimento', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-estabelecimento" onclick="openModal('estabelecimento')" aria-label="Adicionar novo estabelecimento">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-estabelecimento" onclick="removeOption('f-estabelecimento','btn-rem-estabelecimento')" aria-label="Remover estabelecimento selecionado">−</button>
           </div>
+          <input type="text" id="f-estabelecimento-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Estabelecimento — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group">
           <label for="f-forma">Forma de Pagamento</label>
           <div class="select-wrapper">
-            <select id="f-forma" name="forma"></select>
+            <select id="f-forma" name="forma" onchange="onSelectPrincipalChange('forma', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-forma" onclick="openModal('forma')" aria-label="Adicionar nova forma de pagamento">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-forma" onclick="removeOption('f-forma','btn-rem-forma')" aria-label="Remover forma de pagamento selecionada">−</button>
           </div>
+          <input type="text" id="f-forma-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Forma de Pagamento — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group">
           <label for="f-parcela">Parcela</label>
           <div class="select-wrapper">
-            <select id="f-parcela" name="parcela"></select>
+            <select id="f-parcela" name="parcela" onchange="onSelectPrincipalChange('parcela', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-parcela" onclick="openModal('parcela')" aria-label="Adicionar nova opção de parcela">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-parcela" onclick="removeOption('f-parcela','btn-rem-parcela')" aria-label="Remover parcela selecionada">−</button>
           </div>
+          <input type="text" id="f-parcela-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Parcela — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group" id="grupo-categoria">
           <label for="f-categoria">Categoria</label>
           <div class="select-wrapper">
-            <select id="f-categoria" name="categoria"></select>
+            <select id="f-categoria" name="categoria" onchange="onSelectPrincipalChange('categoria', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-categoria" onclick="openModal('categoria')" aria-label="Adicionar nova categoria">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-categoria" onclick="removeOption('f-categoria','btn-rem-categoria')" aria-label="Remover categoria selecionada">−</button>
           </div>
+          <input type="text" id="f-categoria-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Categoria — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group">
           <label for="f-credor">Credor</label>
           <div class="select-wrapper">
-            <select id="f-credor" name="credor"></select>
+            <select id="f-credor" name="credor" onchange="onSelectPrincipalChange('credor', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-credor" onclick="openModal('credor')" aria-label="Adicionar novo credor">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-credor" onclick="removeOption('f-credor','btn-rem-credor')" aria-label="Remover credor selecionado">−</button>
           </div>
+          <input type="text" id="f-credor-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Credor — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group">
           <label for="f-devedor">Devedor</label>
           <div class="select-wrapper">
-            <select id="f-devedor" name="devedor"></select>
+            <select id="f-devedor" name="devedor" onchange="onSelectPrincipalChange('devedor', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-devedor" onclick="openModal('devedor')" aria-label="Adicionar novo devedor">+</button>
             <button type="button" class="btn-icon remove" id="btn-rem-devedor" onclick="removeOption('f-devedor','btn-rem-devedor')" aria-label="Remover devedor selecionado">−</button>
           </div>
+          <input type="text" id="f-devedor-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
+                 placeholder="Digite o valor (não será salvo na lista)"
+                 aria-label="Texto livre para Devedor — não será salvo na lista de opções"
+                 autocomplete="off">
         </div>
 
         <div class="form-group span2" id="grupo-descricao">
@@ -1261,7 +1290,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.7.0 · 24/07/2026
+  Controle Financeiro · v1.8.0 · 26/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1326,6 +1355,13 @@ const CAMPOS_NOMES  = {
 const OPCOES_PADRAO = {
   banco:[], parcela:[], forma:[], estabelecimento:[], categoria:[], credor:[], devedor:[]
 };
+
+// Valor-sentinela usado nos <select> para representar a opção "Outro (digitar
+// uma vez)". Quando escolhida, um campo de texto avulso aparece ao lado — o
+// texto digitado ali é usado normalmente no lançamento, mas NUNCA é gravado em
+// opcoes_listas, então não polui as listas permanentes com valores de uso único.
+const VALOR_OUTRO = '__outro__';
+const ROTULO_OPCAO_OUTRO = '✏️ Outro (digitar uma vez)';
 let opcoesSelects = JSON.parse(JSON.stringify(OPCOES_PADRAO));
 // Configuração de contas/cartões por nome de banco: { tipo, saldo_inicial, limite_total }
 let contasConfig = {};
@@ -2188,12 +2224,67 @@ function renderizarSelect(campo) {
   const sel = document.getElementById('f-'+campo);
   if(!sel) return;
   const val = sel.value;
-  sel.innerHTML = '<option value="">— Selecionar —</option>';
+  sel.innerHTML = '<option value="">— Selecionar —</option>' +
+    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>';
   (opcoesSelects[campo]||[]).forEach(op => {
     const opt = document.createElement('option');
     opt.value = op; opt.textContent = op; sel.appendChild(opt);
   });
   if(val) sel.value = val;
+}
+
+// Alterna a exibição do campo de texto avulso ("Outro") ao lado do select
+// principal, quando o usuário escolhe essa opção. Nada aqui é gravado em
+// opcoes_listas — o texto só existe no formulário, até o momento de salvar.
+function onSelectPrincipalChange(campo, selEl) {
+  const outroInput = document.getElementById('f-'+campo+'-outro');
+  if(!outroInput) return;
+  if(selEl.value === VALOR_OUTRO) {
+    outroInput.style.display = '';
+    outroInput.removeAttribute('aria-hidden');
+    outroInput.value = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => outroInput.focus()));
+    anunciar('Digite o valor de ' + CAMPOS_NOMES[campo] + '. Este texto não será salvo na lista de opções.');
+  } else {
+    outroInput.style.display = 'none';
+    outroInput.setAttribute('aria-hidden', 'true');
+    outroInput.value = '';
+  }
+}
+
+// Devolve o valor final de um campo de select principal (banco, estabelecimento,
+// forma, parcela, categoria, credor, devedor): o valor escolhido na lista, ou o
+// texto avulso digitado, se "Outro" estiver selecionado.
+function obterValorCampoPrincipal(campo) {
+  const sel = document.getElementById('f-'+campo);
+  if(!sel) return '';
+  if(sel.value === VALOR_OUTRO) {
+    const outroInput = document.getElementById('f-'+campo+'-outro');
+    return outroInput ? outroInput.value.trim() : '';
+  }
+  return sel.value;
+}
+
+// Define o valor de um <select> com suporte a "Outro": se o valor existir entre
+// as opções já cadastradas, seleciona normalmente; senão, ativa o modo "Outro"
+// e pré-preenche o texto avulso com o valor original (usado ao editar um
+// lançamento cujo valor foi salvo como texto livre e não está mais — ou nunca
+// esteve — nas listas permanentes).
+function definirValorSelectComOutro(selectEl, outroInputEl, valor) {
+  if(!selectEl) return;
+  if(!valor) {
+    selectEl.value = '';
+    if(outroInputEl) { outroInputEl.value = ''; outroInputEl.style.display = 'none'; outroInputEl.setAttribute('aria-hidden','true'); }
+    return;
+  }
+  const existe = Array.from(selectEl.options).some(o => o.value === valor);
+  if(existe) {
+    selectEl.value = valor;
+    if(outroInputEl) { outroInputEl.value = ''; outroInputEl.style.display = 'none'; outroInputEl.setAttribute('aria-hidden','true'); }
+  } else {
+    selectEl.value = VALOR_OUTRO;
+    if(outroInputEl) { outroInputEl.value = valor; outroInputEl.style.display = ''; outroInputEl.removeAttribute('aria-hidden'); }
+  }
 }
 function renderizarTodosSelects() { CAMPOS_SELECT.forEach(renderizarSelect); }
 
@@ -2994,6 +3085,7 @@ async function removeOption(selectId, botaoRemoverId) {
   const sel = document.getElementById(selectId);
   const val = sel.value;
   if(!val){ anunciar('Nenhuma opção selecionada para remover.',true); sel.focus(); return; }
+  if(val === VALOR_OUTRO){ anunciar('"Outro" não é uma opção salva na lista — não há o que remover.',true); sel.focus(); return; }
   if(!confirm('Remover a opção "'+val+'"?')){ document.getElementById(botaoRemoverId).focus(); return; }
   const campo = selectId.replace('f-','');
 
@@ -3029,6 +3121,7 @@ async function removeOption(selectId, botaoRemoverId) {
 // ═══════════════════════════════════════════════════
 function buildCategoriaOptions() {
   return '<option value="">— Selecionar —</option>' +
+    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>' +
     (opcoesSelects.categoria||[]).map(op =>
       '<option value="'+op.replace(/"/g,"&quot;")+'">'+op+'</option>'
     ).join('');
@@ -3069,6 +3162,11 @@ function adicionarItem(dados) {
                 ' onclick="openModal(\'categoria\',\'btn-add-cat-item-'+id+'\')"' +
                 ' aria-label="Adicionar nova categoria para item '+idx+'">+</button>' +
       '</div>' +
+      '<input type="text" id="item-cat-outro-'+id+'" class="campo-outro-texto"' +
+             ' style="display:none" aria-hidden="true"' +
+             ' placeholder="Digite a categoria (não será salva na lista)"' +
+             ' aria-label="Texto livre para a categoria do item '+idx+' — não será salvo na lista de opções"' +
+             ' oninput="onItemCatOutroInput('+id+', this)" autocomplete="off">' +
     '</div>' +
 
     // Descrição do item
@@ -3091,10 +3189,12 @@ function adicionarItem(dados) {
   document.getElementById('lista-itens').appendChild(itemEl);
   document.getElementById('itens-vazio-msg').style.display = 'none';
 
-  // Preenche categoria se vier de dados
+  // Preenche categoria se vier de dados (com suporte a valores que não estão
+  // nas listas cadastradas — nesse caso, cai automaticamente no modo "Outro")
   if(dados && dados.categoria) {
     const sel = document.getElementById('item-cat-'+id);
-    if(sel) sel.value = dados.categoria;
+    const outroInput = document.getElementById('item-cat-outro-'+id);
+    definirValorSelectComOutro(sel, outroInput, dados.categoria);
   }
 
   // Move o botão "Adicionar Item" para depois deste item-row
@@ -3125,6 +3225,23 @@ function onItemValorInput(id, el) {
   atualizarNotaValor();
 }
 function onItemCatChange(id, el) {
+  const item = itensFormulario.find(i=>i.id===id);
+  const outroInput = document.getElementById('item-cat-outro-'+id);
+  if(el.value === VALOR_OUTRO) {
+    if(outroInput) {
+      outroInput.style.display = '';
+      outroInput.removeAttribute('aria-hidden');
+      outroInput.value = '';
+      requestAnimationFrame(() => requestAnimationFrame(() => outroInput.focus()));
+    }
+    if(item) item.categoria = '';
+    anunciar('Digite a categoria deste item. Este texto não será salvo na lista de opções.');
+  } else {
+    if(outroInput) { outroInput.style.display = 'none'; outroInput.setAttribute('aria-hidden','true'); outroInput.value = ''; }
+    if(item) item.categoria = el.value;
+  }
+}
+function onItemCatOutroInput(id, el) {
   const item = itensFormulario.find(i=>i.id===id);
   if(item) item.categoria = el.value;
 }
@@ -3283,20 +3400,42 @@ async function salvarLancamento() {
     valor = obterTipoValor()==='saida' ? -Math.abs(valorAbs) : Math.abs(valorAbs);
   }
 
+  // Valida os campos com "Outro" selecionado mas sem texto digitado ainda
+  for(const campo of CAMPOS_SELECT) {
+    const sel = document.getElementById('f-'+campo);
+    if(sel && sel.value === VALOR_OUTRO && !obterValorCampoPrincipal(campo)) {
+      anunciar('Digite o texto de ' + CAMPOS_NOMES[campo] + ', ou escolha outra opção.', true);
+      const outroInput = document.getElementById('f-'+campo+'-outro');
+      if(outroInput) outroInput.focus();
+      return;
+    }
+  }
+
   const dadosLancamento = {
     user_id:         usuarioAtual.id,
     data_origem:     dataOrigem,
     data_vencimento: document.getElementById('f-data-vencimento').value || null,
     valor,
-    banco:           document.getElementById('f-banco').value || null,
-    estabelecimento: document.getElementById('f-estabelecimento').value || null,
-    forma:           document.getElementById('f-forma').value || null,
-    parcela:         document.getElementById('f-parcela').value || null,
+    banco:           obterValorCampoPrincipal('banco') || null,
+    estabelecimento: obterValorCampoPrincipal('estabelecimento') || null,
+    forma:           obterValorCampoPrincipal('forma') || null,
+    parcela:         obterValorCampoPrincipal('parcela') || null,
     descricao:       itensFormulario.length>0 ? null : (document.getElementById('f-descricao').value || null),
-    categoria:       itensFormulario.length>0 ? null : (document.getElementById('f-categoria').value || null),
-    credor:          document.getElementById('f-credor').value || null,
-    devedor:         document.getElementById('f-devedor').value || null
+    categoria:       itensFormulario.length>0 ? null : (obterValorCampoPrincipal('categoria') || null),
+    credor:          obterValorCampoPrincipal('credor') || null,
+    devedor:         obterValorCampoPrincipal('devedor') || null
   };
+
+  // Valida itens cuja categoria está em modo "Outro" mas ainda sem texto digitado
+  for(const item of itensFormulario) {
+    const selItem = document.getElementById('item-cat-'+item.id);
+    if(selItem && selItem.value === VALOR_OUTRO && !item.categoria) {
+      anunciar('Digite a categoria de um dos itens, ou escolha outra opção.', true);
+      const outroInput = document.getElementById('item-cat-outro-'+item.id);
+      if(outroInput) outroInput.focus();
+      return;
+    }
+  }
 
   const itensParaSalvar = itensFormulario.length>0
     ? itensFormulario.map(i=>({
@@ -3379,7 +3518,11 @@ function limparFormulario() {
   valEl.value = ''; valEl.classList.remove('negativo');
   definirTipoValor('saida');
   document.getElementById('f-descricao').value = '';
-  CAMPOS_SELECT.forEach(c=>{const s=document.getElementById('f-'+c);if(s)s.value='';});
+  CAMPOS_SELECT.forEach(c=>{
+    const s=document.getElementById('f-'+c);if(s)s.value='';
+    const outroInput = document.getElementById('f-'+c+'-outro');
+    if(outroInput){ outroInput.value=''; outroInput.style.display='none'; outroInput.setAttribute('aria-hidden','true'); }
+  });
   editandoId=null;
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
@@ -3392,13 +3535,13 @@ function editarLancamento(id) {
   document.getElementById('f-data-origem').value     = l.dataOrigem;
   document.getElementById('f-data-vencimento').value = l.dataVencimento;
   document.getElementById('f-descricao').value       = l.descricao||'';
-  document.getElementById('f-banco').value           = l.banco||'';
-  document.getElementById('f-estabelecimento').value = l.estabelecimento||'';
-  document.getElementById('f-forma').value           = l.forma||'';
-  document.getElementById('f-parcela').value         = l.parcela||'';
-  document.getElementById('f-categoria').value       = l.categoria||'';
-  document.getElementById('f-credor').value          = l.credor||'';
-  document.getElementById('f-devedor').value         = l.devedor||'';
+  definirValorSelectComOutro(document.getElementById('f-banco'), document.getElementById('f-banco-outro'), l.banco);
+  definirValorSelectComOutro(document.getElementById('f-estabelecimento'), document.getElementById('f-estabelecimento-outro'), l.estabelecimento);
+  definirValorSelectComOutro(document.getElementById('f-forma'), document.getElementById('f-forma-outro'), l.forma);
+  definirValorSelectComOutro(document.getElementById('f-parcela'), document.getElementById('f-parcela-outro'), l.parcela);
+  definirValorSelectComOutro(document.getElementById('f-categoria'), document.getElementById('f-categoria-outro'), l.categoria);
+  definirValorSelectComOutro(document.getElementById('f-credor'), document.getElementById('f-credor-outro'), l.credor);
+  definirValorSelectComOutro(document.getElementById('f-devedor'), document.getElementById('f-devedor-outro'), l.devedor);
   limparItens();
   if(l.itens && l.itens.length>0) {
     definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
