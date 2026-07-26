@@ -124,6 +124,30 @@ async function registrarUsoIA(accessToken, env) {
 
 export default {
   async fetch(request, env, ctx) {
+    try {
+      return await handleFetch(request, env, ctx);
+    } catch (erroFatal) {
+      // Rede de segurança: qualquer erro não previsto nos blocos abaixo cai
+      // aqui, garantindo que a resposta seja sempre um JSON legível (nunca
+      // a página de erro genérica do Cloudflare, que quebra o parse no
+      // navegador e mostra só "(500)" sem detalhe nenhum).
+      return new Response(
+        JSON.stringify({ ok: false, erro: 'Erro inesperado no servidor: ' + (erroFatal && erroFatal.message) }),
+        {
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+    }
+  },
+};
+
+async function handleFetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // Só tratamos aqui a rota da API. Qualquer outra URL (o próprio site,
@@ -217,8 +241,7 @@ export default {
         { status: 502, headers }
       );
     }
-  },
-};
+}
 
 // Nomes de exibição dos campos rastreados pela memória de correções — devem
 // bater com os mesmos nomes usados no front-end (CAMPOS_NOMES em index.html).
