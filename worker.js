@@ -146,7 +146,15 @@ export default {
       return new Response(JSON.stringify({ ok: false, erro: 'Método não permitido.' }), { status: 405, headers });
     }
 
-    const acesso = await checarAcessoIA(request, env);
+    let acesso;
+    try {
+      acesso = await checarAcessoIA(request, env);
+    } catch (erroChecagem) {
+      return new Response(
+        JSON.stringify({ ok: false, erro: 'Erro ao checar permissão de IA: ' + erroChecagem.message }),
+        { status: 500, headers }
+      );
+    }
     if (!acesso.ok) {
       return new Response(JSON.stringify({ ok: false, erro: acesso.message }), { status: acesso.status, headers });
     }
