@@ -212,7 +212,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#lancamentos">Lançamentos</a>
       <a href="#lanc-campos" class="sub">Campos do formulário</a>
       <a href="#lanc-entrada-saida" class="sub">Entrada e Saída</a>
-      <a href="#lanc-listas" class="sub">Adicionar/remover opções rápido</a>
+      <a href="#lanc-listas" class="sub">Adicionar opções rápido</a>
       <a href="#lanc-outro" class="sub">Texto avulso: "Outro"</a>
       <a href="#lanc-status" class="sub">Marcar como pago</a>
       <a href="#lanc-selecao" class="sub">Selecionar linha e atalhos</a>
@@ -415,7 +415,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <tr><td class="campo-nome">Banco / Cartão</td><td>Lista</td><td>Gerenciável — veja a seção abaixo. Se configurado em Contas e Cartões, afeta o saldo ou o limite calculado.</td></tr>
           <tr><td class="campo-nome">Estabelecimento</td><td>Lista</td><td>Gerenciável.</td></tr>
           <tr><td class="campo-nome">Forma de Pagamento</td><td>Lista</td><td>Gerenciável.</td></tr>
-          <tr><td class="campo-nome">Parcela</td><td>Lista</td><td>Gerenciável. Preenchida automaticamente ao usar o Parcelamento Automático.</td></tr>
           <tr><td class="campo-nome">Categoria</td><td>Lista</td><td>Gerenciável. Ignorada se o lançamento tiver itens múltiplos (cada item tem sua própria categoria).</td></tr>
           <tr><td class="campo-nome">Credor</td><td>Lista</td><td>Gerenciável.</td></tr>
           <tr><td class="campo-nome">Devedor</td><td>Lista</td><td>Gerenciável.</td></tr>
@@ -437,7 +436,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         toggle. O mesmo padrão vale para o modal de <strong>Parcelamento Automático</strong>.
       </p>
 
-      <h3 id="lanc-listas">Adicionar/remover opções rápido</h3>
+      <h3 id="lanc-listas">Adicionar opções rápido</h3>
       <p>
         Os campos do tipo Lista funcionam como caixas combinadas que você mesmo alimenta —
         o app não vem com nenhuma opção pré-cadastrada, então a primeira vez que usar cada campo
@@ -448,14 +447,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <div class="passo-num" aria-hidden="true">+</div>
           <div class="passo-texto">Clique no botão <strong>+</strong> ao lado do campo para abrir uma janela e digitar uma nova opção. Ela é salva na nuvem imediatamente e já fica selecionada no campo.</div>
         </div>
-        <div class="passo">
-          <div class="passo-num" aria-hidden="true">−</div>
-          <div class="passo-texto">Selecione uma opção existente no campo e clique no botão <strong>−</strong> para remover essa opção da lista (pede confirmação antes).</div>
-        </div>
       </div>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
-        <span>Pra gerenciar todas as listas de uma vez, em vez de campo por campo, use o painel <a href="#gerenciar-listas">Gerenciar Listas</a>, na aba Configurações.</span>
+        <span>O formulário de Novo Lançamento só tem o botão de <strong>adicionar</strong> opção. Remover uma opção da lista é feito exclusivamente pelo painel <a href="#gerenciar-listas">Gerenciar Listas</a>, na aba Configurações — isso evita remoções acidentais durante o preenchimento do dia a dia.</span>
       </div>
       <div class="callout callout-warn">
         <span class="callout-icon" aria-hidden="true">⚠️</span>
@@ -466,9 +461,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <p>
         Para valores que você só vai usar uma única vez — e não vale a pena cadastrar permanentemente
         na lista — todos os campos de lista (Banco/Cartão, Estabelecimento, Forma de Pagamento,
-        Parcela, Categoria, Credor, Devedor, e também a Categoria de cada item em
-        <a href="#itens-multiplos">Itens Múltiplos</a>) têm uma opção fixa no topo:
-        <strong>"✏️ Outro (digitar uma vez)"</strong>.
+        Categoria, Credor, Devedor, e também a Categoria de cada item em
+        <a href="#itens-multiplos">Itens Múltiplos</a>) têm uma opção fixa no <strong>final da lista</strong>,
+        depois de todas as opções já cadastradas: <strong>"✏️ Outro (digitar uma vez)"</strong>.
       </p>
       <div class="passos">
         <div class="passo">
@@ -604,12 +599,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         O app cria <strong>um lançamento separado para cada parcela</strong>, com a data de vencimento
         avançando mês a mês a partir da data informada (preservando o dia, ou ajustando para o
         último dia do mês quando necessário). Cada parcela recebe a etiqueta <code>1/N</code>,
-        <code>2/N</code> etc. no campo Parcela, visível na tabela como
+        <code>2/N</code> etc., visível na coluna <strong>Parcelamento</strong> da tabela como
         <span class="badge badge-parcelado">3/12</span>.
       </p>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span>O tipo (Entrada/Saída) escolhido no toggle se aplica a todas as parcelas geradas.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>O Parcelamento Automático é a <strong>única</strong> forma de um lançamento receber uma etiqueta de parcela — não existe mais um campo manual de "Parcela" no formulário. Lançamentos criados normalmente (sem passar pelo Parcelar) aparecem como <strong>"À vista"</strong> na coluna Parcelamento, tanto na tabela quanto na exportação em XLSX.</span>
       </div>
     </section>
 
@@ -789,9 +788,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <h3 id="gerenciar-listas">Gerenciar Listas</h3>
       <p>
         Painel dedicado para adicionar ou remover, de uma vez, as opções de Banco/Cartão, Categoria,
-        Credor, Devedor, Forma de Pagamento, Parcela e Estabelecimento — sem precisar abrir o
-        formulário de lançamento. Funciona igual aos botões <strong>+</strong> e <strong>−</strong>
-        de cada campo, só que reunidos em um só lugar.
+        Credor, Devedor, Forma de Pagamento e Estabelecimento — sem precisar abrir o
+        formulário de lançamento. Funciona igual ao botão <strong>+</strong> de cada campo no
+        formulário, só que reunido em um só lugar — e é o <strong>único</strong> lugar do app onde
+        dá para remover uma opção dessas listas, já que o formulário de Novo Lançamento não tem mais
+        botão de remover.
       </p>
 
       <h3 id="correcoes-ia">Correções Aprendidas (IA)</h3>

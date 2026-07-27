@@ -4,6 +4,33 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.9.0 — 26/07/2026
+
+- **Opção "Outro" movida para o final das listas**: em todos os campos de lista (Banco/Cartão,
+  Estabelecimento, Forma de Pagamento, Categoria, Credor, Devedor, e a Categoria de cada item em
+  Itens Múltiplos), a opção **"✏️ Outro (digitar uma vez)"** agora aparece por último, depois de
+  todas as opções já cadastradas — antes ficava no topo, à frente delas.
+- **Botão de remover opção retirado do formulário de preenchimento**: os botões "−" ao lado de
+  cada campo de lista, no formulário de Novo Lançamento, foram removidos. Remover uma opção agora
+  só é possível pelo painel **Gerenciar Listas**, na aba Configurações — evita remoções
+  acidentais durante o preenchimento do dia a dia. O botão "+" (adicionar) continua no formulário
+  normalmente.
+- **Campo "Parcela" removido do formulário**: como o parcelamento manual não tinha mais utilidade
+  depois da chegada do **Parcelamento Automático** (que já cuida disso com sua função própria) —
+  e a lista de opções de parcela vinha crescendo indefinidamente a cada parcelamento feito, sem
+  necessidade — o campo de lista "Parcela" foi retirado do formulário de Novo Lançamento e da aba
+  Gerenciar Listas. A etiqueta de parcela (ex.: "3/12") continua sendo gravada automaticamente
+  pelo Parcelamento Automático e preservada normalmente ao editar um lançamento parcelado.
+- **Coluna "Parcelamento" na tabela e na exportação XLSX**: em vez de aparecer em branco ou com
+  "—" quando o lançamento não é parcelado, agora mostra **"À vista"**. Lançamentos parcelados
+  continuam mostrando a etiqueta normal (ex.: "3/12"). A importação de planilha reconhece "À
+  vista" automaticamente como "sem parcela", então reimportar um backup exportado não cria
+  duplicatas por causa desse texto.
+- **Correção**: os campos do Parcelamento Automático (Banco/Cartão, Estabelecimento, Forma de
+  Pagamento, Categoria, Credor, Devedor) agora respeitam corretamente a opção "Outro" quando
+  selecionada no formulário principal antes de parcelar — antes, o parcelamento ignorava o texto
+  avulso digitado.
+
 ## v1.8.0 — 26/07/2026
 
 - **Opção "Outro (digitar uma vez)" nas caixas combinadas**: os 7 campos de lista do formulário

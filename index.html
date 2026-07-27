@@ -814,7 +814,6 @@ select option{background:#1e2436;}
           <div class="select-wrapper">
             <select id="f-banco" name="banco" onchange="onSelectPrincipalChange('banco', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-banco" onclick="openModal('banco')" aria-label="Adicionar novo banco ou cartão">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-banco" onclick="removeOption('f-banco','btn-rem-banco')" aria-label="Remover banco ou cartão selecionado">−</button>
           </div>
           <input type="text" id="f-banco-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
                  placeholder="Digite o valor (não será salvo na lista)"
@@ -827,7 +826,6 @@ select option{background:#1e2436;}
           <div class="select-wrapper">
             <select id="f-estabelecimento" name="estabelecimento" onchange="onSelectPrincipalChange('estabelecimento', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-estabelecimento" onclick="openModal('estabelecimento')" aria-label="Adicionar novo estabelecimento">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-estabelecimento" onclick="removeOption('f-estabelecimento','btn-rem-estabelecimento')" aria-label="Remover estabelecimento selecionado">−</button>
           </div>
           <input type="text" id="f-estabelecimento-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
                  placeholder="Digite o valor (não será salvo na lista)"
@@ -840,24 +838,10 @@ select option{background:#1e2436;}
           <div class="select-wrapper">
             <select id="f-forma" name="forma" onchange="onSelectPrincipalChange('forma', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-forma" onclick="openModal('forma')" aria-label="Adicionar nova forma de pagamento">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-forma" onclick="removeOption('f-forma','btn-rem-forma')" aria-label="Remover forma de pagamento selecionada">−</button>
           </div>
           <input type="text" id="f-forma-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
                  placeholder="Digite o valor (não será salvo na lista)"
                  aria-label="Texto livre para Forma de Pagamento — não será salvo na lista de opções"
-                 autocomplete="off">
-        </div>
-
-        <div class="form-group">
-          <label for="f-parcela">Parcela</label>
-          <div class="select-wrapper">
-            <select id="f-parcela" name="parcela" onchange="onSelectPrincipalChange('parcela', this)"></select>
-            <button type="button" class="btn-icon" id="btn-add-parcela" onclick="openModal('parcela')" aria-label="Adicionar nova opção de parcela">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-parcela" onclick="removeOption('f-parcela','btn-rem-parcela')" aria-label="Remover parcela selecionada">−</button>
-          </div>
-          <input type="text" id="f-parcela-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
-                 placeholder="Digite o valor (não será salvo na lista)"
-                 aria-label="Texto livre para Parcela — não será salvo na lista de opções"
                  autocomplete="off">
         </div>
 
@@ -866,7 +850,6 @@ select option{background:#1e2436;}
           <div class="select-wrapper">
             <select id="f-categoria" name="categoria" onchange="onSelectPrincipalChange('categoria', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-categoria" onclick="openModal('categoria')" aria-label="Adicionar nova categoria">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-categoria" onclick="removeOption('f-categoria','btn-rem-categoria')" aria-label="Remover categoria selecionada">−</button>
           </div>
           <input type="text" id="f-categoria-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
                  placeholder="Digite o valor (não será salvo na lista)"
@@ -879,7 +862,6 @@ select option{background:#1e2436;}
           <div class="select-wrapper">
             <select id="f-credor" name="credor" onchange="onSelectPrincipalChange('credor', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-credor" onclick="openModal('credor')" aria-label="Adicionar novo credor">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-credor" onclick="removeOption('f-credor','btn-rem-credor')" aria-label="Remover credor selecionado">−</button>
           </div>
           <input type="text" id="f-credor-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
                  placeholder="Digite o valor (não será salvo na lista)"
@@ -892,7 +874,6 @@ select option{background:#1e2436;}
           <div class="select-wrapper">
             <select id="f-devedor" name="devedor" onchange="onSelectPrincipalChange('devedor', this)"></select>
             <button type="button" class="btn-icon" id="btn-add-devedor" onclick="openModal('devedor')" aria-label="Adicionar novo devedor">+</button>
-            <button type="button" class="btn-icon remove" id="btn-rem-devedor" onclick="removeOption('f-devedor','btn-rem-devedor')" aria-label="Remover devedor selecionado">−</button>
           </div>
           <input type="text" id="f-devedor-outro" class="campo-outro-texto" style="display:none" aria-hidden="true"
                  placeholder="Digite o valor (não será salvo na lista)"
@@ -984,7 +965,7 @@ select option{background:#1e2436;}
             <th scope="col">Banco / Cartão</th>
             <th scope="col">Estabelecimento</th>
             <th scope="col">Forma Pgto</th>
-            <th scope="col">Parcela</th>
+            <th scope="col">Parcelamento</th>
             <th scope="col">Descrição</th>
             <th scope="col">Categoria</th>
             <th scope="col">Credor</th>
@@ -1145,7 +1126,7 @@ select option{background:#1e2436;}
   <section class="card" aria-labelledby="titulo-listas">
     <h2 class="card-title" id="titulo-listas"><span aria-hidden="true">🗂️</span> Gerenciar Listas</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-      Adicione ou remova as opções de Banco/Cartão, Categoria, Credor, Devedor, Forma de Pagamento, Parcela e Estabelecimento.
+      Adicione ou remova as opções de Banco/Cartão, Categoria, Credor, Devedor, Forma de Pagamento e Estabelecimento.
     </p>
     <div id="config-listas-container"></div>
   </section>
@@ -1290,7 +1271,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.8.0 · 26/07/2026
+  Controle Financeiro · v1.9.0 · 26/07/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1319,6 +1300,12 @@ let usuarioAtual         = null; // objeto user do Supabase Auth
 let lancamentos           = [];
 let lancamentosFiltrados  = [];
 let editandoId            = null;
+// Guarda a etiqueta de parcela (ex.: "3/12") do lançamento em edição. O campo
+// manual de Parcela foi removido do formulário — esse valor só existe quando
+// o lançamento foi originalmente criado pelo Parcelamento Automático, e é
+// preservado ao salvar uma edição para não perder a etiqueta. Lançamentos
+// novos (não vindos de edição) sempre ficam com '' — ou seja, "À vista".
+let parcelaEmEdicao       = '';
 
 // Paginação da tabela de Lançamentos. 0 = sem paginação (mostrar todos).
 let itensPorPagina = parseInt(localStorage.getItem('cf_itens_por_pagina')) || 50;
@@ -1347,13 +1334,13 @@ let correcoesIA = [];
 // é comparável ou não. Atualizado a cada salvarLancamento().
 let itensParaSalvarSnapshot = [];
 
-const CAMPOS_SELECT = ['banco','parcela','forma','estabelecimento','categoria','credor','devedor'];
+const CAMPOS_SELECT = ['banco','forma','estabelecimento','categoria','credor','devedor'];
 const CAMPOS_NOMES  = {
-  banco:'Banco / Cartão', parcela:'Parcela', forma:'Forma de Pagamento',
+  banco:'Banco / Cartão', forma:'Forma de Pagamento',
   estabelecimento:'Estabelecimento', categoria:'Categoria', credor:'Credor', devedor:'Devedor'
 };
 const OPCOES_PADRAO = {
-  banco:[], parcela:[], forma:[], estabelecimento:[], categoria:[], credor:[], devedor:[]
+  banco:[], forma:[], estabelecimento:[], categoria:[], credor:[], devedor:[]
 };
 
 // Valor-sentinela usado nos <select> para representar a opção "Outro (digitar
@@ -2224,12 +2211,14 @@ function renderizarSelect(campo) {
   const sel = document.getElementById('f-'+campo);
   if(!sel) return;
   const val = sel.value;
-  sel.innerHTML = '<option value="">— Selecionar —</option>' +
-    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>';
+  sel.innerHTML = '<option value="">— Selecionar —</option>';
   (opcoesSelects[campo]||[]).forEach(op => {
     const opt = document.createElement('option');
     opt.value = op; opt.textContent = op; sel.appendChild(opt);
   });
+  const optOutro = document.createElement('option');
+  optOutro.value = VALOR_OUTRO; optOutro.textContent = ROTULO_OPCAO_OUTRO;
+  sel.appendChild(optOutro);
   if(val) sel.value = val;
 }
 
@@ -2253,7 +2242,7 @@ function onSelectPrincipalChange(campo, selEl) {
 }
 
 // Devolve o valor final de um campo de select principal (banco, estabelecimento,
-// forma, parcela, categoria, credor, devedor): o valor escolhido na lista, ou o
+// forma, categoria, credor, devedor): o valor escolhido na lista, ou o
 // texto avulso digitado, se "Outro" estiver selecionado.
 function obterValorCampoPrincipal(campo) {
   const sel = document.getElementById('f-'+campo);
@@ -3081,50 +3070,19 @@ async function confirmarModal() {
   anunciar('Opção "'+val+'" adicionada em '+CAMPOS_NOMES[campoSalvo]+' e selecionada.');
 }
 
-async function removeOption(selectId, botaoRemoverId) {
-  const sel = document.getElementById(selectId);
-  const val = sel.value;
-  if(!val){ anunciar('Nenhuma opção selecionada para remover.',true); sel.focus(); return; }
-  if(val === VALOR_OUTRO){ anunciar('"Outro" não é uma opção salva na lista — não há o que remover.',true); sel.focus(); return; }
-  if(!confirm('Remover a opção "'+val+'"?')){ document.getElementById(botaoRemoverId).focus(); return; }
-  const campo = selectId.replace('f-','');
-
-  const { error } = await sb.from('opcoes_listas')
-    .delete()
-    .eq('user_id', usuarioAtual.id)
-    .eq('campo', campo)
-    .eq('valor', val);
-
-  if(error) {
-    anunciar('Erro ao remover a opção: ' + error.message, true);
-    mostrarToast('Erro ao remover opção.', true);
-    sel.focus();
-    return;
-  }
-
-  opcoesSelects[campo] = opcoesSelects[campo].filter(o=>o!==val);
-  renderizarSelect(campo);
-  renderizarFiltroSelect(campo);
-  if(campo === 'banco') {
-    if(contasConfig[val]) {
-      await sb.from('contas_config').delete().eq('user_id', usuarioAtual.id).eq('nome_banco', val);
-      delete contasConfig[val];
-    }
-    renderizarContasConfig();
-  }
-  renderizarListasConfig();
-  sel.focus();
-  anunciar('Opção "'+val+'" removida de '+CAMPOS_NOMES[campo]+'.');
-}
+// A remoção de opções das listas passou a ser feita exclusivamente pelo painel
+// "Gerenciar Listas", na aba Configurações (função removerOpcaoConfig) — o
+// formulário de Novo Lançamento não tem mais botão de remover ao lado de cada
+// campo, para evitar remoções acidentais durante o preenchimento do dia a dia.
 
 //  ITENS DO LANÇAMENTO
 // ═══════════════════════════════════════════════════
 function buildCategoriaOptions() {
   return '<option value="">— Selecionar —</option>' +
-    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>' +
     (opcoesSelects.categoria||[]).map(op =>
       '<option value="'+op.replace(/"/g,"&quot;")+'">'+op+'</option>'
-    ).join('');
+    ).join('') +
+    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>';
 }
 
 function adicionarItem(dados) {
@@ -3419,7 +3377,7 @@ async function salvarLancamento() {
     banco:           obterValorCampoPrincipal('banco') || null,
     estabelecimento: obterValorCampoPrincipal('estabelecimento') || null,
     forma:           obterValorCampoPrincipal('forma') || null,
-    parcela:         obterValorCampoPrincipal('parcela') || null,
+    parcela:         parcelaEmEdicao || null,
     descricao:       itensFormulario.length>0 ? null : (document.getElementById('f-descricao').value || null),
     categoria:       itensFormulario.length>0 ? null : (obterValorCampoPrincipal('categoria') || null),
     credor:          obterValorCampoPrincipal('credor') || null,
@@ -3524,6 +3482,7 @@ function limparFormulario() {
     if(outroInput){ outroInput.value=''; outroInput.style.display='none'; outroInput.setAttribute('aria-hidden','true'); }
   });
   editandoId=null;
+  parcelaEmEdicao='';
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
 }
@@ -3538,7 +3497,7 @@ function editarLancamento(id) {
   definirValorSelectComOutro(document.getElementById('f-banco'), document.getElementById('f-banco-outro'), l.banco);
   definirValorSelectComOutro(document.getElementById('f-estabelecimento'), document.getElementById('f-estabelecimento-outro'), l.estabelecimento);
   definirValorSelectComOutro(document.getElementById('f-forma'), document.getElementById('f-forma-outro'), l.forma);
-  definirValorSelectComOutro(document.getElementById('f-parcela'), document.getElementById('f-parcela-outro'), l.parcela);
+  parcelaEmEdicao = l.parcela || '';
   definirValorSelectComOutro(document.getElementById('f-categoria'), document.getElementById('f-categoria-outro'), l.categoria);
   definirValorSelectComOutro(document.getElementById('f-credor'), document.getElementById('f-credor-outro'), l.credor);
   definirValorSelectComOutro(document.getElementById('f-devedor'), document.getElementById('f-devedor-outro'), l.devedor);
@@ -3742,7 +3701,7 @@ function renderizarTabela() {
       '<td>'+(l.banco||'—')+'</td>'+
       '<td>'+(l.estabelecimento||'—')+'</td>'+
       '<td>'+(l.forma||'—')+'</td>'+
-      '<td>'+(l.parcela||'—')+'</td>'+
+      '<td>'+(l.parcela||'À vista')+'</td>'+
       '<td style="max-width:200px;white-space:normal;word-break:break-word;">'+desc+'</td>'+
       '<td style="max-width:160px;white-space:normal;word-break:break-word;">'+categorias+'</td>'+
       '<td>'+(l.credor||'—')+'</td>'+
@@ -4033,7 +3992,7 @@ function exportarPlanilha(){
           'Data Origem':fmtData(l.dataOrigem),'Data Vencimento':fmtData(l.dataVencimento),
           'Valor (R$)':l.valor,'Banco / Cartão':l.banco||'',
           'Estabelecimento':l.estabelecimento||'','Forma de Pagamento':l.forma||'',
-          'Parcela':l.parcela||'','Descrição':'(lançamento com '+l.itens.length+' itens)',
+          'Parcela':l.parcela||'À vista','Descrição':'(lançamento com '+l.itens.length+' itens)',
           'Categoria':'(múltiplas)','Credor':l.credor||'','Devedor':l.devedor||'',
           'Status':l.pago?'Pago':'Pendente','Tipo':'Principal'
         });
@@ -4053,7 +4012,7 @@ function exportarPlanilha(){
           'Data Origem':fmtData(l.dataOrigem),'Data Vencimento':fmtData(l.dataVencimento),
           'Valor (R$)':l.valor,'Banco / Cartão':l.banco||'',
           'Estabelecimento':l.estabelecimento||'','Forma de Pagamento':l.forma||'',
-          'Parcela':l.parcela||'','Descrição':l.descricao||'',
+          'Parcela':l.parcela||'À vista','Descrição':l.descricao||'',
           'Categoria':l.categoria||'','Credor':l.credor||'','Devedor':l.devedor||'',
           'Status':l.pago?'Pago':'Pendente','Tipo':'Simples'
         });
@@ -4089,6 +4048,17 @@ function exportarPlanilha(){
 // ═══════════════════════════════════════════════════
 //  IMPORT XLSX (grava direto no Supabase)
 // ═══════════════════════════════════════════════════
+// Ao exportar, um lançamento sem parcelamento aparece como "À vista" na planilha
+// (mais legível do que uma célula em branco). Ao reimportar, esse texto precisa
+// voltar a ser tratado como "sem parcela" (string vazia), tanto para não gravar
+// o texto literal "À vista" no banco quanto para a assinatura de deduplicação
+// continuar batendo corretamente com o lançamento original.
+function normalizarParcelaImportada(valorBruto) {
+  const v = String(valorBruto || '').trim().toLowerCase();
+  if(v === 'à vista' || v === 'a vista') return '';
+  return valorBruto || '';
+}
+
 function lerArquivoXLSX(event){
   const file=event.target.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -4099,7 +4069,7 @@ function lerArquivoXLSX(event){
 
     // Agrupa linhas em lançamentos + seus itens (mesma lógica do parser anterior)
     const novosLancamentos = [];
-    const opcoesParaColetar = { banco:new Set(), parcela:new Set(), forma:new Set(), estabelecimento:new Set(), categoria:new Set(), credor:new Set(), devedor:new Set() };
+    const opcoesParaColetar = { banco:new Set(), forma:new Set(), estabelecimento:new Set(), categoria:new Set(), credor:new Set(), devedor:new Set() };
     let lancAtual = null;
 
     rows.forEach(row=>{
@@ -4123,7 +4093,7 @@ function lerArquivoXLSX(event){
         banco:          row['Banco / Cartão']||'',
         estabelecimento:row['Estabelecimento']||'',
         forma:          row['Forma de Pagamento']||'',
-        parcela:        row['Parcela']||'',
+        parcela:        normalizarParcelaImportada(row['Parcela']),
         descricao:      row['Descrição']||'',
         categoria:      row['Categoria']||'',
         credor:         row['Credor']||'',
@@ -4131,7 +4101,7 @@ function lerArquivoXLSX(event){
         pago:           (row['Status']||'').toLowerCase()==='pago',
         itens:          []
       };
-      ['banco','estabelecimento','forma','parcela','categoria','credor','devedor'].forEach(campo=>{
+      ['banco','estabelecimento','forma','categoria','credor','devedor'].forEach(campo=>{
         const v = lancAtual[campo];
         if(v) opcoesParaColetar[campo].add(v);
       });
@@ -4433,12 +4403,24 @@ async function confirmarParcelamento() {
                        new Date().toISOString().slice(0,10);
   const dataVencBase = document.getElementById('f-data-vencimento').value ||
                        new Date().toISOString().slice(0,10);
-  const banco        = document.getElementById('f-banco').value || null;
-  const estab        = document.getElementById('f-estabelecimento').value || null;
-  const forma        = document.getElementById('f-forma').value || null;
-  const categoria    = document.getElementById('f-categoria').value || null;
-  const credor       = document.getElementById('f-credor').value || null;
-  const devedor      = document.getElementById('f-devedor').value || null;
+
+  // Valida os campos com "Outro" selecionado mas sem texto digitado ainda
+  for(const campo of CAMPOS_SELECT) {
+    const sel = document.getElementById('f-'+campo);
+    if(sel && sel.value === VALOR_OUTRO && !obterValorCampoPrincipal(campo)) {
+      anunciar('Digite o texto de ' + CAMPOS_NOMES[campo] + ', ou escolha outra opção, antes de parcelar.', true);
+      const outroInput = document.getElementById('f-'+campo+'-outro');
+      if(outroInput) outroInput.focus();
+      return;
+    }
+  }
+
+  const banco        = obterValorCampoPrincipal('banco') || null;
+  const estab        = obterValorCampoPrincipal('estabelecimento') || null;
+  const forma        = obterValorCampoPrincipal('forma') || null;
+  const categoria    = obterValorCampoPrincipal('categoria') || null;
+  const credor       = obterValorCampoPrincipal('credor') || null;
+  const devedor      = obterValorCampoPrincipal('devedor') || null;
   const descricaoBase = document.getElementById('f-descricao').value.trim();
 
   const parcelas = calcularParcelas(valorTotal, numParcelas, arredond, sinal);
@@ -4448,21 +4430,6 @@ async function confirmarParcelamento() {
   const textoOriginal = btnConfirmar.innerHTML;
   btnConfirmar.disabled = true;
   btnConfirmar.innerHTML = '<span class="spinner" aria-hidden="true"></span> Criando 0/'+numParcelas+'...';
-
-  // Garante que todas as labels de parcela existam como opção
-  for(let i=0; i<numParcelas; i++) {
-    const lbl = labelParcela(i);
-    if(!opcoesSelects.parcela.includes(lbl)) {
-      await sb.from('opcoes_listas').upsert(
-        { user_id: usuarioAtual.id, campo: 'parcela', valor: lbl },
-        { onConflict: 'user_id,campo,valor', ignoreDuplicates: true }
-      );
-      opcoesSelects.parcela.push(lbl);
-    }
-  }
-  opcoesSelects.parcela.sort((a,b) => a.localeCompare(b,'pt-BR'));
-  renderizarSelect('parcela');
-  renderizarFiltroSelect('parcela');
 
   let sucesso = 0, falhas = 0;
   for(let i=0; i<parcelas.length; i++) {

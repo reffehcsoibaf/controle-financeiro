@@ -156,18 +156,50 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.9.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-9-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-9-0"><span aria-hidden="true">🏷️</span> v1.9.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">26/07/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">✏️</span> Ajustes na Opção "Outro" e Simplificação de Listas</h3>
+          <ul>
+            <li>A opção <strong>"✏️ Outro (digitar uma vez)"</strong> agora aparece <strong>por último</strong> em todas as listas (Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor, Devedor, e Categoria de cada item), depois de todas as opções já cadastradas.</li>
+            <li>Os botões <strong>"−" (remover opção)</strong> foram retirados do formulário de Novo Lançamento — remover uma opção agora só é feito pelo painel <strong>Gerenciar Listas</strong>, na aba Configurações, evitando remoções acidentais durante o preenchimento do dia a dia. O botão "+" (adicionar) continua no formulário normalmente.</li>
+            <li><strong>Campo "Parcela" removido do formulário</strong>: essa lista crescia indefinidamente a cada parcelamento e não tinha mais utilidade com o <strong>Parcelamento Automático</strong> já cuidando disso de forma exclusiva. A etiqueta de parcela (ex.: "3/12") continua sendo gravada automaticamente e preservada ao editar um lançamento parcelado.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🧾</span> Coluna "Parcelamento" na Tabela e na Exportação</h3>
+          <ul>
+            <li>Em vez de ficar em branco ou com "—", a coluna agora mostra <strong>"À vista"</strong> quando o lançamento não é parcelado, e a etiqueta normal (ex.: "3/12") quando é.</li>
+            <li>A importação de planilha reconhece "À vista" automaticamente como "sem parcela" — reimportar um backup exportado não cria duplicatas por causa desse texto.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🔧</span> Correção</h3>
+          <ul>
+            <li>Os campos do Parcelamento Automático (Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor, Devedor) agora respeitam corretamente a opção "Outro" selecionada no formulário principal antes de parcelar.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.8.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-8-0">
+      <section class="versao-bloco" aria-labelledby="v1-8-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-8-0"><span aria-hidden="true">🏷️</span> v1.8.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">26/07/2026</span>
         </div>
 
         <div class="versao-secao">
           <h3><span aria-hidden="true">✏️</span> Opção "Outro (digitar uma vez)" nas Caixas Combinadas</h3>
           <ul>
-            <li>Os 7 campos de lista do formulário de Novo Lançamento — <strong>Banco/Cartão, Estabelecimento, Forma de Pagamento, Parcela, Categoria, Credor e Devedor</strong> — e também a Categoria de cada item nos lançamentos com Itens Múltiplos, agora têm uma opção fixa no topo: <strong>"✏️ Outro (digitar uma vez)"</strong>.</li>
+            <li>Os 7 campos de lista do formulário de Novo Lançamento — <strong>Banco/Cartão, Estabelecimento, Forma de Pagamento, Parcela, Categoria, Credor e Devedor</strong> — e também a Categoria de cada item nos lançamentos com Itens Múltiplos, agora têm uma opção fixa: <strong>"✏️ Outro (digitar uma vez)"</strong>.</li>
             <li>Ao escolher essa opção, um campo de texto aparece ao lado para digitar um valor avulso. Esse texto é usado normalmente no lançamento, mas <strong>nunca é gravado</strong> nas listas permanentes (Gerenciar Listas) — ideal para valores de uso único que não valem a pena cadastrar.</li>
             <li>O leitor de tela anuncia automaticamente quando o campo de texto aparece, com o foco indo direto para ele.</li>
             <li>Tentar salvar com "Outro" selecionado mas sem texto digitado é bloqueado, com aviso e foco no campo pendente.</li>
