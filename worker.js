@@ -90,7 +90,7 @@ async function checarAcessoIA(request, env) {
   const userData = await userResp.json();
 
   const profileResp = await fetch(
-    env.SUPABASE_URL + '/rest/v1/profiles?id=eq.' + userData.id + '&select=ai_enabled',
+    env.SUPABASE_URL + '/rest/v1/profiles_modulos?user_id=eq.' + userData.id + '&modulo=eq.financeiro&select=ai_enabled',
     { headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + accessToken } }
   );
   if (!profileResp.ok) {
@@ -108,7 +108,7 @@ async function checarAcessoIA(request, env) {
 // nunca deve quebrar a resposta já obtida para o usuário.
 async function registrarUsoIA(accessToken, env) {
   try {
-    await fetch(env.SUPABASE_URL + '/rest/v1/rpc/increment_ai_calls_count', {
+    await fetch(env.SUPABASE_URL + '/rest/v1/rpc/financeiro_increment_ai_calls', {
       method: 'POST',
       headers: {
         apikey: env.SUPABASE_ANON_KEY,

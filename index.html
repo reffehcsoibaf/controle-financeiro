@@ -1280,8 +1280,8 @@ select option{background:#1e2436;}
 // ═══════════════════════════════════════════════════
 //  CONFIGURAÇÃO SUPABASE
 // ═══════════════════════════════════════════════════
-const SUPABASE_URL = 'https://arkhifcucqozrpofhceq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_fNGQLgpF3_tOycUEciaznw_b0o2FM8h';
+const SUPABASE_URL = 'https://zlclakzjktpsbpfkltxa.supabase.co'; // projeto Hub
+const SUPABASE_KEY = 'sb_publishable_o5Rn3Qp_C3boiYCRqQ5Ykw_2sNd3KiQ'; // Project Settings > API > anon/public
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Monta o header Authorization com o token da sessão atual, usado na chamada
@@ -1529,9 +1529,10 @@ async function aplicarVisibilidadeIA() {
     if (!userId) return;
 
     const { data: perfil, error } = await sb
-      .from('profiles')
+      .from('profiles_modulos')
       .select('ai_enabled, documents_enabled')
-      .eq('id', userId)
+      .eq('user_id', userId)
+      .eq('modulo', 'financeiro')
       .single();
 
     if (error) return; // em caso de erro, não esconde nada (evita falso negativo)
@@ -1818,7 +1819,7 @@ async function limparDuplicatasExistentes() {
   const tamanhoLote = 100;
   for(let i=0; i<idsParaExcluir.length; i += tamanhoLote) {
     const lote = idsParaExcluir.slice(i, i + tamanhoLote);
-    const { error } = await sb.from('lancamentos')
+    const { error } = await sb.from('financeiro_lancamentos')
       .delete()
       .in('id', lote)
       .eq('user_id', usuarioAtual.id);
@@ -1918,7 +1919,7 @@ async function migrarDadosLocais() {
 
   for(const l of candidatos) {
     try {
-      const { data: lancInserido, error: errLanc } = await sb.from('lancamentos').insert({
+      const { data: lancInserido, error: errLanc } = await sb.from('financeiro_lancamentos').insert({
         user_id:         usuarioAtual.id,
         data_origem:     l.dataOrigem || null,
         data_vencimento: l.dataVencimento || null,
@@ -1946,7 +1947,7 @@ async function migrarDadosLocais() {
           descricao:     item.descricao || null,
           ordem:         idx
         }));
-        await sb.from('itens_lancamento').insert(itensParaInserir);
+        await sb.from('financeiro_itens_lancamento').insert(itensParaInserir);
       }
       sucesso++;
     } catch(e) {
@@ -1959,7 +1960,7 @@ async function migrarDadosLocais() {
     const valores = opcoesAntigas[campo] || [];
     for(const valor of valores) {
       if(!valor) continue;
-      await sb.from('opcoes_listas').upsert(
+      await sb.from('financeiro_opcoes_listas').upsert(
         { user_id: usuarioAtual.id, campo, valor },
         { onConflict: 'user_id,campo,valor', ignoreDuplicates: true }
       );
@@ -2019,7 +2020,7 @@ async function selecionarTudo(tabela, ordenarPor, colunas) {
 
 async function carregarOpcoesSupabase() {
   opcoesSelects = JSON.parse(JSON.stringify(OPCOES_PADRAO));
-  const { data, error } = await selecionarTudo('opcoes_listas', 'valor');
+  const { data, error } = await selecionarTudo('financeiro_opcoes_listas', 'valor');
   if(error) { mostrarToast('Erro ao carregar listas: ' + error.message, true); return; }
   (data || []).forEach(row => {
     if(opcoesSelects[row.campo] && !opcoesSelects[row.campo].includes(row.valor)) {
@@ -2031,7 +2032,7 @@ async function carregarOpcoesSupabase() {
 
 async function carregarContasConfigSupabase() {
   contasConfig = {};
-  const { data, error } = await selecionarTudo('contas_config', 'nome_banco');
+  const { data, error } = await selecionarTudo('financeiro_contas_config', 'nome_banco');
   if(error) { mostrarToast('Erro ao carregar contas/cartões: ' + error.message, true); return; }
   (data || []).forEach(row => {
     contasConfig[row.nome_banco] = {
@@ -2044,10 +2045,10 @@ async function carregarContasConfigSupabase() {
 }
 
 async function carregarLancamentosSupabase() {
-  const { data: lancRows, error: e1 } = await selecionarTudo('lancamentos', 'data_origem');
+  const { data: lancRows, error: e1 } = await selecionarTudo('financeiro_lancamentos', 'data_origem');
   if(e1) { mostrarToast('Erro ao carregar lançamentos: ' + e1.message, true); lancamentos = []; return; }
 
-  const { data: itensRows, error: e2 } = await selecionarTudo('itens_lancamento', 'ordem');
+  const { data: itensRows, error: e2 } = await selecionarTudo('financeiro_itens_lancamento', 'ordem');
   if(e2) { mostrarToast('Erro ao carregar itens: ' + e2.message, true); }
 
   const itensPorLancamento = {};
@@ -2104,7 +2105,7 @@ function linhaParaCorrecao(row) {
 }
 
 async function carregarCorrecoesIA() {
-  const { data, error } = await selecionarTudo('correcoes_ia', 'id');
+  const { data, error } = await selecionarTudo('financeiro_correcoes_ia', 'id');
   if(error) {
     // Tabela pode ainda não existir se o SQL de criação não foi rodado —
     // falha silenciosa aqui não deve travar o app, só desativa o recurso.
@@ -2122,7 +2123,7 @@ async function registrarCorrecaoIA(campo, valorErrado, valorCorreto, contexto) {
   const jaExiste = correcoesIA.some(c => c.campo===campo && c.valorErrado===valorErrado && c.valorCorreto===valorCorreto);
   if(jaExiste) return;
   const nova = { campo, valorErrado, valorCorreto, contexto: contexto || '' };
-  const { data, error } = await sb.from('correcoes_ia').insert({ user_id: usuarioAtual.id, ...correcaoParaLinha(nova) }).select().single();
+  const { data, error } = await sb.from('financeiro_correcoes_ia').insert({ user_id: usuarioAtual.id, ...correcaoParaLinha(nova) }).select().single();
   if(error) { console.warn('Não foi possível salvar correção aprendida:', error.message); return; }
   nova.id = data.id;
   nova.criadoEm = data.criado_em;
@@ -2130,7 +2131,7 @@ async function registrarCorrecaoIA(campo, valorErrado, valorCorreto, contexto) {
 }
 
 async function excluirCorrecaoIA(id) {
-  const { error } = await sb.from('correcoes_ia').delete().eq('id', id).eq('user_id', usuarioAtual.id);
+  const { error } = await sb.from('financeiro_correcoes_ia').delete().eq('id', id).eq('user_id', usuarioAtual.id);
   if(error) { mostrarToast('Erro ao excluir correção: ' + error.message, true); return; }
   correcoesIA = correcoesIA.filter(c => c.id !== id);
   renderCorrecoesIA();
@@ -2141,7 +2142,7 @@ async function excluirCorrecaoIA(id) {
 async function limparTodasCorrecoesIA() {
   if(!correcoesIA.length) return;
   if(!confirm('Apagar todas as ' + correcoesIA.length + ' correções aprendidas? A IA volta a inferir do zero, sem lembrar dos ajustes feitos até agora.')) return;
-  const { error } = await sb.from('correcoes_ia').delete().eq('user_id', usuarioAtual.id);
+  const { error } = await sb.from('financeiro_correcoes_ia').delete().eq('user_id', usuarioAtual.id);
   if(error) { mostrarToast('Erro ao limpar correções: ' + error.message, true); return; }
   correcoesIA = [];
   renderCorrecoesIA();
@@ -2465,7 +2466,7 @@ function fmtDataHoraDoc(isoStr) {
 }
 
 async function carregarDocumentosArmazenados() {
-  const { data, error } = await sb.from('documentos_armazenados')
+  const { data, error } = await sb.from('financeiro_documentos_armazenados')
     .select('*')
     .order('criado_em', { ascending: false });
   if(error) {
@@ -2559,7 +2560,7 @@ async function uploadDocumentoStorage(file) {
   });
   if(erroUpload) throw new Error('Falha ao enviar o arquivo: ' + erroUpload.message);
 
-  const { data: registro, error: erroInsert } = await sb.from('documentos_armazenados').insert({
+  const { data: registro, error: erroInsert } = await sb.from('financeiro_documentos_armazenados').insert({
     user_id: usuarioAtual.id,
     nome_arquivo: file.name,
     caminho: caminho,
@@ -2676,7 +2677,7 @@ async function excluirDocumentoArmazenado(id) {
     return;
   }
 
-  const { error: erroDb } = await sb.from('documentos_armazenados')
+  const { error: erroDb } = await sb.from('financeiro_documentos_armazenados')
     .delete().eq('id', id).eq('user_id', usuarioAtual.id);
   if(erroDb) {
     anunciar('Erro ao excluir registro: ' + erroDb.message, true);
@@ -2938,7 +2939,7 @@ async function adicionarOpcaoConfig(campo) {
   if(!opcoesSelects[campo]) opcoesSelects[campo] = [];
   if(opcoesSelects[campo].includes(val)) { anunciar('Essa opção já existe: ' + val, true); input.focus(); return; }
 
-  const { error } = await sb.from('opcoes_listas').insert({
+  const { error } = await sb.from('financeiro_opcoes_listas').insert({
     user_id: usuarioAtual.id, campo: campo, valor: val
   });
 
@@ -2968,7 +2969,7 @@ async function adicionarOpcaoConfig(campo) {
 async function removerOpcaoConfig(campo, valor) {
   if(!confirm('Remover a opção "' + valor + '" de ' + CAMPOS_NOMES[campo] + '?')) return;
 
-  const { error } = await sb.from('opcoes_listas')
+  const { error } = await sb.from('financeiro_opcoes_listas')
     .delete()
     .eq('user_id', usuarioAtual.id)
     .eq('campo', campo)
@@ -2985,7 +2986,7 @@ async function removerOpcaoConfig(campo, valor) {
   renderizarFiltroSelect(campo);
   if(campo === 'banco') {
     if(contasConfig[valor]) {
-      await sb.from('contas_config').delete().eq('user_id', usuarioAtual.id).eq('nome_banco', valor);
+      await sb.from('financeiro_contas_config').delete().eq('user_id', usuarioAtual.id).eq('nome_banco', valor);
       delete contasConfig[valor];
     }
     renderizarContasConfig();
@@ -3032,7 +3033,7 @@ async function confirmarModal() {
   const btnConfirmar = document.getElementById('btn-modal-confirmar');
   btnConfirmar.disabled = true;
 
-  const { error } = await sb.from('opcoes_listas').insert({
+  const { error } = await sb.from('financeiro_opcoes_listas').insert({
     user_id: usuarioAtual.id, campo: campoSalvo, valor: val
   });
 
@@ -3412,19 +3413,19 @@ async function salvarLancamento() {
   try {
     if(editandoId) {
       // ── ATUALIZAR ──
-      const { error: errUpd } = await sb.from('lancamentos')
+      const { error: errUpd } = await sb.from('financeiro_lancamentos')
         .update(dadosLancamento)
         .eq('id', editandoId)
         .eq('user_id', usuarioAtual.id);
       if(errUpd) throw errUpd;
 
       // Substitui todos os itens: remove os antigos e insere os novos
-      await sb.from('itens_lancamento').delete().eq('lancamento_id', editandoId);
+      await sb.from('financeiro_itens_lancamento').delete().eq('lancamento_id', editandoId);
       if(itensParaSalvar.length > 0) {
         const itensComFk = itensParaSalvar.map((i, idx) => ({
           ...i, lancamento_id: editandoId, user_id: usuarioAtual.id, ordem: idx
         }));
-        const { error: errItens } = await sb.from('itens_lancamento').insert(itensComFk);
+        const { error: errItens } = await sb.from('financeiro_itens_lancamento').insert(itensComFk);
         if(errItens) throw errItens;
       }
 
@@ -3432,7 +3433,7 @@ async function salvarLancamento() {
       anunciar('Lançamento atualizado com sucesso.');
     } else {
       // ── CRIAR ──
-      const { data: novo, error: errIns } = await sb.from('lancamentos')
+      const { data: novo, error: errIns } = await sb.from('financeiro_lancamentos')
         .insert(dadosLancamento)
         .select()
         .single();
@@ -3442,7 +3443,7 @@ async function salvarLancamento() {
         const itensComFk = itensParaSalvar.map((i, idx) => ({
           ...i, lancamento_id: novo.id, user_id: usuarioAtual.id, ordem: idx
         }));
-        const { error: errItens } = await sb.from('itens_lancamento').insert(itensComFk);
+        const { error: errItens } = await sb.from('financeiro_itens_lancamento').insert(itensComFk);
         if(errItens) throw errItens;
       }
 
@@ -3527,7 +3528,7 @@ async function excluirLancamento(id) {
   const desc=(l?(l.descricao||fmtData(l.dataOrigem)):'' ).replace(/"/g,"'");
   if(!confirm('Excluir o lançamento "'+desc+'"?')) return;
 
-  const { error } = await sb.from('lancamentos')
+  const { error } = await sb.from('financeiro_lancamentos')
     .delete()
     .eq('id', id)
     .eq('user_id', usuarioAtual.id);
@@ -3562,7 +3563,7 @@ async function togglePago(id, chkEl) {
   aplicarFiltrosSilencioso();
   anunciar('Lançamento marcado como '+(l.pago?'pago':'pendente')+'.');
 
-  const { error } = await sb.from('lancamentos')
+  const { error } = await sb.from('financeiro_lancamentos')
     .update({ pago: novoStatus })
     .eq('id', id)
     .eq('user_id', usuarioAtual.id);
@@ -3918,7 +3919,7 @@ async function salvarContaConfig(idSafe, nomeBanco) {
   const btn = document.getElementById(idSafe+'-btn-salvar');
   btn.disabled = true;
 
-  const { error } = await sb.from('contas_config')
+  const { error } = await sb.from('financeiro_contas_config')
     .upsert(registro, { onConflict: 'user_id,nome_banco' });
 
   btn.disabled = false;
@@ -4149,7 +4150,7 @@ function lerArquivoXLSX(event){
     for(let i=0; i<candidatos.length; i++) {
       const l = candidatos[i];
       try {
-        const { data: lancInserido, error: errLanc } = await sb.from('lancamentos').insert({
+        const { data: lancInserido, error: errLanc } = await sb.from('financeiro_lancamentos').insert({
           user_id:         usuarioAtual.id,
           data_origem:     l.dataOrigem || null,
           data_vencimento: l.dataVencimento || null,
@@ -4176,7 +4177,7 @@ function lerArquivoXLSX(event){
             descricao:     item.descricao || null,
             ordem:         idx
           }));
-          await sb.from('itens_lancamento').insert(itensComFk);
+          await sb.from('financeiro_itens_lancamento').insert(itensComFk);
         }
         importados++;
       } catch(err) {
@@ -4188,7 +4189,7 @@ function lerArquivoXLSX(event){
     // Insere as novas opções de lista coletadas (ignora duplicadas via upsert)
     for(const campo of Object.keys(opcoesParaColetar)) {
       for(const valor of opcoesParaColetar[campo]) {
-        await sb.from('opcoes_listas').upsert(
+        await sb.from('financeiro_opcoes_listas').upsert(
           { user_id: usuarioAtual.id, campo, valor },
           { onConflict: 'user_id,campo,valor', ignoreDuplicates: true }
         );
@@ -4436,7 +4437,7 @@ async function confirmarParcelamento() {
     const val = parcelas[i];
     const desc = descricaoBase ? descricaoBase + ' — ' + labelParcela(i) : labelParcela(i);
     try {
-      const { error } = await sb.from('lancamentos').insert({
+      const { error } = await sb.from('financeiro_lancamentos').insert({
         user_id:         usuarioAtual.id,
         data_origem:     dataOrigem,
         data_vencimento: avancarMeses(dataVencBase, i),
