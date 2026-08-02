@@ -652,8 +652,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
       <h3 id="contas-cartoes">Contas e Cartões</h3>
       <p>
-        Permite configurar cada Banco/Cartão cadastrado como um de dois tipos:
+        Cada Banco/Cartão já cadastrado aparece como uma linha numa tabela, com colunas
+        <strong>Banco/Cartão</strong>, <strong>Tipo</strong>,
+        <strong>Situação Atual</strong> (calculada) e <strong>Ações</strong>.
       </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Clique em <strong>✏️ Editar</strong> na linha do Banco/Cartão que deseja configurar. É só nessa janela que o Tipo e o Saldo Inicial/Limite Total ficam editáveis.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Escolha o tipo — <strong>Conta Corrente</strong> ou <strong>Cartão de Crédito</strong> — e informe o valor correspondente.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Clique em <strong>Salvar</strong>. A tabela é atualizada com o novo Tipo, o valor configurado e a Situação Atual recalculada.</div>
+        </div>
+      </div>
+      <p>Os dois tipos funcionam assim:</p>
       <ul>
         <li><strong>Conta Corrente</strong> — acompanha o saldo, somando apenas os lançamentos marcados como <strong>Pago</strong> (entradas somam, saídas subtraem). Lançamentos Pendentes ainda não afetam o saldo, já que representam algo agendado que ainda não aconteceu de verdade na conta.</li>
         <li><strong>Cartão de Crédito</strong> — acompanha o limite disponível, somando <strong>todos</strong> os lançamentos daquele Banco/Cartão, Pago ou Pendente (compra parcelada e fatura em aberto normalmente ainda não estão marcadas como Pago, mas já consomem limite de verdade).</li>
@@ -668,7 +685,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </div>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">🔍</span>
-        <span>Se o saldo ou o limite calculado não bater com a realidade, use o botão <strong>"🔍 Ver Lançamentos"</strong> ao lado da conta/cartão, em Saldos — ele filtra a aba Lançamentos exatamente pelo mesmo conjunto de registros usado no cálculo, pra você conferir data por data.</span>
+        <span>Se o saldo ou o limite calculado não bater com a realidade, use o botão <strong>"🔍 Ver Lançamentos"</strong> na linha da conta/cartão — ele filtra a aba Lançamentos exatamente pelo mesmo conjunto de registros usado no cálculo, pra você conferir data por data.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">🗑️</span>
+        <span>O botão <strong>Excluir</strong> (disponível só quando o Banco/Cartão já está configurado) remove apenas a configuração de Tipo e Saldo Inicial/Limite — o Banco/Cartão em si continua existindo normalmente na lista de opções, disponível para novos lançamentos, só deixa de ter saldo ou limite calculado até você configurá-lo de novo.</span>
       </div>
     </section>
 
@@ -787,13 +808,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
       <h3 id="gerenciar-listas">Gerenciar Listas</h3>
       <p>
-        Painel dedicado para adicionar ou remover, de uma vez, as opções de Banco/Cartão, Categoria,
-        Credor, Devedor, Forma de Pagamento e Estabelecimento — sem precisar abrir o
-        formulário de lançamento. Funciona igual ao botão <strong>+</strong> de cada campo no
-        formulário, só que reunido em um só lugar — e é o <strong>único</strong> lugar do app onde
-        dá para remover uma opção dessas listas, já que o formulário de Novo Lançamento não tem mais
-        botão de remover.
+        Painel dedicado para adicionar, editar ou remover, de uma vez, as opções de Banco/Cartão,
+        Categoria, Credor, Devedor, Forma de Pagamento e Estabelecimento — sem precisar abrir o
+        formulário de lançamento. Cada campo tem sua própria tabela, com uma linha por opção
+        cadastrada e os botões <strong>✏️ Editar</strong> e <strong>🗑️ Excluir</strong> em cada linha.
+        É o <strong>único</strong> lugar do app onde dá para remover ou renomear uma opção dessas
+        listas, já que o formulário de Novo Lançamento não tem mais botão de remover.
       </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">✏️</span>
+        <span>O botão <strong>Editar</strong> abre uma janela para renomear a opção. Ao confirmar, o
+        novo nome é aplicado automaticamente em todos os lançamentos que já usavam o valor antigo
+        (e nos itens de lançamentos com múltiplos itens, no caso de Categoria) — nenhum lançamento
+        antigo fica "perdido" com o nome anterior.</span>
+      </div>
 
       <h3 id="correcoes-ia">Correções Aprendidas (IA)</h3>
       <p>
@@ -818,9 +846,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </div>
       <p>
         A lista de correções memorizadas fica visível aqui em Configurações, na seção
-        <strong>"🧠 Correções Aprendidas (IA)"</strong>, com um botão <strong>🗑️</strong> para excluir
-        uma correção específica, ou <strong>🗑️ Apagar Todas as Correções</strong> para zerar tudo
-        de uma vez e deixar a IA voltar a inferir do zero.
+        <strong>"🧠 Correções Aprendidas (IA)"</strong>, em formato de tabela (Campo, Valor Errado,
+        Valor Correto, Contexto e Ações). Cada linha tem um botão <strong>✏️ Editar</strong>, para
+        ajustar os valores da correção sem precisar excluir e recriar do zero, e um botão
+        <strong>🗑️ Excluir</strong>, para remover só aquela correção. Há também o botão
+        <strong>🗑️ Apagar Todas as Correções</strong>, para zerar tudo de uma vez e deixar a IA
+        voltar a inferir do zero.
       </p>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>

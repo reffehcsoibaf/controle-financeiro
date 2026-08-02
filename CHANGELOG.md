@@ -4,6 +4,29 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.10.0 — 02/08/2026
+
+- **Mais telas em formato de tabela**: além da aba Documentos, agora também estão em formato de
+  tabela: **Gerenciar Listas** (Banco/Cartão, Categoria, Credor, Devedor, Forma de Pagamento,
+  Estabelecimento), **Correções Aprendidas (IA)** e **Contas e Cartões** (aba Saldos) — mesmo
+  padrão visual e de acessibilidade já usado na tabela de Lançamentos.
+- **Botão Editar em cada linha**: todas essas tabelas — Documentos, Gerenciar Listas, Correções
+  Aprendidas e Contas e Cartões — agora têm um botão **✏️ Editar** ao lado do **🗑️ Excluir** em
+  cada linha:
+  - Em **Gerenciar Listas**, Editar abre uma janela para renomear a opção; o novo nome é
+    propagado automaticamente para todos os lançamentos (e itens, no caso de Categoria) que já
+    usavam o valor antigo, para nada ficar "órfão".
+  - Em **Correções Aprendidas**, Editar abre uma janela para ajustar o valor errado, o valor
+    correto e o contexto da correção, sem precisar excluir e recriar do zero.
+  - Em **Contas e Cartões** (aba Saldos), Editar abre uma janela dedicada onde agora ficam o
+    seletor de Tipo (Conta Corrente / Cartão de Crédito) e o campo de Saldo Inicial ou Limite
+    Total — antes esses campos ficavam sempre visíveis ao lado de cada banco; agora só aparecem
+    ao clicar em Editar. A tabela em si mostra apenas Banco/Cartão, Tipo e a Situação Atual
+    calculada (o Saldo Inicial/Limite configurado não fica mais como coluna da tabela, só dentro
+    da janela de edição), com um botão **Excluir** para remover a configuração (o Banco/Cartão
+    em si continua existindo na lista de opções) e o botão **🔍 Ver Lançamentos** para auditoria,
+    como antes.
+
 ## v1.9.0 — 26/07/2026
 
 - **Opção "Outro" movida para o final das listas**: em todos os campos de lista (Banco/Cartão,

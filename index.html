@@ -115,16 +115,9 @@ input.negativo{color:var(--red);}
 .tipo-valor-btn[aria-checked="true"].saida{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red);}
 .tipo-valor-btn[aria-checked="true"].entrada{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green);}
 
-/* ── CONTAS E CARTÕES ── */
-.conta-row{
-  display:grid;grid-template-columns:1.1fr .9fr .9fr auto auto;gap:8px;align-items:end;
-  padding:10px 0;border-bottom:1px solid var(--border);
-}
-.conta-row:last-child{border-bottom:none;}
-.conta-nome{font-weight:600;font-size:13px;padding-bottom:9px;}
-.conta-resultado{grid-column:1 / -1;font-size:13px;color:var(--accent);font-weight:600;margin-top:2px;}
+/* ── CONTAS E CARTÕES (agora em tabela) ── */
+.conta-resultado{color:var(--accent);font-weight:600;}
 .conta-resultado.alerta{color:var(--red);}
-@media (max-width:640px){.conta-row{grid-template-columns:1fr;}}
 
 /* ── ABAS ── */
 .tabs-nav{
@@ -143,34 +136,9 @@ input.negativo{color:var(--red);}
 /* ── GERENCIAR LISTAS ── */
 .config-lista-grupo{margin-bottom:22px;}
 .config-lista-grupo h3{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text);}
-.config-lista{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;padding:0;}
-.config-lista li{
-  display:flex;align-items:center;gap:6px;background:var(--bg3);
-  border:1px solid var(--border);border-radius:999px;padding:5px 6px 5px 12px;
-  font-size:13px;
-}
-.config-lista li button{
-  background:transparent;border:none;color:var(--text3);cursor:pointer;
-  width:20px;height:20px;border-radius:50%;font-size:13px;line-height:1;
-}
-.config-lista li button:hover{background:rgba(239,68,68,.15);color:var(--red);}
-.config-lista-vazio{font-size:12px;color:var(--text3);margin-bottom:10px;}
-.config-lista-add{display:flex;gap:8px;max-width:420px;}
+.config-lista-vazio{font-size:12px;color:var(--text3);}
+.config-lista-add{display:flex;gap:8px;max-width:420px;margin-top:10px;}
 .config-lista-add input{flex:1;}
-
-/* ── DOCUMENTOS ARMAZENADOS ── */
-.doc-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
-.doc-lista li{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
-  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
-  padding:8px 12px;font-size:13px;
-}
-.doc-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
-.doc-nome{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;}
-.doc-meta{font-size:11px;color:var(--text3);}
-.doc-acoes{display:flex;gap:6px;flex-shrink:0;}
-.doc-acoes .btn{padding:6px 10px;font-size:12px;}
-.doc-lista-vazio{font-size:12px;color:var(--text3);}
 
 /* ── RODAPÉ: VERSÃO ── */
 .app-footer{
@@ -428,12 +396,22 @@ input[type="checkbox"]:checked::after{
   font-size:12px;font-weight:600;color:var(--text2);
   text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;
 }
-.modal input[type="text"]{
+.modal input[type="text"],
+.modal input[type="number"],
+.modal select{
   background:var(--bg3);border:1px solid var(--border);
   border-radius:var(--radius-sm);color:var(--text);
-  padding:9px 12px;font-size:13px;width:100%;outline:none;
+  padding:9px 12px;font-size:13px;width:100%;outline:none;font-family:inherit;
 }
-.modal input[type="text"]:focus-visible{border-color:var(--accent);outline:3px solid var(--accent);outline-offset:1px;}
+.modal select{
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7590' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+.modal input:disabled,.modal select:disabled{opacity:.5;cursor:not-allowed;}
+.modal input[type="text"]:focus-visible,
+.modal input[type="number"]:focus-visible,
+.modal select:focus-visible{border-color:var(--accent);outline:3px solid var(--accent);outline-offset:1px;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
 
 /* ══ MODAL DE PARCELAMENTO ══ */
@@ -1076,7 +1054,20 @@ select option{background:#1e2436;}
       </div>
     </div>
 
-    <ul id="documentos-armazenados-lista" class="doc-lista" aria-label="Documentos guardados na nuvem"></ul>
+    <div class="table-info" id="documentos-info" aria-live="polite" aria-atomic="true" style="margin-bottom:10px;"></div>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de documentos guardados — role horizontalmente se necessário">
+      <table id="tabela-documentos" aria-label="Documentos guardados na nuvem" aria-describedby="documentos-info">
+        <thead>
+          <tr>
+            <th scope="col">Nome do Arquivo</th>
+            <th scope="col">Guardado em</th>
+            <th scope="col">Tamanho</th>
+            <th scope="col">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="documentos-armazenados-lista"></tbody>
+      </table>
+    </div>
   </section>
 
   </div>
@@ -1171,6 +1162,69 @@ select option{background:#1e2436;}
     <div class="modal-actions">
       <button type="button" class="btn btn-secondary" id="btn-modal-cancelar" onclick="fecharModal()">Cancelar</button>
       <button type="button" class="btn btn-primary" id="btn-modal-confirmar" onclick="confirmarModal()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIGURAR CONTA / CARTÃO ══ -->
+<div class="modal-overlay" id="modal-conta-overlay"
+     role="dialog" aria-modal="true"
+     aria-labelledby="mconta-titulo" aria-describedby="mconta-desc">
+  <div class="modal">
+    <h2 id="mconta-titulo">Configurar Banco/Cartão</h2>
+    <p id="mconta-desc" class="sr-only">
+      Escolha o tipo — Conta Corrente ou Cartão de Crédito — e informe o saldo inicial ou o limite
+      total. Pressione Escape para cancelar.
+    </p>
+    <div>
+      <label for="mconta-tipo">Tipo</label>
+      <select id="mconta-tipo" onchange="onTipoContaModalChange()" onkeydown="tratarTeclaModalConta(event)">
+        <option value="">— Não configurada —</option>
+        <option value="conta_corrente">Conta Corrente</option>
+        <option value="cartao_credito">Cartão de Crédito</option>
+      </select>
+    </div>
+    <div>
+      <label for="mconta-valor" id="mconta-valor-label">Saldo Inicial</label>
+      <input type="number" id="mconta-valor" step="0.01" autocomplete="off"
+             onkeydown="tratarTeclaModalConta(event)">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="fecharModalConta()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btn-mconta-confirmar" onclick="confirmarModalConta()">
+        <span aria-hidden="true">💾</span> Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR CORREÇÃO APRENDIDA ══ -->
+<div class="modal-overlay" id="modal-correcao-overlay"
+     role="dialog" aria-modal="true"
+     aria-labelledby="mcorr-titulo" aria-describedby="mcorr-desc">
+  <div class="modal">
+    <h2 id="mcorr-titulo">Editar correção aprendida</h2>
+    <p id="mcorr-desc" class="sr-only">
+      Ajuste o valor que a IA sugeriu, o valor correto e o contexto desta correção aprendida.
+      Pressione Escape para cancelar.
+    </p>
+    <div>
+      <label for="mcorr-errado">Valor que a IA sugeriu (errado)</label>
+      <input type="text" id="mcorr-errado" autocomplete="off" onkeydown="tratarTeclaModalCorrecao(event)">
+    </div>
+    <div>
+      <label for="mcorr-correto">Valor correto</label>
+      <input type="text" id="mcorr-correto" autocomplete="off" onkeydown="tratarTeclaModalCorrecao(event)">
+    </div>
+    <div>
+      <label for="mcorr-contexto">Contexto (opcional)</label>
+      <input type="text" id="mcorr-contexto" autocomplete="off" onkeydown="tratarTeclaModalCorrecao(event)">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" onclick="fecharModalCorrecao()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btn-mcorr-confirmar" onclick="confirmarEdicaoCorrecao()">
+        <span aria-hidden="true">💾</span> Salvar
+      </button>
     </div>
   </div>
 </div>
@@ -1271,7 +1325,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.9.0 · 26/07/2026
+  Controle Financeiro · v1.10.0 · 02/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1312,6 +1366,15 @@ let itensPorPagina = parseInt(localStorage.getItem('cf_itens_por_pagina')) || 50
 let paginaAtual     = 1;
 let modalCampo            = null;
 let modalOrigemBotaoId    = null;
+// Modo de edição do modal genérico (openModal): quando true, o modal serve
+// para RENOMEAR uma opção já existente (em vez de adicionar uma nova), e
+// modalValorOriginal guarda o valor antigo para comparação/atualização.
+let modalModoEdicao       = false;
+let modalValorOriginal    = null;
+// Nome do banco/cartão sendo configurado no modal de Contas e Cartões (aba Saldos)
+let contaEditandoNome     = null;
+// Id da correção aprendida sendo editada no modal de Correções (aba Configurações)
+let correcaoEditandoId    = null;
 
 // Itens do lançamento em edição no formulário
 // Cada item: { id (local), valor, categoria, descricao }
@@ -1705,6 +1768,14 @@ function registrarEventosModais() {
   ov.addEventListener('click',   e => { if (e.target === ov) fecharModal(); });
   ov.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
 
+  const ovConta = document.getElementById('modal-conta-overlay');
+  ovConta.addEventListener('click',   e => { if (e.target === ovConta) fecharModalConta(); });
+  ovConta.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModalConta(); });
+
+  const ovCorr = document.getElementById('modal-correcao-overlay');
+  ovCorr.addEventListener('click',   e => { if (e.target === ovCorr) fecharModalCorrecao(); });
+  ovCorr.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModalCorrecao(); });
+
   const ovP = document.getElementById('modal-parcelar-overlay');
   ovP.addEventListener('click',   e => { if (e.target === ovP) fecharModalParcelar(); });
   ovP.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModalParcelar(); });
@@ -1714,6 +1785,13 @@ function registrarEventosModais() {
       if(e.key === 'Enter') { e.preventDefault(); confirmarParcelamento(); }
     });
   });
+}
+
+function tratarTeclaModalConta(e) {
+  if(e.key==='Enter'){ e.preventDefault(); confirmarModalConta(); }
+}
+function tratarTeclaModalCorrecao(e) {
+  if(e.key==='Enter'){ e.preventDefault(); confirmarEdicaoCorrecao(); }
 }
 
 function iniciarRelogio() {
@@ -2194,15 +2272,95 @@ function renderCorrecoesIA() {
     return;
   }
   const ordenadas = correcoesIA.slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
-  container.innerHTML = ordenadas.map(c => (
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
-      '<div>' +
-        '<strong>'+escaparHTML(CAMPOS_NOMES[c.campo]||c.campo)+':</strong> "'+escaparHTML(c.valorErrado)+'" → "'+escaparHTML(c.valorCorreto)+'"' +
-        (c.contexto ? '<br><span style="color:var(--text3);font-size:12px;">'+escaparHTML(c.contexto)+'</span>' : '') +
-      '</div>' +
-      '<button type="button" class="btn-icon remove" onclick="excluirCorrecaoIA('+c.id+')" aria-label="Excluir esta correção aprendida">🗑️</button>' +
-    '</div>'
-  )).join('');
+  container.innerHTML =
+    '<div class="table-wrap">' +
+      '<table aria-label="Correções aprendidas pela IA">' +
+        '<thead><tr>' +
+          '<th scope="col">Campo</th>' +
+          '<th scope="col">Valor Errado</th>' +
+          '<th scope="col">Valor Correto</th>' +
+          '<th scope="col">Contexto</th>' +
+          '<th scope="col">Ações</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+          ordenadas.map(c => (
+            '<tr>' +
+              '<td>'+escaparHTML(CAMPOS_NOMES[c.campo]||c.campo)+'</td>' +
+              '<td style="white-space:normal;word-break:break-word;">'+escaparHTML(c.valorErrado)+'</td>' +
+              '<td style="white-space:normal;word-break:break-word;">'+escaparHTML(c.valorCorreto)+'</td>' +
+              '<td style="white-space:normal;word-break:break-word;">'+(c.contexto ? escaparHTML(c.contexto) : '—')+'</td>' +
+              '<td><div class="td-actions">' +
+                '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" ' +
+                  'onclick="abrirModalCorrecao('+c.id+')" aria-label="Editar esta correção aprendida">' +
+                  '<span aria-hidden="true">✏️</span> Editar</button>' +
+                '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" ' +
+                  'onclick="excluirCorrecaoIA('+c.id+')" aria-label="Excluir esta correção aprendida">' +
+                  '<span aria-hidden="true">🗑️</span> Excluir</button>' +
+              '</div></td>' +
+            '</tr>'
+          )).join('') +
+        '</tbody>' +
+      '</table>' +
+    '</div>';
+}
+
+// Abre o modal de edição de uma correção aprendida já existente, permitindo
+// ajustar o valor errado, o valor correto e o contexto sem precisar excluir
+// e recriar a correção do zero.
+function abrirModalCorrecao(id) {
+  const c = correcoesIA.find(x => x.id === id);
+  if(!c) return;
+  correcaoEditandoId = id;
+  document.getElementById('mcorr-titulo').textContent = 'Editar correção: ' + (CAMPOS_NOMES[c.campo] || c.campo);
+  document.getElementById('mcorr-errado').value   = c.valorErrado || '';
+  document.getElementById('mcorr-correto').value  = c.valorCorreto || '';
+  document.getElementById('mcorr-contexto').value = c.contexto || '';
+  document.getElementById('modal-correcao-overlay').classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.getElementById('mcorr-correto').focus()
+  ));
+}
+function fecharModalCorrecao() {
+  document.getElementById('modal-correcao-overlay').classList.remove('open');
+  correcaoEditandoId = null;
+}
+async function confirmarEdicaoCorrecao() {
+  if(!correcaoEditandoId) return;
+  const errado   = document.getElementById('mcorr-errado').value.trim();
+  const correto  = document.getElementById('mcorr-correto').value.trim();
+  const contexto = document.getElementById('mcorr-contexto').value.trim();
+
+  if(!errado || !correto) {
+    anunciar('Preencha o valor errado e o valor correto.', true);
+    return;
+  }
+  if(errado === correto) {
+    anunciar('O valor errado e o valor correto não podem ser iguais.', true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-mcorr-confirmar');
+  btn.disabled = true;
+
+  const { error } = await sb.from('financeiro_correcoes_ia')
+    .update({ valor_errado: errado, valor_correto: correto, contexto: contexto || null })
+    .eq('id', correcaoEditandoId).eq('user_id', usuarioAtual.id);
+
+  btn.disabled = false;
+
+  if(error) {
+    anunciar('Erro ao salvar a correção: ' + error.message, true);
+    mostrarToast('Erro ao salvar correção.', true);
+    return;
+  }
+
+  const c = correcoesIA.find(x => x.id === correcaoEditandoId);
+  if(c) { c.valorErrado = errado; c.valorCorreto = correto; c.contexto = contexto; }
+
+  fecharModalCorrecao();
+  renderCorrecoesIA();
+  anunciar('Correção atualizada.');
+  mostrarToast('Correção atualizada.');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2515,36 +2673,50 @@ let iaHabilitadaAtual = true;
 
 function renderizarDocumentosArmazenados(lista) {
   const container = document.getElementById('documentos-armazenados-lista');
+  const info = document.getElementById('documentos-info');
   if(!container) return;
   const itens = lista || documentosArmazenados;
 
   if(!documentosArmazenados.length) {
-    container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento guardado ainda.</li>';
+    container.innerHTML = '<tr><td colspan="4">' +
+      '<div class="empty-state" role="status">' +
+        '<div class="empty-icon" aria-hidden="true">📭</div>' +
+        '<p>Nenhum documento guardado ainda.</p>' +
+      '</div>' +
+    '</td></tr>';
+    if(info) info.textContent = '0 documentos';
     return;
   }
   if(!itens.length) {
-    container.innerHTML = '<li class="doc-lista-vazio">Nenhum documento encontrado para essa busca.</li>';
+    container.innerHTML = '<tr><td colspan="4">' +
+      '<div class="empty-state" role="status">' +
+        '<div class="empty-icon" aria-hidden="true">🔍</div>' +
+        '<p>Nenhum documento encontrado para essa busca.</p>' +
+      '</div>' +
+    '</td></tr>';
+    if(info) info.textContent = '0 documentos (filtrados de ' + documentosArmazenados.length + ')';
     return;
   }
 
+  if(info) info.textContent = itens.length + ' documento' + (itens.length!==1?'s':'') +
+    (itens.length !== documentosArmazenados.length ? ' (de ' + documentosArmazenados.length + ' no total)' : '');
+
   container.innerHTML = itens.map(doc => (
-    '<li>' +
-      '<div class="doc-info">' +
-        '<span class="doc-nome" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</span>' +
-        '<span class="doc-meta">'+fmtDataHoraDoc(doc.criado_em)+
-          (doc.tamanho_bytes ? ' · '+fmtTamanhoArquivo(doc.tamanho_bytes) : '')+'</span>' +
-      '</div>' +
-      '<div class="doc-acoes">' +
+    '<tr>' +
+      '<td style="max-width:280px;white-space:normal;word-break:break-word;" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</td>' +
+      '<td>'+fmtDataHoraDoc(doc.criado_em)+'</td>' +
+      '<td>'+(doc.tamanho_bytes ? fmtTamanhoArquivo(doc.tamanho_bytes) : '—')+'</td>' +
+      '<td><div class="td-actions">' +
         (iaHabilitadaAtual ?
-          '<button type="button" class="btn btn-secondary" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
+          '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
             'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>'
           : '') +
-        '<button type="button" class="btn btn-secondary" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
+        '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
           'aria-label="Baixar '+escaparHTML(doc.nome_arquivo)+'">⬇️ Baixar</button>' +
-        '<button type="button" class="btn-icon" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
+        '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
           'aria-label="Excluir '+escaparHTML(doc.nome_arquivo)+'">🗑️</button>' +
-      '</div>' +
-    '</li>'
+      '</div></td>' +
+    '</tr>'
   )).join('');
 }
 
@@ -2906,21 +3078,33 @@ function renderizarListasConfig() {
 
   container.innerHTML = CAMPOS_SELECT.map(campo => {
     const lista = opcoesSelects[campo] || [];
-    const itensHtml = lista.length
-      ? '<ul class="config-lista" aria-label="Opções cadastradas para '+CAMPOS_NOMES[campo]+'">' +
-          lista.map(valor =>
-            '<li>' + escaparHTML(valor) +
-              '<button type="button" onclick="removerOpcaoConfig(\''+campo+'\', \''+escaparParaJS(valor)+'\')" ' +
-                'aria-label="Remover \''+escaparHTML(valor)+'\' de '+CAMPOS_NOMES[campo]+'">✕</button>' +
-            '</li>'
-          ).join('') +
-        '</ul>'
-      : '<p class="config-lista-vazio">Nenhuma opção cadastrada ainda.</p>';
+    const corpoTabela = lista.length
+      ? lista.map(valor =>
+          '<tr>' +
+            '<td style="white-space:normal;word-break:break-word;">' + escaparHTML(valor) + '</td>' +
+            '<td><div class="td-actions">' +
+              '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" ' +
+                'onclick="editarOpcaoConfig(\''+campo+'\', \''+escaparParaJS(valor)+'\')" ' +
+                'aria-label="Editar \''+escaparHTML(valor)+'\' em '+CAMPOS_NOMES[campo]+'">' +
+                '<span aria-hidden="true">✏️</span> Editar</button>' +
+              '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" ' +
+                'onclick="removerOpcaoConfig(\''+campo+'\', \''+escaparParaJS(valor)+'\')" ' +
+                'aria-label="Excluir \''+escaparHTML(valor)+'\' de '+CAMPOS_NOMES[campo]+'">' +
+                '<span aria-hidden="true">🗑️</span> Excluir</button>' +
+            '</div></td>' +
+          '</tr>'
+        ).join('')
+      : '<tr><td colspan="2" class="config-lista-vazio">Nenhuma opção cadastrada ainda.</td></tr>';
 
     return (
       '<div class="config-lista-grupo">' +
         '<h3>'+CAMPOS_NOMES[campo]+'</h3>' +
-        itensHtml +
+        '<div class="table-wrap">' +
+          '<table aria-label="Opções cadastradas para '+CAMPOS_NOMES[campo]+'">' +
+            '<thead><tr><th scope="col">Valor</th><th scope="col">Ações</th></tr></thead>' +
+            '<tbody>'+corpoTabela+'</tbody>' +
+          '</table>' +
+        '</div>' +
         '<div class="config-lista-add">' +
           '<label for="cfg-add-'+campo+'" class="sr-only">Nova opção para '+CAMPOS_NOMES[campo]+'</label>' +
           '<input type="text" id="cfg-add-'+campo+'" placeholder="Nova opção..." ' +
@@ -2930,6 +3114,11 @@ function renderizarListasConfig() {
       '</div>'
     );
   }).join('');
+}
+
+// Abre o modal genérico em modo edição para renomear uma opção já cadastrada.
+function editarOpcaoConfig(campo, valorAntigo) {
+  openModal(campo, null, valorAntigo);
 }
 
 async function adicionarOpcaoConfig(campo) {
@@ -2998,16 +3187,28 @@ async function removerOpcaoConfig(campo, valor) {
 // ═══════════════════════════════════════════════════
 //  MODAL ADICIONAR OPÇÃO (agora grava direto no Supabase)
 // ═══════════════════════════════════════════════════
-function openModal(campo, origemBotaoId) {
+// campo: nome do campo (banco, categoria, etc.)
+// origemBotaoId: id do elemento para onde o foco volta ao fechar (opcional)
+// valorParaEditar: quando informado, o modal abre em MODO EDIÇÃO (renomear
+// uma opção já existente) em vez do modo padrão de adicionar uma nova opção.
+function openModal(campo, origemBotaoId, valorParaEditar) {
   modalCampo         = campo;
   modalOrigemBotaoId = origemBotaoId || ('btn-add-'+campo);
-  document.getElementById('modal-title').textContent       = 'Adicionar opção: '+CAMPOS_NOMES[campo];
-  document.getElementById('modal-input-label').textContent = 'Nova opção para '+CAMPOS_NOMES[campo];
-  document.getElementById('modal-input').value = '';
+  modalModoEdicao    = (valorParaEditar !== undefined && valorParaEditar !== null);
+  modalValorOriginal = modalModoEdicao ? valorParaEditar : null;
+
+  document.getElementById('modal-title').textContent =
+    (modalModoEdicao ? 'Editar opção: ' : 'Adicionar opção: ') + CAMPOS_NOMES[campo];
+  document.getElementById('modal-input-label').textContent =
+    (modalModoEdicao ? 'Novo valor para ' : 'Nova opção para ') + CAMPOS_NOMES[campo];
+  document.getElementById('modal-input').value = modalModoEdicao ? valorParaEditar : '';
+  document.getElementById('btn-modal-confirmar').textContent = modalModoEdicao ? 'Salvar' : 'Adicionar';
   document.getElementById('modal-overlay').classList.add('open');
-  requestAnimationFrame(() => requestAnimationFrame(() =>
-    document.getElementById('modal-input').focus()
-  ));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const inp = document.getElementById('modal-input');
+    inp.focus();
+    if(modalModoEdicao) inp.select();
+  }));
 }
 function fecharModal() {
   document.getElementById('modal-overlay').classList.remove('open');
@@ -3015,7 +3216,7 @@ function fecharModal() {
     const btn = document.getElementById(modalOrigemBotaoId);
     if(btn) btn.focus();
   }
-  modalCampo = null; modalOrigemBotaoId = null;
+  modalCampo = null; modalOrigemBotaoId = null; modalModoEdicao = false; modalValorOriginal = null;
 }
 function tratarTeclaModal(e) {
   if(e.key==='Enter'){e.preventDefault();confirmarModal();}
@@ -3023,7 +3224,13 @@ function tratarTeclaModal(e) {
 }
 async function confirmarModal() {
   const val = document.getElementById('modal-input').value.trim();
-  if(!val){ anunciar('Digite um nome para a nova opção.',true); document.getElementById('modal-input').focus(); return; }
+  if(!val){ anunciar('Digite um nome para a opção.',true); document.getElementById('modal-input').focus(); return; }
+
+  if(modalModoEdicao) {
+    await confirmarEdicaoOpcao(modalCampo, modalValorOriginal, val);
+    return;
+  }
+
   if(!opcoesSelects[modalCampo]) opcoesSelects[modalCampo]=[];
   if(opcoesSelects[modalCampo].includes(val)){ anunciar('Essa opção já existe: '+val,true); document.getElementById('modal-input').select(); return; }
 
@@ -3069,6 +3276,100 @@ async function confirmarModal() {
     if(selPrincipal){ selPrincipal.value = val; selPrincipal.focus(); }
   }
   anunciar('Opção "'+val+'" adicionada em '+CAMPOS_NOMES[campoSalvo]+' e selecionada.');
+}
+
+// Renomeia uma opção já cadastrada (ex.: corrigir um nome digitado errado).
+// Como o valor é texto livre gravado diretamente nos lançamentos (não é uma
+// chave estrangeira), a renomeação PRECISA propagar para todos os lugares que
+// guardam esse texto, ou os lançamentos antigos ficariam "órfãos" do valor
+// antigo enquanto a lista de opções já mostraria só o novo nome:
+//  1) a própria opção, em financeiro_opcoes_listas;
+//  2) todos os lançamentos que usam esse valor no campo correspondente;
+//  3) para Categoria, também os itens de lançamentos com múltiplos itens;
+//  4) para Banco/Cartão, também a configuração de Conta/Cartão (Saldos), que
+//     usa o nome do banco como identificador.
+async function confirmarEdicaoOpcao(campo, valorAntigo, valorNovo) {
+  if(valorNovo === valorAntigo) { fecharModal(); return; }
+  if((opcoesSelects[campo]||[]).includes(valorNovo)) {
+    anunciar('Já existe uma opção chamada "'+valorNovo+'" em '+CAMPOS_NOMES[campo]+'.', true);
+    document.getElementById('modal-input').select();
+    return;
+  }
+
+  const btnConfirmar = document.getElementById('btn-modal-confirmar');
+  btnConfirmar.disabled = true;
+
+  const { error: errOpcao } = await sb.from('financeiro_opcoes_listas')
+    .update({ valor: valorNovo })
+    .eq('user_id', usuarioAtual.id).eq('campo', campo).eq('valor', valorAntigo);
+
+  if(errOpcao) {
+    btnConfirmar.disabled = false;
+    anunciar('Erro ao renomear a opção: ' + errOpcao.message, true);
+    mostrarToast('Erro ao renomear opção.', true);
+    return;
+  }
+
+  const { error: errLanc } = await sb.from('financeiro_lancamentos')
+    .update({ [campo]: valorNovo })
+    .eq('user_id', usuarioAtual.id).eq(campo, valorAntigo);
+  if(errLanc) console.warn('Erro ao atualizar lançamentos com o novo valor:', errLanc.message);
+
+  if(campo === 'categoria') {
+    const { error: errItens } = await sb.from('financeiro_itens_lancamento')
+      .update({ categoria: valorNovo })
+      .eq('user_id', usuarioAtual.id).eq('categoria', valorAntigo);
+    if(errItens) console.warn('Erro ao atualizar itens com a nova categoria:', errItens.message);
+  }
+
+  if(campo === 'banco' && contasConfig[valorAntigo]) {
+    const { error: errConta } = await sb.from('financeiro_contas_config')
+      .update({ nome_banco: valorNovo })
+      .eq('user_id', usuarioAtual.id).eq('nome_banco', valorAntigo);
+    if(errConta) {
+      console.warn('Erro ao renomear a conta/cartão associado:', errConta.message);
+    } else {
+      contasConfig[valorNovo] = contasConfig[valorAntigo];
+      delete contasConfig[valorAntigo];
+    }
+  }
+
+  btnConfirmar.disabled = false;
+
+  // Atualiza o estado local (evita ter que recarregar tudo do zero)
+  opcoesSelects[campo] = opcoesSelects[campo].map(v => v === valorAntigo ? valorNovo : v);
+  opcoesSelects[campo].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+
+  lancamentos.forEach(l => {
+    if(l[campo] === valorAntigo) l[campo] = valorNovo;
+    if(campo === 'categoria' && l.itens && l.itens.length) {
+      l.itens.forEach(it => { if(it.categoria === valorAntigo) it.categoria = valorNovo; });
+    }
+  });
+
+  renderizarSelect(campo);
+  renderizarFiltroSelect(campo);
+  if(campo === 'categoria') {
+    document.querySelectorAll('.item-sel-categoria').forEach(s => {
+      const cur = s.value;
+      s.innerHTML = buildCategoriaOptions();
+      if(cur) s.value = (cur === valorAntigo ? valorNovo : cur);
+    });
+  }
+  if(campo === 'banco') renderizarContasConfig();
+  renderizarListasConfig();
+  aplicarFiltrosSilencioso();
+  renderizarTabela();
+  atualizarSaldos();
+
+  document.getElementById('modal-overlay').classList.remove('open');
+  modalCampo = null; modalOrigemBotaoId = null; modalModoEdicao = false; modalValorOriginal = null;
+
+  const inputAdd = document.getElementById('cfg-add-' + campo);
+  if(inputAdd) inputAdd.focus();
+
+  anunciar('Opção "'+valorAntigo+'" renomeada para "'+valorNovo+'" em '+CAMPOS_NOMES[campo]+'. Lançamentos existentes foram atualizados.');
+  mostrarToast('Opção renomeada.');
 }
 
 // A remoção de opções das listas passou a ser feita exclusivamente pelo painel
@@ -3810,57 +4111,67 @@ function renderizarContasConfig() {
     return;
   }
 
-  container.innerHTML = bancos.map(nome => {
+  const linhas = bancos.map(nome => {
     const cfg  = contasConfig[nome] || {};
     const tipo = cfg.tipo || '';
     const idSafe = 'conta-' + nome.replace(/[^a-zA-Z0-9]/g,'_');
+    const tipoTexto = tipo === 'cartao_credito' ? 'Cartão de Crédito'
+                     : tipo === 'conta_corrente' ? 'Conta Corrente'
+                     : '— Não configurada —';
     return (
-      '<div class="conta-row" data-banco="'+escaparHTML(nome)+'">' +
-        '<div class="conta-nome">'+escaparHTML(nome)+'</div>' +
-        '<div class="form-group" style="margin:0;">' +
-          '<label for="'+idSafe+'-tipo" class="sr-only">Tipo de '+escaparHTML(nome)+'</label>' +
-          '<select id="'+idSafe+'-tipo" onchange="onTipoContaChange(\''+idSafe+'\')">' +
-            '<option value=""'+(tipo===''?' selected':'')+'>— Não configurada —</option>' +
-            '<option value="conta_corrente"'+(tipo==='conta_corrente'?' selected':'')+'>Conta Corrente</option>' +
-            '<option value="cartao_credito"'+(tipo==='cartao_credito'?' selected':'')+'>Cartão de Crédito</option>' +
-          '</select>' +
-        '</div>' +
-        '<div class="form-group" style="margin:0;" id="'+idSafe+'-valor-grupo">' +
-          '<label for="'+idSafe+'-valor" class="sr-only">'+
-            (tipo==='cartao_credito' ? 'Limite total de '+escaparHTML(nome) : 'Saldo inicial de '+escaparHTML(nome)) +
-          '</label>' +
-          '<input type="number" id="'+idSafe+'-valor" step="0.01" ' +
-            'placeholder="'+(tipo==='cartao_credito' ? 'Limite total' : 'Saldo inicial')+'" ' +
-            'value="'+(tipo==='cartao_credito' ? (cfg.limite_total ?? '') : (cfg.saldo_inicial ?? ''))+'" ' +
-            (tipo===''?'disabled':'') +
-            '>' +
-        '</div>' +
-        '<button type="button" class="btn btn-secondary btn-salvar-conta" style="padding:8px 14px;font-size:12px;" '+(tipo===''?'disabled':'')+
-          ' id="'+idSafe+'-btn-salvar" data-id-safe="'+idSafe+'">Salvar</button>' +
-        '<button type="button" class="btn btn-secondary btn-auditar-conta" style="padding:8px 14px;font-size:12px;" ' +
-          'aria-label="Ver todos os lançamentos de '+escaparHTML(nome)+' usados no cálculo do saldo">' +
-          '<span aria-hidden="true">🔍</span> Ver Lançamentos</button>' +
-        '<div class="conta-resultado" id="'+idSafe+'-resultado"></div>' +
-      '</div>'
+      '<tr class="conta-row" data-banco="'+escaparHTML(nome)+'">' +
+        '<td>'+escaparHTML(nome)+'</td>' +
+        '<td>'+tipoTexto+'</td>' +
+        '<td class="conta-resultado" id="'+idSafe+'-resultado">—</td>' +
+        '<td><div class="td-actions">' +
+          '<button type="button" class="btn btn-secondary btn-editar-conta" style="padding:5px 10px;font-size:11px;" ' +
+            'aria-label="Configurar '+escaparHTML(nome)+'"><span aria-hidden="true">✏️</span> Editar</button>' +
+          '<button type="button" class="btn btn-secondary btn-auditar-conta" style="padding:5px 10px;font-size:11px;" ' +
+            'aria-label="Ver todos os lançamentos de '+escaparHTML(nome)+' usados no cálculo do saldo">' +
+            '<span aria-hidden="true">🔍</span> Ver Lançamentos</button>' +
+          (tipo ? '<button type="button" class="btn btn-danger btn-excluir-conta" style="padding:5px 10px;font-size:11px;" ' +
+            'aria-label="Remover configuração de '+escaparHTML(nome)+'"><span aria-hidden="true">🗑️</span> Excluir</button>' : '') +
+        '</div></td>' +
+      '</tr>'
     );
   }).join('');
+
+  container.innerHTML =
+    '<div class="table-wrap">' +
+      '<table aria-label="Contas e cartões configurados">' +
+        '<thead><tr>' +
+          '<th scope="col">Banco/Cartão</th>' +
+          '<th scope="col">Tipo</th>' +
+          '<th scope="col">Situação Atual</th>' +
+          '<th scope="col">Ações</th>' +
+        '</tr></thead>' +
+        '<tbody>'+linhas+'</tbody>' +
+      '</table>' +
+    '</div>';
 
   atualizarContas();
 }
 
-// Delegação de eventos dos botões de cada linha de Conta/Cartão (Salvar e Ver
-// Lançamentos). Usa sempre o atributo data-banco do .conta-row — a MESMA string
-// já usada para renderizar o nome na tela — em vez de remontar o texto dentro de
-// um onclick, que é uma fonte de descompasso caso o nome tenha caractere especial.
+// Delegação de eventos dos botões de cada linha de Conta/Cartão (Editar, Ver
+// Lançamentos e Excluir). Usa sempre o atributo data-banco do .conta-row — a
+// MESMA string já usada para renderizar o nome na tela — em vez de remontar
+// o texto dentro de um onclick, que é uma fonte de descompasso caso o nome
+// tenha caractere especial.
 function registrarEventosContasConfig() {
   const container = document.getElementById('contas-config-lista');
   if(!container || container.dataset.eventosRegistrados) return;
   container.dataset.eventosRegistrados = 'true';
   container.addEventListener('click', (e) => {
-    const btnSalvar = e.target.closest('.btn-salvar-conta');
-    if(btnSalvar) {
-      const row = btnSalvar.closest('.conta-row');
-      salvarContaConfig(btnSalvar.dataset.idSafe, row.dataset.banco);
+    const btnEditar = e.target.closest('.btn-editar-conta');
+    if(btnEditar) {
+      const row = btnEditar.closest('.conta-row');
+      abrirModalConta(row.dataset.banco);
+      return;
+    }
+    const btnExcluir = e.target.closest('.btn-excluir-conta');
+    if(btnExcluir) {
+      const row = btnExcluir.closest('.conta-row');
+      excluirContaConfig(row.dataset.banco);
       return;
     }
     const btnAuditar = e.target.closest('.btn-auditar-conta');
@@ -3885,26 +4196,51 @@ function auditarConta(nomeBanco) {
   setTimeout(() => document.getElementById('titulo-tabela').scrollIntoView({behavior:'smooth', block:'start'}), 300);
 }
 
-function onTipoContaChange(idSafe) {
-  const tipo = document.getElementById(idSafe+'-tipo').value;
-  const input = document.getElementById(idSafe+'-valor');
-  const label = document.querySelector('label[for="'+idSafe+'-valor"]');
-  const btn   = document.getElementById(idSafe+'-btn-salvar');
-  input.disabled = tipo === '';
-  btn.disabled   = tipo === '';
-  input.placeholder = tipo === 'cartao_credito' ? 'Limite total' : 'Saldo inicial';
-  if(label) label.textContent = tipo === 'cartao_credito' ? 'Limite total' : 'Saldo inicial';
+// ── MODAL: Configurar Banco/Cartão (Editar) ──
+// Abre com o tipo e o valor (saldo inicial ou limite total) já configurados
+// para esse banco, se houver. É aqui — e só aqui — que o tipo e o valor
+// ficam editáveis; a tabela em si só mostra o resultado calculado.
+function abrirModalConta(nomeBanco) {
+  contaEditandoNome = nomeBanco;
+  const cfg = contasConfig[nomeBanco] || {};
+  document.getElementById('mconta-titulo').textContent = 'Configurar: ' + nomeBanco;
+  document.getElementById('mconta-tipo').value = cfg.tipo || '';
+  document.getElementById('mconta-valor').value =
+    cfg.tipo === 'cartao_credito' ? (cfg.limite_total ?? '') :
+    cfg.tipo === 'conta_corrente' ? (cfg.saldo_inicial ?? '') : '';
+  onTipoContaModalChange();
+  document.getElementById('modal-conta-overlay').classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.getElementById('mconta-tipo').focus()
+  ));
 }
+function fecharModalConta() {
+  document.getElementById('modal-conta-overlay').classList.remove('open');
+  contaEditandoNome = null;
+}
+function onTipoContaModalChange() {
+  const tipo  = document.getElementById('mconta-tipo').value;
+  const label = document.getElementById('mconta-valor-label');
+  const input = document.getElementById('mconta-valor');
+  label.textContent = tipo === 'cartao_credito' ? 'Limite Total' : 'Saldo Inicial';
+  input.disabled = tipo === '';
+  if(tipo === '') input.value = '';
+}
+async function confirmarModalConta() {
+  const nomeBanco = contaEditandoNome;
+  if(!nomeBanco) return;
+  const tipo = document.getElementById('mconta-tipo').value;
+  const valorStr = document.getElementById('mconta-valor').value;
 
-async function salvarContaConfig(idSafe, nomeBanco) {
-  const tipo = document.getElementById(idSafe+'-tipo').value;
-  const valorStr = document.getElementById(idSafe+'-valor').value;
+  if(!tipo) {
+    anunciar('Escolha o tipo antes de salvar, ou cancele e use o botão Excluir para remover a configuração.', true);
+    document.getElementById('mconta-tipo').focus();
+    return;
+  }
   const valor = parseFloat(valorStr);
-
-  if(!tipo) { anunciar('Escolha o tipo antes de salvar.', true); return; }
   if(valorStr === '' || isNaN(valor)) {
     anunciar('Informe ' + (tipo==='cartao_credito' ? 'o limite total.' : 'o saldo inicial.'), true);
-    document.getElementById(idSafe+'-valor').focus();
+    document.getElementById('mconta-valor').focus();
     return;
   }
 
@@ -3916,7 +4252,7 @@ async function salvarContaConfig(idSafe, nomeBanco) {
     limite_total:  tipo === 'cartao_credito' ? valor : null
   };
 
-  const btn = document.getElementById(idSafe+'-btn-salvar');
+  const btn = document.getElementById('btn-mconta-confirmar');
   btn.disabled = true;
 
   const { error } = await sb.from('financeiro_contas_config')
@@ -3936,9 +4272,32 @@ async function salvarContaConfig(idSafe, nomeBanco) {
     limite_total: registro.limite_total
   };
 
+  fecharModalConta();
+  renderizarContasConfig();
   anunciar((tipo==='cartao_credito' ? 'Cartão' : 'Conta') + ' ' + nomeBanco + ' configurado(a) com sucesso.');
   mostrarToast('Configuração de ' + nomeBanco + ' salva.');
-  atualizarContas();
+}
+
+// Remove só a CONFIGURAÇÃO (tipo + saldo inicial/limite) do banco/cartão — o
+// nome continua existindo normalmente na lista de Banco/Cartão (Gerenciar
+// Listas), só deixa de ter saldo ou limite calculado na aba Saldos.
+async function excluirContaConfig(nomeBanco) {
+  if(!contasConfig[nomeBanco]) return;
+  if(!confirm('Remover a configuração de "'+nomeBanco+'"? O Banco/Cartão continua existindo na lista de opções, só deixa de ter saldo ou limite calculado aqui em Saldos.')) return;
+
+  const { error } = await sb.from('financeiro_contas_config')
+    .delete().eq('user_id', usuarioAtual.id).eq('nome_banco', nomeBanco);
+
+  if(error) {
+    anunciar('Erro ao remover configuração: ' + error.message, true);
+    mostrarToast('Erro ao remover configuração.', true);
+    return;
+  }
+
+  delete contasConfig[nomeBanco];
+  renderizarContasConfig();
+  anunciar('Configuração de "'+nomeBanco+'" removida.');
+  mostrarToast('Configuração removida.');
 }
 
 // Recalcula saldo/limite de cada conta configurada, usando TODOS os lançamentos

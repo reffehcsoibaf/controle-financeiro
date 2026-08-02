@@ -156,11 +156,40 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.10.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-10-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-10-0"><span aria-hidden="true">🏷️</span> v1.10.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">02/08/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📂</span> Mais Telas em Formato de Tabela</h3>
+          <ul>
+            <li>A aba <strong>Documentos</strong> agora exibe os arquivos guardados na nuvem em uma <strong>tabela</strong> (Nome do Arquivo, Guardado em, Tamanho e Ações), em vez da lista de cartões usada antes.</li>
+            <li>O painel <strong>Gerenciar Listas</strong> (Configurações) agora exibe cada lista — Banco/Cartão, Categoria, Credor, Devedor, Forma de Pagamento e Estabelecimento — como uma tabela própria, em vez de "pílulas" lado a lado.</li>
+            <li><strong>Correções Aprendidas (IA)</strong> também virou tabela, com colunas Campo, Valor Errado, Valor Correto, Contexto e Ações.</li>
+            <li><strong>Contas e Cartões</strong>, na aba Saldos, agora é uma tabela com colunas Banco/Cartão, Tipo, Saldo Inicial/Limite, Situação Atual e Ações.</li>
+            <li>Todas essas tabelas seguem o mesmo padrão visual e de navegação por teclado/leitor de tela já usado na tabela de Lançamentos.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">✏️</span> Botão Editar em Cada Linha</h3>
+          <ul>
+            <li>Documentos, Gerenciar Listas, Correções Aprendidas e Contas e Cartões agora têm um botão <strong>✏️ Editar</strong> ao lado do <strong>🗑️ Excluir</strong> em cada linha.</li>
+            <li>Em <strong>Gerenciar Listas</strong>, Editar abre uma janela para renomear a opção; o novo nome é propagado automaticamente para todos os lançamentos (e itens, no caso de Categoria) que já usavam o valor antigo.</li>
+            <li>Em <strong>Correções Aprendidas</strong>, Editar abre uma janela para ajustar o valor errado, o valor correto e o contexto, sem precisar excluir e recriar a correção do zero.</li>
+            <li>Em <strong>Contas e Cartões</strong>, Editar abre uma janela dedicada com o seletor de Tipo (Conta Corrente / Cartão de Crédito) e o campo de Saldo Inicial ou Limite Total — antes esses campos ficavam sempre visíveis ao lado de cada banco; agora só aparecem ao clicar em Editar. A tabela em si mostra apenas Banco/Cartão, Tipo e a Situação Atual calculada. O botão <strong>Excluir</strong> remove só a configuração (o Banco/Cartão continua na lista de opções), e o <strong>🔍 Ver Lançamentos</strong> continua disponível para auditoria.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.9.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-9-0">
+      <section class="versao-bloco" aria-labelledby="v1-9-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-9-0"><span aria-hidden="true">🏷️</span> v1.9.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">26/07/2026</span>
         </div>
 
