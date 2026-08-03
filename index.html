@@ -1559,16 +1559,43 @@ function fazerLogout() {
 sb.auth.onAuthStateChange((_evento, session) => {
   if(session && session.user) {
     usuarioAtual = session.user;
-    document.getElementById('auth-screen').style.display     = 'none';
-    document.getElementById('app-principal').style.display    = '';
-    document.getElementById('user-email-display').textContent = usuarioAtual.email;
-    aplicarVisibilidadeIA().then(() => iniciarAppLogado());
+    moduloEstaHabilitado('financeiro').then(function(habilitado) {
+      if (!habilitado) {
+        sb.auth.signOut();
+        usuarioAtual = null;
+        mostrarErroAuth('Seu acesso a este módulo está desativado. Fale com o administrador.');
+        document.getElementById('auth-screen').style.display  = '';
+        document.getElementById('app-principal').style.display = 'none';
+        return;
+      }
+      document.getElementById('auth-screen').style.display     = 'none';
+      document.getElementById('app-principal').style.display    = '';
+      document.getElementById('user-email-display').textContent = usuarioAtual.email;
+      aplicarVisibilidadeIA().then(() => iniciarAppLogado());
+    });
   } else {
     usuarioAtual = null;
     document.getElementById('auth-screen').style.display  = '';
     document.getElementById('app-principal').style.display = 'none';
   }
 });
+
+// Confere se o usuário logado está com este módulo habilitado em
+// profiles_modulos. A garantia de segurança de verdade está no RLS do
+// banco (o Postgres bloqueia mesmo que este código seja contornado);
+// isto aqui é só para dar uma mensagem clara em vez de erros confusos.
+async function moduloEstaHabilitado(modulo) {
+  const { data: sessao } = await sb.auth.getSession();
+  if (!sessao.session) return false;
+  const { data, error } = await sb
+    .from('profiles_modulos')
+    .select('habilitado')
+    .eq('user_id', sessao.session.user.id)
+    .eq('modulo', modulo)
+    .maybeSingle();
+  if (error || !data) return false;
+  return data.habilitado === true;
+}
 
 // ═══════════════════════════════════════════════════
 //  INICIALIZAÇÃO DO APP (após login confirmado)
