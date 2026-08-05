@@ -4,6 +4,15 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.12.0 — 05/08/2026
+
+- **Marcar como pago já no formulário**: o formulário de Novo Lançamento agora tem uma caixa de
+  verificação **"Marcar como pago"**, logo antes do botão Salvar. Deixe desmarcada para criar o
+  lançamento como **Pendente** (padrão) ou marque para já criá-lo como **Pago**, sem precisar ir
+  até a tabela depois.
+  - Ao editar um lançamento existente, a caixa já vem preenchida com o status atual dele, e
+    qualquer mudança nela é salva junto com o restante da edição.
+
 ## v1.11.0 — 05/08/2026
 
 - **Vínculo entre Documento e Lançamento**: ao analisar um documento com a IA (novo ou já guardado

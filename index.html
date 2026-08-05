@@ -903,6 +903,13 @@ select option{background:#1e2436;}
 
       </div><!-- /form-grid -->
 
+      <div style="margin-top:14px;display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="f-pago" style="width:auto;">
+        <label for="f-pago" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
+          Marcar como pago (deixe desmarcado para pendente)
+        </label>
+      </div>
+
       <div class="form-actions" style="margin-top:16px;">
         <button type="submit" class="btn btn-primary" id="btn-salvar" onclick="salvarLancamento()">
           <span aria-hidden="true">💾</span> Salvar Lançamento
@@ -1334,7 +1341,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.11.0 · 05/08/2026
+  Controle Financeiro · v1.12.0 · 05/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -3843,7 +3850,8 @@ async function salvarLancamento() {
     descricao:       itensFormulario.length>0 ? null : (document.getElementById('f-descricao').value || null),
     categoria:       itensFormulario.length>0 ? null : (obterValorCampoPrincipal('categoria') || null),
     credor:          obterValorCampoPrincipal('credor') || null,
-    devedor:         obterValorCampoPrincipal('devedor') || null
+    devedor:         obterValorCampoPrincipal('devedor') || null,
+    pago:            document.getElementById('f-pago').checked
   };
 
   // Valida itens cuja categoria está em modo "Outro" mas ainda sem texto digitado
@@ -3967,6 +3975,7 @@ function limparFormulario() {
   });
   editandoId=null;
   parcelaEmEdicao='';
+  document.getElementById('f-pago').checked = false;
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
   limparVinculoDocumentoPendente();
@@ -3987,6 +3996,7 @@ function editarLancamento(id) {
   definirValorSelectComOutro(document.getElementById('f-categoria'), document.getElementById('f-categoria-outro'), l.categoria);
   definirValorSelectComOutro(document.getElementById('f-credor'), document.getElementById('f-credor-outro'), l.credor);
   definirValorSelectComOutro(document.getElementById('f-devedor'), document.getElementById('f-devedor-outro'), l.devedor);
+  document.getElementById('f-pago').checked = !!l.pago;
   limparItens();
   if(l.itens && l.itens.length>0) {
     definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
@@ -4005,7 +4015,7 @@ function editarLancamento(id) {
   mudarAba('novolanc');
   window.scrollTo({top:0,behavior:'smooth'});
   setTimeout(()=>document.getElementById('f-data-origem').focus(),320);
-  anunciar('Formulário preenchido para edição na aba Novo Lançamento: '+fmtData(l.dataOrigem)+', '+fmtValor(l.valor)+'.');
+  anunciar('Formulário preenchido para edição na aba Novo Lançamento: '+fmtData(l.dataOrigem)+', '+fmtValor(l.valor)+', '+(l.pago?'pago':'pendente')+'.');
 }
 
 async function excluirLancamento(id) {

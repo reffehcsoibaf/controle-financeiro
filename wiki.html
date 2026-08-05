@@ -420,6 +420,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <tr><td class="campo-nome">Credor</td><td>Lista</td><td>Gerenciável.</td></tr>
           <tr><td class="campo-nome">Devedor</td><td>Lista</td><td>Gerenciável.</td></tr>
           <tr><td class="campo-nome">Descrição</td><td>Texto livre</td><td>Opcional. Também é ignorada se houver itens múltiplos.</td></tr>
+          <tr><td class="campo-nome">Marcar como pago</td><td>Caixa de verificação</td><td>Opcional, logo antes do botão Salvar. Desmarcada = <strong>Pendente</strong> (padrão); marcada = <strong>Pago</strong>. Veja a seção <a href="#lanc-status">Marcar como pago</a> para detalhes.</td></tr>
         </tbody>
       </table>
 
@@ -491,11 +492,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
       <h3 id="lanc-status">Marcar como pago</h3>
       <p>
-        Cada linha da tabela tem uma caixa de marcação na primeira coluna.
-        <span class="badge badge-pendente">⏳ Pendente</span> quando desmarcada,
-        <span class="badge badge-pago">✓ Pago</span> quando marcada. A mudança é salva
-        automaticamente, e os totais do Resumo são recalculados na hora.
+        Existem duas formas de definir se um lançamento está pago ou pendente:
       </p>
+      <ul>
+        <li>
+          <strong>Ao criar ou editar</strong> — no próprio formulário de Novo Lançamento, logo antes
+          do botão Salvar, há a caixa de verificação <strong>"Marcar como pago"</strong>. Deixe
+          desmarcada para o lançamento entrar como <strong>Pendente</strong> (padrão), ou marque
+          para já entrar como <strong>Pago</strong>. Ao editar um lançamento existente, a caixa
+          já vem preenchida com o status atual dele.
+        </li>
+        <li>
+          <strong>Depois de salvo</strong> — cada linha da tabela tem uma caixa de marcação na
+          primeira coluna. <span class="badge badge-pendente">⏳ Pendente</span> quando desmarcada,
+          <span class="badge badge-pago">✓ Pago</span> quando marcada. A mudança é salva
+          automaticamente, e os totais do Resumo são recalculados na hora.
+        </li>
+      </ul>
 
       <h3 id="lanc-selecao">Selecionar uma linha e atalhos de teclado</h3>
       <p>
