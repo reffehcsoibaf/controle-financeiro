@@ -738,6 +738,11 @@ select option{background:#1e2436;}
       </label>
     </div>
 
+    <div id="vinculo-documento-indicador" role="status" aria-live="polite" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.25);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="vinculo-texto" aria-hidden="true"></span>
+      <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="cancelarVinculoDocumentoPendente()">Não vincular</button>
+    </div>
+
     <div class="form-group" style="margin-top:14px;">
       <label for="leitor-ia-texto">Ou cole o texto do comprovante</label>
       <textarea id="leitor-ia-texto" rows="4" placeholder="Cole aqui o texto do e-mail, mensagem ou comprovante..."></textarea>
@@ -1062,6 +1067,7 @@ select option{background:#1e2436;}
             <th scope="col">Nome do Arquivo</th>
             <th scope="col">Guardado em</th>
             <th scope="col">Tamanho</th>
+            <th scope="col">Lançamento</th>
             <th scope="col">Ações</th>
           </tr>
         </thead>
@@ -1325,7 +1331,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.10.0 · 02/08/2026
+  Controle Financeiro · v1.11.0 · 05/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1360,6 +1366,12 @@ let editandoId            = null;
 // preservado ao salvar uma edição para não perder a etiqueta. Lançamentos
 // novos (não vindos de edição) sempre ficam com '' — ou seja, "À vista".
 let parcelaEmEdicao       = '';
+
+// Documento (da aba Documentos) que será vinculado ao lançamento assim que
+// ele for salvo — definido ao analisar um arquivo com a IA (novo ou já
+// guardado) e limpo ao salvar, limpar o formulário, ou editar outro lançamento.
+let documentoParaVincularId   = null;
+let documentoParaVincularNome = '';
 
 // Paginação da tabela de Lançamentos. 0 = sem paginação (mostrar todos).
 let itensPorPagina = parseInt(localStorage.getItem('cf_itens_por_pagina')) || 50;
@@ -2552,6 +2564,38 @@ function prepararArquivoParaIA(file) {
   });
 }
 
+// ═══════════════════════════════════════════════════
+//  VÍNCULO DOCUMENTO ⇄ LANÇAMENTO
+//  Enquanto o formulário de Novo Lançamento está sendo preenchido a partir
+//  de um documento (novo ou já guardado), guardamos aqui qual documento
+//  deve ser vinculado ao lançamento no momento de salvar.
+// ═══════════════════════════════════════════════════
+function definirVinculoDocumentoPendente(id, nomeArquivo) {
+  documentoParaVincularId   = id;
+  documentoParaVincularNome = nomeArquivo || 'documento';
+  atualizarIndicadorVinculoDocumento();
+}
+function limparVinculoDocumentoPendente() {
+  documentoParaVincularId   = null;
+  documentoParaVincularNome = '';
+  atualizarIndicadorVinculoDocumento();
+}
+function cancelarVinculoDocumentoPendente() {
+  limparVinculoDocumentoPendente();
+  anunciar('Vínculo cancelado. Este lançamento será salvo sem vínculo com o documento.');
+}
+function atualizarIndicadorVinculoDocumento() {
+  const el = document.getElementById('vinculo-documento-indicador');
+  if(!el) return;
+  if(documentoParaVincularId) {
+    el.style.display = 'flex';
+    el.querySelector('.vinculo-texto').textContent =
+      '📎 Documento "' + documentoParaVincularNome + '" será vinculado a este lançamento ao salvar.';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 // Envia o conteúdo (de arquivo ou texto colado) para a IA e aplica o resultado ao formulário.
 // Compartilhada entre lerDocumentoIA (arquivo) e analisarTextoColado (texto livre).
 async function processarConteudoIA(tipo, conteudo, mimeType, nomeArquivo) {
@@ -2585,6 +2629,7 @@ async function lerDocumentoIA(event) {
   if(btn) btn.setAttribute('aria-disabled', 'true');
 
   const salvarTambem = document.getElementById('leitor-ia-salvar-tambem').checked;
+  limparVinculoDocumentoPendente();
 
   try {
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
@@ -2592,7 +2637,8 @@ async function lerDocumentoIA(event) {
 
     if(salvarTambem) {
       try {
-        await uploadDocumentoStorage(file);
+        const registro = await uploadDocumentoStorage(file);
+        if(registro) definirVinculoDocumentoPendente(registro.id, registro.nome_arquivo);
         anunciar('Arquivo também guardado na nuvem.');
       } catch(erroSalvar) {
         // A análise já foi feita; um erro ao guardar não deve travar o fluxo,
@@ -2620,6 +2666,7 @@ async function analisarTextoColado() {
 
   const btn = document.getElementById('btn-leitor-ia-texto');
   if(btn) btn.disabled = true;
+  limparVinculoDocumentoPendente(); // texto colado não é um arquivo guardado, não há o que vincular
 
   try {
     await processarConteudoIA('texto', texto, 'text/plain', 'texto colado');
@@ -2705,7 +2752,7 @@ function renderizarDocumentosArmazenados(lista) {
   const itens = lista || documentosArmazenados;
 
   if(!documentosArmazenados.length) {
-    container.innerHTML = '<tr><td colspan="4">' +
+    container.innerHTML = '<tr><td colspan="5">' +
       '<div class="empty-state" role="status">' +
         '<div class="empty-icon" aria-hidden="true">📭</div>' +
         '<p>Nenhum documento guardado ainda.</p>' +
@@ -2715,7 +2762,7 @@ function renderizarDocumentosArmazenados(lista) {
     return;
   }
   if(!itens.length) {
-    container.innerHTML = '<tr><td colspan="4">' +
+    container.innerHTML = '<tr><td colspan="5">' +
       '<div class="empty-state" role="status">' +
         '<div class="empty-icon" aria-hidden="true">🔍</div>' +
         '<p>Nenhum documento encontrado para essa busca.</p>' +
@@ -2728,23 +2775,104 @@ function renderizarDocumentosArmazenados(lista) {
   if(info) info.textContent = itens.length + ' documento' + (itens.length!==1?'s':'') +
     (itens.length !== documentosArmazenados.length ? ' (de ' + documentosArmazenados.length + ' no total)' : '');
 
-  container.innerHTML = itens.map(doc => (
-    '<tr>' +
-      '<td style="max-width:280px;white-space:normal;word-break:break-word;" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</td>' +
-      '<td>'+fmtDataHoraDoc(doc.criado_em)+'</td>' +
-      '<td>'+(doc.tamanho_bytes ? fmtTamanhoArquivo(doc.tamanho_bytes) : '—')+'</td>' +
-      '<td><div class="td-actions">' +
-        (iaHabilitadaAtual ?
-          '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
-            'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>'
-          : '') +
-        '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
-          'aria-label="Baixar '+escaparHTML(doc.nome_arquivo)+'">⬇️ Baixar</button>' +
-        '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
-          'aria-label="Excluir '+escaparHTML(doc.nome_arquivo)+'">🗑️</button>' +
-      '</div></td>' +
-    '</tr>'
-  )).join('');
+  container.innerHTML = itens.map(doc => {
+    const lancVinc = doc.lancamento_id ? lancamentos.find(l => l.id === doc.lancamento_id) : null;
+    let celulaVinculo;
+    if(lancVinc) {
+      const rotuloLanc = fmtData(lancVinc.dataOrigem) + ' · ' + fmtValor(lancVinc.valor);
+      celulaVinculo =
+        '<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">' +
+          '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" ' +
+            'onclick="irParaLancamentoVinculado('+lancVinc.id+')" ' +
+            'aria-label="Ver lançamento vinculado a '+escaparHTML(doc.nome_arquivo)+': '+escaparHTML(rotuloLanc)+'">' +
+            '🔗 '+rotuloLanc+
+          '</button>' +
+          '<button type="button" style="background:transparent;border:none;color:var(--text3);font-size:11px;text-decoration:underline;cursor:pointer;padding:0;" ' +
+            'onclick="desvincularDocumento(\''+doc.id+'\')" ' +
+            'aria-label="Remover vínculo de '+escaparHTML(doc.nome_arquivo)+' com o lançamento">Desvincular</button>' +
+        '</div>';
+    } else if(doc.lancamento_id) {
+      // lancamento_id preenchido mas o lançamento não está (mais) na lista carregada
+      celulaVinculo = '<span style="color:var(--text3);">🔗 Vinculado</span>';
+    } else {
+      celulaVinculo = '<span style="color:var(--text3);">—</span>';
+    }
+
+    return (
+      '<tr>' +
+        '<td style="max-width:280px;white-space:normal;word-break:break-word;" title="'+escaparHTML(doc.nome_arquivo)+'">'+escaparHTML(doc.nome_arquivo)+'</td>' +
+        '<td>'+fmtDataHoraDoc(doc.criado_em)+'</td>' +
+        '<td>'+(doc.tamanho_bytes ? fmtTamanhoArquivo(doc.tamanho_bytes) : '—')+'</td>' +
+        '<td>'+celulaVinculo+'</td>' +
+        '<td><div class="td-actions">' +
+          (iaHabilitadaAtual ?
+            '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="analisarDocumentoArmazenado(\''+doc.id+'\')" ' +
+              'aria-label="Analisar '+escaparHTML(doc.nome_arquivo)+' com IA">🔎 Analisar</button>'
+            : '') +
+          '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="baixarDocumentoArmazenado(\''+doc.id+'\')" ' +
+            'aria-label="Baixar '+escaparHTML(doc.nome_arquivo)+'">⬇️ Baixar</button>' +
+          '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="excluirDocumentoArmazenado(\''+doc.id+'\')" ' +
+            'aria-label="Excluir '+escaparHTML(doc.nome_arquivo)+'">🗑️</button>' +
+        '</div></td>' +
+      '</tr>'
+    );
+  }).join('');
+}
+
+// Leva o foco até a linha do lançamento vinculado, na aba Lançamentos —
+// limpa os filtros (caso ele esteja escondido por algum filtro ativo) e
+// calcula em qual página da tabela ele cai, já que a tabela é paginada.
+function irParaLancamentoVinculado(id) {
+  limparFiltros();
+  const idx = lancamentosFiltrados.findIndex(l => l.id === id);
+  if(idx === -1) {
+    mudarAba('lancamentos');
+    anunciar('Não foi possível localizar o lançamento vinculado — ele pode ter sido excluído.', true);
+    return;
+  }
+  if(itensPorPagina > 0) paginaAtual = Math.floor(idx / itensPorPagina) + 1;
+  mudarAba('lancamentos');
+  renderizarTabela();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const linha = document.querySelector('tr[data-lancamento-id="'+id+'"]');
+    if(linha) { linha.scrollIntoView({behavior:'smooth', block:'center'}); linha.focus(); }
+    anunciar('Lançamento vinculado localizado.');
+  }));
+}
+
+// Vai até a aba Documentos e localiza o documento vinculado a um lançamento
+function irParaDocumentoVinculado(idLancamento) {
+  const doc = documentosArmazenados.find(d => d.lancamento_id === idLancamento);
+  if(!doc) { anunciar('Documento vinculado não encontrado.', true); return; }
+  document.getElementById('documentos-busca').value = '';
+  document.getElementById('documentos-data-de').value = '';
+  document.getElementById('documentos-data-ate').value = '';
+  renderizarDocumentosArmazenados(documentosArmazenados);
+  mudarAba('documentos');
+  anunciar('Documento vinculado: ' + doc.nome_arquivo + '.');
+}
+
+// Remove o vínculo de um documento com o lançamento (o documento continua guardado)
+async function desvincularDocumento(id) {
+  const doc = documentosArmazenados.find(d => d.id === id);
+  if(!doc) return;
+  if(!confirm('Remover o vínculo deste documento com o lançamento? O documento continua guardado normalmente.')) return;
+
+  const { error } = await sb.from('financeiro_documentos_armazenados')
+    .update({ lancamento_id: null })
+    .eq('id', id)
+    .eq('user_id', usuarioAtual.id);
+
+  if(error) {
+    anunciar('Erro ao desvincular: ' + error.message, true);
+    mostrarToast('Erro ao desvincular documento.', true);
+    return;
+  }
+
+  doc.lancamento_id = null;
+  filtrarDocumentosArmazenados();
+  anunciar('Documento desvinculado do lançamento.');
+  mostrarToast('Vínculo removido.');
 }
 
 // Envia o arquivo bruto para o bucket privado "documentos" e registra os metadados.
@@ -2775,6 +2903,7 @@ async function uploadDocumentoStorage(file) {
 
   documentosArmazenados.unshift(registro);
   filtrarDocumentosArmazenados();
+  return registro;
 }
 
 async function guardarArquivoSemAnalisar(event) {
@@ -2854,6 +2983,7 @@ async function analisarDocumentoArmazenado(id) {
 
     mostrarStatusDocumentos('Documento baixado. Enviando para a IA...');
     mudarAba('novolanc');
+    definirVinculoDocumentoPendente(doc.id, doc.nome_arquivo);
 
     const { tipo, conteudo, mimeType } = await prepararArquivoParaIA(file);
     await processarConteudoIA(tipo, conteudo, mimeType, file.name);
@@ -3738,9 +3868,12 @@ async function salvarLancamento() {
   btnSalvar.disabled = true;
   btnSalvar.innerHTML = '<span class="spinner" aria-hidden="true"></span> Salvando...';
 
+  let idLancamentoSalvo = null;
+
   try {
     if(editandoId) {
       // ── ATUALIZAR ──
+      idLancamentoSalvo = editandoId;
       const { error: errUpd } = await sb.from('financeiro_lancamentos')
         .update(dadosLancamento)
         .eq('id', editandoId)
@@ -3766,6 +3899,7 @@ async function salvarLancamento() {
         .select()
         .single();
       if(errIns) throw errIns;
+      idLancamentoSalvo = novo.id;
 
       if(itensParaSalvar.length > 0) {
         const itensComFk = itensParaSalvar.map((i, idx) => ({
@@ -3776,6 +3910,24 @@ async function salvarLancamento() {
       }
 
       anunciar('Lançamento salvo' + (itensParaSalvar.length>0 ? ' com '+itensParaSalvar.length+' item'+(itensParaSalvar.length!==1?'s':'') : '') + '.');
+    }
+
+    // Vincula o documento pendente (se houver) a este lançamento — não impede
+    // o fluxo de salvar em caso de falha, só avisa.
+    if(documentoParaVincularId && idLancamentoSalvo) {
+      try {
+        const { error: errVinculo } = await sb.from('financeiro_documentos_armazenados')
+          .update({ lancamento_id: idLancamentoSalvo })
+          .eq('id', documentoParaVincularId)
+          .eq('user_id', usuarioAtual.id);
+        if(errVinculo) throw errVinculo;
+        const docLocal = documentosArmazenados.find(d => d.id === documentoParaVincularId);
+        if(docLocal) docLocal.lancamento_id = idLancamentoSalvo;
+        filtrarDocumentosArmazenados();
+        anunciar('Documento vinculado a este lançamento.');
+      } catch(erroVinculo) {
+        anunciar('Lançamento salvo, mas houve erro ao vincular o documento: ' + erroVinculo.message, true);
+      }
     }
 
     btnSalvar.innerHTML = '<span aria-hidden="true">💾</span> Salvar Lançamento';
@@ -3814,12 +3966,14 @@ function limparFormulario() {
   parcelaEmEdicao='';
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
+  limparVinculoDocumentoPendente();
 }
 
 function editarLancamento(id) {
   const l = lancamentos.find(x=>x.id===id);
   if(!l) return;
   editandoId=id;
+  limparVinculoDocumentoPendente(); // edição de um lançamento existente não herda vínculo pendente de outra análise
   document.getElementById('f-data-origem').value     = l.dataOrigem;
   document.getElementById('f-data-vencimento').value = l.dataVencimento;
   document.getElementById('f-descricao').value       = l.descricao||'';
@@ -4011,8 +4165,10 @@ function renderizarTabela() {
       ? [...new Set(l.itens.map(i=>i.categoria).filter(Boolean))].join(', ')||'—'
       : l.categoria||'—';
     const vNeg = l.valor<0;
+    const docVinculado = documentosArmazenados.find(d => d.lancamento_id === l.id);
 
-    const rotuloLinha = 'Lançamento: '+fmtData(l.dataOrigem)+', '+(l.banco||'sem banco informado')+', '+fmtValor(l.valor)+', '+(l.pago?'pago':'pendente')+'.';
+    const rotuloLinha = 'Lançamento: '+fmtData(l.dataOrigem)+', '+(l.banco||'sem banco informado')+', '+fmtValor(l.valor)+', '+(l.pago?'pago':'pendente')+
+      (docVinculado ? ', com documento vinculado' : '')+'.';
 
     linhas.push(
       '<tr class="linha-lancamento'+(l.pago?' pago-row':'')+(temItens?' has-subitems':'')+'" '+
@@ -4023,6 +4179,7 @@ function renderizarTabela() {
       '<td><span class="badge badge-status '+(l.pago?'badge-pago':'badge-pendente')+'" aria-hidden="true">'+(l.pago?'✓ Pago':'⏳ Pendente')+'</span>'+
           (temItens?'<span class="badge badge-multi" aria-label="'+l.itens.length+' itens">'+l.itens.length+' itens</span>':'')+
           (eParcelado?'<span class="badge badge-parcelado" aria-label="parcela '+l.parcela+'">'+l.parcela+'</span>':'')+
+          (docVinculado?'<span class="badge" style="background:rgba(79,124,255,.15);color:var(--accent);margin-left:4px;" aria-hidden="true" title="Documento vinculado">📎</span>':'')+
       '</td>'+
       '<td>'+fmtData(l.dataOrigem)+'</td>'+
       '<td>'+fmtData(l.dataVencimento)+'</td>'+
@@ -4036,6 +4193,10 @@ function renderizarTabela() {
       '<td>'+(l.credor||'—')+'</td>'+
       '<td>'+(l.devedor||'—')+'</td>'+
       '<td><div class="td-actions">'+
+        (docVinculado ?
+          '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
+            ' onclick="irParaDocumentoVinculado('+l.id+')" aria-label="Ver documento vinculado a este lançamento: '+escaparHTML(docVinculado.nome_arquivo)+'"><span aria-hidden="true">📎</span></button>'
+          : '') +
         '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
           ' onclick="editarLancamento('+l.id+')" aria-label="Editar lançamento: '+desc+'"><span aria-hidden="true">✏️</span></button>'+
         '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+

@@ -4,6 +4,29 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.11.0 — 05/08/2026
+
+- **Vínculo entre Documento e Lançamento**: ao analisar um documento com a IA (novo ou já guardado
+  na aba Documentos) e salvar o lançamento resultante, o documento agora é automaticamente
+  **vinculado** a esse lançamento — não é mais preciso lembrar qual comprovante deu origem a qual
+  registro.
+  - Enquanto o formulário está preenchido a partir de um documento, aparece um aviso "📎 Documento
+    será vinculado a este lançamento ao salvar", com um botão **Não vincular** para cancelar o
+    vínculo antes de salvar, se preferir.
+  - Na aba **Documentos**, nova coluna **Lançamento** mostra a qual lançamento (data e valor) cada
+    documento está vinculado, com um botão **🔗** que leva direto até a linha correspondente na
+    tabela de Lançamentos (trocando de página automaticamente, se for o caso), e um link
+    **Desvincular** para remover a associação sem excluir o documento.
+  - Na tabela de **Lançamentos**, um selo **📎** aparece nos lançamentos com documento vinculado,
+    com um botão de ação que leva direto até a aba Documentos e localiza o arquivo correspondente.
+  - Texto colado (sem arquivo) e documentos guardados sem passar pela IA não geram vínculo
+    automático — o vínculo só é criado quando o documento realmente foi a origem dos dados do
+    lançamento salvo.
+  - Se o documento vinculado for excluído, o vínculo é removido automaticamente do lançamento (o
+    lançamento em si não é afetado).
+  - Requer a migração SQL `2026-08-05_vinculo_documento_lancamento.sql` (nova coluna
+    `lancamento_id` na tabela `financeiro_documentos_armazenados`).
+
 ## v1.10.0 — 02/08/2026
 
 - **Mais telas em formato de tabela**: além da aba Documentos, agora também estão em formato de

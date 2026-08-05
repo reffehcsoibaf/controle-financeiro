@@ -156,11 +156,31 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.11.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-11-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-11-0"><span aria-hidden="true">🏷️</span> v1.11.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">05/08/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📎</span> Vínculo entre Documento e Lançamento</h3>
+          <ul>
+            <li>Ao analisar um documento com a IA (novo ou já guardado na aba Documentos) e depois <strong>salvar o lançamento</strong>, o documento é automaticamente <strong>vinculado</strong> a esse lançamento — não é mais preciso lembrar qual comprovante gerou qual registro.</li>
+            <li>Enquanto o formulário está preenchido a partir de um documento, um aviso "📎 Documento será vinculado a este lançamento ao salvar" aparece logo abaixo do Leitor de Notas, com um botão <strong>Não vincular</strong> para cancelar caso não queira.</li>
+            <li>Na aba <strong>Documentos</strong>, uma nova coluna <strong>Lançamento</strong> mostra a qual lançamento (data e valor) cada documento está vinculado, com um botão <strong>🔗</strong> que leva direto até a linha correspondente na tabela de Lançamentos (inclusive trocando de página, se for o caso) — e um link <strong>Desvincular</strong> para remover a associação sem excluir o documento.</li>
+            <li>Na tabela de <strong>Lançamentos</strong>, um selo <strong>📎</strong> aparece nos lançamentos que têm documento vinculado, com um botão de ação que leva direto até a aba Documentos e localiza o arquivo correspondente.</li>
+            <li>Texto colado (sem arquivo) e documentos guardados sem passar pela IA não geram vínculo automático — o vínculo só é criado quando o documento realmente foi a origem dos dados do lançamento salvo.</li>
+            <li>Se o documento vinculado for excluído, o vínculo é removido automaticamente do lançamento (sem apagar o lançamento em si).</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.10.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-10-0">
+      <section class="versao-bloco" aria-labelledby="v1-10-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-10-0"><span aria-hidden="true">🏷️</span> v1.10.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">02/08/2026</span>
         </div>
 

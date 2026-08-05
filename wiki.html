@@ -225,6 +225,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#documentos">Documentos</a>
       <a href="#documentos-guardar" class="sub">Guardar um arquivo</a>
       <a href="#documentos-acoes" class="sub">Analisar, baixar e excluir</a>
+      <a href="#documentos-vinculo" class="sub">Vincular a um lançamento</a>
       <a href="#documentos-busca" class="sub">Buscar documentos</a>
       <a href="#configuracoes">Configurações</a>
       <a href="#planilhas" class="sub">Exportar e Importar Planilhas</a>
@@ -733,6 +734,56 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <tr><td class="campo-nome">🗑️ Excluir</td><td>Remove o arquivo permanentemente da nuvem, com uma confirmação antes. Essa ação não afeta nenhum lançamento já salvo.</td></tr>
         </tbody>
       </table>
+
+      <h3 id="documentos-vinculo">Vincular a um lançamento</h3>
+      <p>
+        Quando um documento é analisado pela IA — seja um arquivo novo (com o checkbox "Também
+        guardar" marcado) ou um já guardado nesta aba, usando <strong>🔎 Analisar</strong> — e o
+        lançamento resultante é <strong>salvo</strong>, o app cria automaticamente um vínculo entre
+        os dois. Assim, cada comprovante fica ligado ao lançamento que ele originou.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Analise um documento (novo ou já guardado) normalmente — os campos do formulário de <strong>Novo Lançamento</strong> são preenchidos como sempre.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Um aviso aparece logo abaixo do Leitor de Notas: <strong>"📎 Documento será vinculado a este lançamento ao salvar"</strong>. Se não quiser criar o vínculo dessa vez, clique em <strong>Não vincular</strong>.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Confira e ajuste os campos como preferir, depois clique em <strong>Salvar Lançamento</strong>. O vínculo é criado automaticamente junto com o salvamento.</div>
+        </div>
+      </div>
+      <p>Depois de vinculado, o vínculo aparece nos dois sentidos:</p>
+      <ul>
+        <li>
+          Na aba <strong>Documentos</strong>, a coluna <strong>Lançamento</strong> mostra a data e o
+          valor do lançamento vinculado, com um botão <strong>🔗</strong> que leva direto até a
+          linha correspondente na tabela de Lançamentos.
+        </li>
+        <li>
+          Na tabela de <strong>Lançamentos</strong>, um selo <strong>📎</strong> aparece ao lado do
+          status do lançamento, com um botão de ação que leva direto até o documento na aba
+          Documentos.
+        </li>
+      </ul>
+      <p>
+        Para remover um vínculo sem excluir o documento, use o link <strong>Desvincular</strong>
+        logo abaixo do botão 🔗, na aba Documentos.
+      </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Texto colado (sem arquivo) e documentos guardados sem passar pela IA (botão
+        "Guardar Novo Arquivo") não criam vínculo automático — só a análise por IA de um documento
+        seguida do salvamento do lançamento gera o vínculo.</span>
+      </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span>Excluir o lançamento vinculado não apaga o documento — ele só perde o vínculo e volta
+        a aparecer como "—" na coluna Lançamento.</span>
+      </div>
 
       <h3 id="documentos-busca">Buscar documentos</h3>
       <p>
