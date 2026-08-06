@@ -158,6 +158,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 .divider{height:1px;background:var(--border);margin:18px 0;}
 
+/* Mesmo triângulo azul do botão "Entrada (receita)" no app, para ilustrar aqui no guia */
+.icone-triangulo-cima{
+  display:inline-block;width:0;height:0;
+  border-left:5px solid transparent;border-right:5px solid transparent;
+  border-bottom:8px solid var(--accent);
+  vertical-align:middle;margin-bottom:2px;
+}
+
 /* ── BOTÃO VOLTAR AO TOPO ── */
 .voltar-topo{
   position:fixed;bottom:24px;right:24px;
@@ -412,7 +420,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <tbody>
           <tr><td class="campo-nome">Data Origem</td><td>Data</td><td>Obrigatório. Data em que o lançamento foi gerado.</td></tr>
           <tr><td class="campo-nome">Data Vencimento</td><td>Data</td><td>Opcional. Usada como base para o parcelamento automático.</td></tr>
-          <tr><td class="campo-nome">Entrada de Valor</td><td>Toggle + Número</td><td>Obrigatório. Escolha primeiro <strong>🔻 Saída (despesa)</strong> ou <strong>🔺 Entrada (receita)</strong> no botão de alternância, depois digite o valor sempre <strong>positivo</strong> — o sinal é definido pelo toggle, não pelo número.</td></tr>
+          <tr><td class="campo-nome">Entrada de Valor</td><td>Toggle + Número</td><td>Obrigatório. Escolha primeiro <strong>🔻 Saída (despesa)</strong> ou <strong><span class="icone-triangulo-cima" aria-hidden="true"></span> Entrada (receita)</strong> no botão de alternância, depois digite o valor sempre <strong>positivo</strong> — o sinal é definido pelo toggle, não pelo número. O campo mostra apenas o texto "Valor" como dica, sem um número de exemplo.</td></tr>
           <tr><td class="campo-nome">Banco / Cartão</td><td>Lista</td><td>Gerenciável — veja a seção abaixo. Se configurado em Contas e Cartões, afeta o saldo ou o limite calculado.</td></tr>
           <tr><td class="campo-nome">Estabelecimento</td><td>Lista</td><td>Gerenciável.</td></tr>
           <tr><td class="campo-nome">Forma de Pagamento</td><td>Lista</td><td>Gerenciável.</td></tr>
@@ -431,7 +439,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </p>
       <ul>
         <li><span class="btn-demo btn-demo-secondary">🔻 Saída (despesa)</span> — selecionado por padrão.</li>
-        <li><span class="btn-demo btn-demo-secondary">🔺 Entrada (receita)</span></li>
+        <li><span class="btn-demo btn-demo-secondary"><span class="icone-triangulo-cima" aria-hidden="true"></span> Entrada (receita)</span></li>
       </ul>
       <p>
         Depois de escolher o tipo, digite o valor sempre como número positivo no campo abaixo do
@@ -602,7 +610,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">2</div>
-          <div class="passo-texto">Clique em <strong>Parcelar</strong>. Escolha <strong>🔻 Saída</strong> ou <strong>🔺 Entrada</strong> no toggle, informe o <strong>Valor Total</strong> (sempre positivo) da compra e o <strong>Número de Parcelas</strong> (mínimo 2).</div>
+          <div class="passo-texto">Clique em <strong>Parcelar</strong>. Escolha <strong>🔻 Saída</strong> ou <strong><span class="icone-triangulo-cima" aria-hidden="true"></span> Entrada</strong> no toggle, informe o <strong>Valor Total</strong> (sempre positivo) da compra e o <strong>Número de Parcelas</strong> (mínimo 2).</div>
         </div>
         <div class="passo">
           <div class="passo-num" aria-hidden="true">3</div>

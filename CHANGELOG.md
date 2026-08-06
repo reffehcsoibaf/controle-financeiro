@@ -16,6 +16,25 @@ está publicada e comparar com o que está descrito aqui.
     tabela de Lançamentos e era lido pelo NVDA repetidamente ao navegar por cada linha, foi
     removido — os atalhos continuam funcionando normalmente, só não há mais essa explicação
     repetida na tela nem no discurso do leitor de tela.
+- **Reorganização das colunas Status/Detalhes da tabela de Lançamentos**: a coluna que antes se
+  chamava "Pago" (com a caixa de marcação) agora se chama **Status**, já que é literalmente ali
+  que o status pago/pendente do lançamento é definido e exibido.
+  - A antiga coluna "Status" (que misturava selo de pago/pendente, número de itens e número da
+    parcela) foi renomeada para **Detalhes** e agora mostra só o que faz sentido nela: o selo de
+    quantidade de itens (para lançamentos múltiplos) e o ícone de documento vinculado, quando houver.
+  - O número da parcela (ex.: 3/12) saiu dessa coluna — ele já aparece, sem duplicação, na coluna
+    **Parcelamento**.
+  - O selo textual "✓ Pago" / "⏳ Pendente" que ficava nessa coluna também saiu, por ser redundante
+    com a nova coluna Status — a informação de pago/pendente continua acessível pela caixa de
+    marcação, pela cor da linha e pela leitura de tela.
+- **Ícone azul para "Entrada (receita)"**: como não existe emoji de triângulo azul no padrão
+  Unicode, o botão "Entrada (receita)" (no formulário de Novo Lançamento e no Parcelamento
+  Automático) passou a usar um triângulo desenhado em CSS, na cor de destaque azul do app, no
+  lugar do antigo 🔺 (que renderizava vermelho em praticamente todo dispositivo, confundindo com
+  o botão de Saída). O botão de Saída continua com o triângulo vermelho para baixo (🔻).
+- **Placeholder do campo Valor simplificado**: o campo onde se digita o valor do lançamento (e o
+  do Parcelamento Automático) agora mostra só a dica "Valor", em vez de um número de exemplo como
+  "Ex.: 150,00".
 
 ## v1.12.0 — 05/08/2026
 

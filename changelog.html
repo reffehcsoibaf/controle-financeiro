@@ -173,6 +173,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
             <li>O texto explicativo sobre os atalhos das linhas, que antes ficava sempre visível acima da tabela de Lançamentos e era lido pelo NVDA repetidamente ao navegar por cada linha, foi removido — os atalhos continuam funcionando normalmente, só não há mais essa explicação repetida na tela nem no discurso do leitor de tela.</li>
           </ul>
         </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🗂️</span> Reorganização das colunas Status/Detalhes na tabela de Lançamentos</h3>
+          <ul>
+            <li>A coluna que antes se chamava "Pago" (com a caixa de marcação) agora se chama <strong>Status</strong>, já que é literalmente ali que o status pago/pendente do lançamento é definido e exibido.</li>
+            <li>A antiga coluna "Status" (que misturava selo de pago/pendente, número de itens e número da parcela) foi renomeada para <strong>Detalhes</strong> e agora mostra só o que faz sentido nela: o selo de quantidade de itens (para lançamentos múltiplos) e o ícone de documento vinculado, quando houver.</li>
+            <li>O número da parcela (ex.: 3/12) saiu dessa coluna — ele já aparece, sem duplicação, na coluna <strong>Parcelamento</strong>.</li>
+            <li>O selo textual "✓ Pago" / "⏳ Pendente" que ficava nessa coluna também saiu, por ser redundante com a nova coluna Status — a informação de pago/pendente continua acessível pela caixa de marcação, pela cor da linha e pela leitura de tela.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🔺</span> Ícone azul para "Entrada (receita)" e placeholder do campo Valor</h3>
+          <ul>
+            <li>Como não existe emoji de triângulo azul no padrão Unicode, o botão "Entrada (receita)" (no formulário de Novo Lançamento e no Parcelamento Automático) passou a usar um triângulo desenhado em CSS, na cor de destaque azul do app, no lugar do antigo 🔺 (que renderizava vermelho em praticamente todo dispositivo, confundindo com o botão de Saída).</li>
+            <li>O botão de Saída continua com o triângulo vermelho para baixo (🔻).</li>
+            <li>O campo onde se digita o valor do lançamento (e o do Parcelamento Automático) agora mostra só a dica "Valor", em vez de um número de exemplo como "Ex.: 150,00".</li>
+          </ul>
+        </div>
       </section>
 
       <!-- ══ v1.12.0 ══ -->

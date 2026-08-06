@@ -104,6 +104,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 }
 input.negativo{color:var(--red);}
 
+/* Triângulo azul decorativo do botão "Entrada (receita)" — desenhado em CSS puro
+   (em vez de emoji) para poder usar a cor de destaque do app, já que não existe
+   um emoji de triângulo azul no padrão Unicode. */
+.icone-triangulo-cima{
+  display:inline-block;width:0;height:0;
+  border-left:5px solid transparent;border-right:5px solid transparent;
+  border-bottom:8px solid var(--accent);
+  vertical-align:middle;margin-bottom:2px;
+}
+
 /* ── TIPO DE LANÇAMENTO (ENTRADA / SAÍDA) ── */
 .tipo-valor-toggle{display:flex;gap:6px;margin-bottom:6px;}
 .tipo-valor-btn{
@@ -781,13 +791,13 @@ select option{background:#1e2436;}
           <div class="tipo-valor-toggle" role="radiogroup" aria-label="Tipo de lançamento: entrada ou saída">
             <button type="button" id="f-tipo-saida" class="tipo-valor-btn saida"
                     role="radio" aria-checked="true"
-                    onclick="definirTipoValor('saida')">🔻 Saída (despesa)</button>
+                    onclick="definirTipoValor('saida')"><span aria-hidden="true">🔻</span> Saída (despesa)</button>
             <button type="button" id="f-tipo-entrada" class="tipo-valor-btn entrada"
                     role="radio" aria-checked="false"
-                    onclick="definirTipoValor('entrada')">🔺 Entrada (receita)</button>
+                    onclick="definirTipoValor('entrada')"><span class="icone-triangulo-cima" aria-hidden="true"></span> Entrada (receita)</button>
           </div>
           <input type="number" id="f-valor" name="valor"
-                 placeholder="Ex.: 150,00"
+                 placeholder="Valor"
                  step="0.01" min="0" aria-required="true"
                  aria-describedby="f-valor-nota"
                  autocomplete="off"
@@ -1258,13 +1268,13 @@ select option{background:#1e2436;}
         <div class="tipo-valor-toggle" role="radiogroup" aria-label="Tipo de parcelamento: entrada ou saída">
           <button type="button" id="mp-tipo-saida" class="tipo-valor-btn saida"
                   role="radio" aria-checked="true"
-                  onclick="definirTipoValorParcelar('saida')">🔻 Saída (despesa)</button>
+                  onclick="definirTipoValorParcelar('saida')"><span aria-hidden="true">🔻</span> Saída (despesa)</button>
           <button type="button" id="mp-tipo-entrada" class="tipo-valor-btn entrada"
                   role="radio" aria-checked="false"
-                  onclick="definirTipoValorParcelar('entrada')">🔺 Entrada (receita)</button>
+                  onclick="definirTipoValorParcelar('entrada')"><span class="icone-triangulo-cima" aria-hidden="true"></span> Entrada (receita)</button>
         </div>
         <input type="number" id="mp-valor-total" step="0.01" min="0"
-               placeholder="Ex.: 1200,00"
+               placeholder="Valor"
                aria-required="true"
                oninput="colorirValorParcelar(this); atualizarPreviewParcelas()"
                autocomplete="off">
