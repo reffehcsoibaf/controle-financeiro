@@ -940,18 +940,12 @@ select option{background:#1e2436;}
         <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
       </div>
     </div>
-    <p id="dica-atalhos-linha" style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-      Clique numa linha ou navegue até ela e pressione Enter para selecioná-la. Com a linha
-      selecionada: <strong>Alt+P</strong> marca/desmarca como pago, <strong>Alt+E</strong> edita,
-      <strong>Alt+X</strong> exclui. <strong>Alt+S</strong> salva o formulário de Novo Lançamento a
-      qualquer momento, mesmo em outra aba.
-    </p>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
       <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
         <thead>
           <tr>
-            <th scope="col">Pago</th>
             <th scope="col">Status</th>
+            <th scope="col">Detalhes</th>
             <th scope="col">Data Origem</th>
             <th scope="col">Data Venc.</th>
             <th scope="col">Valor</th>
@@ -1014,7 +1008,7 @@ select option{background:#1e2436;}
       <div class="form-group"><label for="fi-devedor">Devedor</label><select id="fi-devedor"><option value="">Todos</option></select></div>
       <div class="filters-actions" style="grid-column:span 5;">
         <button type="button" class="btn btn-primary" onclick="aplicarFiltros()"><span aria-hidden="true">🔍</span> Filtrar</button>
-        <button type="button" class="btn btn-secondary" onclick="limparFiltros()"><span aria-hidden="true">✖</span> Limpar Filtros</button>
+        <button type="button" class="btn btn-secondary" onclick="limparFiltros()" aria-label="Limpar Filtros (atalho Alt+L)"><span aria-hidden="true">✖</span> Limpar Filtros</button>
       </div>
     </div>
   </section>
@@ -1341,7 +1335,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.12.0 · 05/08/2026
+  Controle Financeiro · v1.13.0 · 06/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1766,6 +1760,9 @@ function registrarAtalhosGlobaisAbas() {
 // ═══════════════════════════════════════════════════
 //  ATALHOS DE TECLADO — AÇÕES SOBRE O LANÇAMENTO
 //  Alt+S salva o formulário de Novo Lançamento, de qualquer aba.
+//  Alt+L limpa os Filtros, de qualquer aba, sem trocar a aba atual
+//  (limparFiltros() só reseta os campos e reaplica a busca — nunca
+//  chama mudarAba(), então a pessoa continua exatamente onde estava).
 //  Alt+P / Alt+E / Alt+X agem sobre a linha da tabela de Lançamentos
 //  que estiver com o FOCO REAL do teclado no momento (não é preciso
 //  clicar — dá pra chegar até a linha pelo Tab, ou pelo modo de
@@ -1788,6 +1785,12 @@ function registrarAtalhosAcoesLancamento() {
     if(tecla === 's') {
       e.preventDefault();
       salvarLancamento();
+      return;
+    }
+
+    if(tecla === 'l') {
+      e.preventDefault();
+      limparFiltros();
       return;
     }
 
@@ -4050,8 +4053,6 @@ async function togglePago(id, chkEl) {
   l.pago = novoStatus;
   const tr=chkEl?chkEl.closest('tr'):null;
   if(tr){
-    const badge=tr.querySelector('.badge-status');
-    if(badge){badge.className='badge badge-status '+(l.pago?'badge-pago':'badge-pendente');badge.textContent=l.pago?'✓ Pago':'⏳ Pendente';}
     tr.classList.toggle('pago-row', l.pago);
     chkEl.setAttribute('aria-label',l.pago?'Pago — clique para marcar como pendente':'Pendente — clique para marcar como pago');
   }
@@ -4068,8 +4069,6 @@ async function togglePago(id, chkEl) {
     l.pago = !novoStatus;
     if(chkEl) chkEl.checked = l.pago;
     if(tr){
-      const badge=tr.querySelector('.badge-status');
-      if(badge){badge.className='badge badge-status '+(l.pago?'badge-pago':'badge-pendente');badge.textContent=l.pago?'✓ Pago':'⏳ Pendente';}
       tr.classList.toggle('pago-row', l.pago);
     }
     aplicarFiltrosSilencioso();
@@ -4169,7 +4168,6 @@ function renderizarTabela() {
   const linhas=[];
   pagina.forEach(l=>{
     const temItens = l.itens && l.itens.length>0;
-    const eParcelado = l.parcela && /^\d+\/\d+$/.test(l.parcela);
     const chkLabel = l.pago?'Pago — clique para marcar como pendente':'Pendente — clique para marcar como pago';
     const desc = (temItens
       ? l.itens.map(i=>i.descricao).filter(Boolean).join(' / ') || '—'
@@ -4186,13 +4184,13 @@ function renderizarTabela() {
     linhas.push(
       '<tr class="linha-lancamento'+(l.pago?' pago-row':'')+(temItens?' has-subitems':'')+'" '+
         'tabindex="0" data-lancamento-id="'+l.id+'" '+
-        'aria-label="'+escaparHTML(rotuloLinha)+'" aria-describedby="dica-atalhos-linha">' +
+        'aria-label="'+escaparHTML(rotuloLinha)+'">' +
       '<td><div class="chk-wrap"><label class="chk-label"><input type="checkbox"'+(l.pago?' checked':'')+
         ' tabindex="-1" aria-label="'+chkLabel+'" onchange="togglePago('+l.id+',this)"></label></div></td>'+
-      '<td><span class="badge badge-status '+(l.pago?'badge-pago':'badge-pendente')+'" aria-hidden="true">'+(l.pago?'✓ Pago':'⏳ Pendente')+'</span>'+
+      '<td>'+
           (temItens?'<span class="badge badge-multi" aria-label="'+l.itens.length+' itens">'+l.itens.length+' itens</span>':'')+
-          (eParcelado?'<span class="badge badge-parcelado" aria-label="parcela '+l.parcela+'">'+l.parcela+'</span>':'')+
           (docVinculado?'<span class="badge" style="background:rgba(79,124,255,.15);color:var(--accent);margin-left:4px;" aria-hidden="true" title="Documento vinculado">📎</span>':'')+
+          (!temItens && !docVinculado?'<span aria-hidden="true" style="color:var(--text3);">—</span>':'')+
       '</td>'+
       '<td>'+fmtData(l.dataOrigem)+'</td>'+
       '<td>'+fmtData(l.dataVencimento)+'</td>'+

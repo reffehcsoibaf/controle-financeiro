@@ -4,6 +4,19 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.13.0 — 06/08/2026
+
+- **Atalho de teclado para limpar filtros**: `Alt+L` limpa todos os campos da aba Filtros e volta
+  a exibir todos os lançamentos, de qualquer lugar da tela — sem precisar estar na aba Filtros
+  nem clicar no botão "Limpar Filtros".
+  - Assim como os demais atalhos de ação (`Alt+S`, `Alt+P`, `Alt+E`, `Alt+X`), funciona em
+    qualquer aba e **não muda a aba atual** — você continua exatamente onde estava.
+  - Botão "Limpar Filtros" também ganhou um rótulo indicando o atalho, para quem usa leitor de tela.
+  - O texto explicativo sobre os atalhos das linhas, que antes ficava sempre visível acima da
+    tabela de Lançamentos e era lido pelo NVDA repetidamente ao navegar por cada linha, foi
+    removido — os atalhos continuam funcionando normalmente, só não há mais essa explicação
+    repetida na tela nem no discurso do leitor de tela.
+
 ## v1.12.0 — 05/08/2026
 
 - **Marcar como pago já no formulário**: o formulário de Novo Lançamento agora tem uma caixa de

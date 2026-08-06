@@ -504,11 +504,17 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         </li>
         <li>
           <strong>Depois de salvo</strong> — cada linha da tabela tem uma caixa de marcação na
-          primeira coluna. <span class="badge badge-pendente">⏳ Pendente</span> quando desmarcada,
+          primeira coluna, chamada <strong>Status</strong>. <span class="badge badge-pendente">⏳ Pendente</span> quando desmarcada,
           <span class="badge badge-pago">✓ Pago</span> quando marcada. A mudança é salva
           automaticamente, e os totais do Resumo são recalculados na hora.
         </li>
       </ul>
+      <p>
+        A segunda coluna da tabela, chamada <strong>Detalhes</strong>, reúne informações extras do
+        lançamento que não cabem nas outras colunas: o selo <span class="badge badge-multi">3 itens</span>
+        quando o lançamento tem itens múltiplos, e o ícone 📎 quando há um documento vinculado a ele.
+        Ela aparece vazia quando nenhum desses casos se aplica.
+      </p>
 
       <h3 id="lanc-selecao">Selecionar uma linha e atalhos de teclado</h3>
       <p>
@@ -526,12 +532,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <tr><td class="campo-nome">Alt+E</td><td>Edita a linha selecionada — leva direto até a aba Novo Lançamento, já com o formulário preenchido.</td></tr>
           <tr><td class="campo-nome">Alt+X</td><td>Exclui a linha selecionada — pede confirmação antes, igual ao botão 🗑.</td></tr>
           <tr><td class="campo-nome">Alt+S</td><td>Salva o formulário de Novo Lançamento — funciona a qualquer momento, mesmo se você estiver numa aba diferente.</td></tr>
+          <tr><td class="campo-nome">Alt+L</td><td>Limpa todos os campos da aba Filtros e volta a exibir todos os lançamentos — funciona a qualquer momento, de qualquer aba, sem trocar de aba.</td></tr>
         </tbody>
       </table>
-      <div class="callout callout-tip">
-        <span class="callout-icon" aria-hidden="true">💡</span>
-        <span>Uma dica com esses quatro atalhos aparece sempre visível logo acima da tabela, na aba Lançamentos.</span>
-      </div>
+
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">🖱️</span>
         <span>A caixinha "Pago" e os botões "✏️ Editar"/"🗑 Excluir" de cada linha continuam funcionando normalmente por clique do mouse. A diferença é que, navegando pelo teclado, o Tab agora para na linha inteira (não mais em cada botão separadamente) — as ações desses elementos passam a ser feitas pelos atalhos Alt+P/E/X.</span>
