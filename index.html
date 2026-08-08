@@ -252,6 +252,15 @@ input.negativo{color:var(--red);}
 .migracao-banner-header{display:flex;align-items:center;gap:10px;font-weight:600;color:var(--accent);}
 .migracao-actions{display:flex;gap:10px;flex-wrap:wrap;}
 
+.link-toggle-pagamento{
+  background:none;border:none;padding:6px 0 0;margin:0;
+  font-size:12px;color:var(--accent);text-decoration:underline;
+  cursor:pointer;text-align:left;font-weight:600;display:block;
+}
+.link-toggle-pagamento:hover{opacity:.8;}
+.link-toggle-pagamento:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.link-toggle-pagamento[aria-expanded="true"]{color:var(--text3);text-decoration:none;cursor:default;}
+
 /* ════════════════════════════════════════
    ITENS DO LANÇAMENTO
 ════════════════════════════════════════ */
@@ -801,11 +810,11 @@ select option{background:#1e2436;}
                  step="0.01" min="0" aria-required="true"
                  aria-describedby="f-valor-nota"
                  autocomplete="off"
-                 oninput="colorirValor(this); atualizarNotaValor()">
+                 oninput="colorirValor(this); atualizarNotaValor(); atualizarTotalPagamentos()">
           <span id="f-valor-nota" class="nota-valor" style="display:none;" aria-live="polite"></span>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="grupo-banco">
           <label for="f-banco">Banco / Cartão</label>
           <div class="select-wrapper">
             <select id="f-banco" name="banco" onchange="onSelectPrincipalChange('banco', this)"></select>
@@ -815,6 +824,10 @@ select option{background:#1e2436;}
                  placeholder="Digite o valor (não será salvo na lista)"
                  aria-label="Texto livre para Banco / Cartão — não será salvo na lista de opções"
                  autocomplete="off">
+          <button type="button" id="btn-toggle-pagamento-dividido" class="link-toggle-pagamento"
+                  onclick="alternarPagamentoDividido()" aria-expanded="false" aria-controls="secao-pagamentos">
+            Dividir pagamento?
+          </button>
         </div>
 
         <div class="form-group">
@@ -829,7 +842,7 @@ select option{background:#1e2436;}
                  autocomplete="off">
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="grupo-forma">
           <label for="f-forma">Forma de Pagamento</label>
           <div class="select-wrapper">
             <select id="f-forma" name="forma" onchange="onSelectPrincipalChange('forma', this)"></select>
@@ -880,6 +893,35 @@ select option{background:#1e2436;}
         <div class="form-group span2" id="grupo-descricao">
           <label for="f-descricao">Descrição</label>
           <textarea id="f-descricao" name="descricao" rows="3" placeholder="Descreva o lançamento..." autocomplete="off"></textarea>
+        </div>
+
+        <!-- ══ SEÇÃO DE PAGAMENTO DIVIDIDO ══ -->
+        <div class="itens-section" id="secao-pagamentos" aria-labelledby="titulo-pagamentos" style="display:none;">
+          <div class="itens-header">
+            <div class="itens-header-left">
+              <span class="itens-titulo" id="titulo-pagamentos">Pagamento</span>
+              <span class="itens-total-badge" id="pagamentos-total-badge" aria-live="polite" aria-atomic="true">
+                Total: R$ 0,00
+              </span>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--text3);margin:4px 0 8px;">
+            A soma das formas de pagamento abaixo precisa bater com o Valor total do lançamento.
+          </p>
+
+          <p id="pagamentos-vazio-msg" style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0;">
+            Nenhuma forma de pagamento adicionada ainda.
+          </p>
+
+          <div id="lista-pagamentos" role="list" aria-label="Formas de pagamento do lançamento"></div>
+
+          <div id="wrap-btn-add-pagamento" style="display:flex;justify-content:flex-start;padding-top:4px;">
+            <button type="button" class="btn btn-teal" id="btn-add-pagamento"
+                    onclick="adicionarPagamento()"
+                    aria-label="Adicionar nova forma de pagamento, com banco/cartão, forma e valor próprios">
+              <span aria-hidden="true">＋</span> Adicionar Forma de Pagamento
+            </button>
+          </div>
         </div>
 
         <!-- ══ SEÇÃO DE ITENS ══ -->
@@ -1345,7 +1387,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.13.0 · 06/08/2026
+  Controle Financeiro · v1.14.0 · 08/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1406,6 +1448,10 @@ let correcaoEditandoId    = null;
 // Cada item: { id (local), valor, categoria, descricao }
 let itensFormulario = [];
 let proximoItemId   = 1;
+
+let pagamentosFormulario  = [];
+let proximoPagamentoId    = 1;
+let pagamentoDivididoAtivo = false;
 
 // Última extração da IA aplicada ao formulário — usada só para comparar com o
 // que o usuário efetivamente salvou (memória de correções da IA, ver mais abaixo).
@@ -1875,6 +1921,7 @@ function iniciarRelogio() {
 // ═══════════════════════════════════════════════════
 function assinaturaLancamento(l) {
   const temItens = (l.itens && l.itens.length > 0);
+  const temPagamentos = (l.pagamentos && l.pagamentos.length > 0);
 
   // IMPORTANTE: quando o lançamento tem itens, a exportação para XLSX substitui
   // a Descrição por "(lançamento com N itens)" e a Categoria por "(múltiplas)"
@@ -1904,7 +1951,13 @@ function assinaturaLancamento(l) {
     [Number(i.valor||0).toFixed(2), (i.categoria||'').trim().toLowerCase(), (i.descricao||'').trim().toLowerCase()].join('|')
   ).sort().join(';');
 
-  return base + '##' + itens;
+  // Assinatura do pagamento dividido (banco/forma reais ficam aqui, não no base,
+  // já que banco/forma do lançamento ficam null quando o pagamento é dividido)
+  const pagamentos = (l.pagamentos || []).map(p =>
+    [(p.banco||'').trim().toLowerCase(), (p.forma||'').trim().toLowerCase(), Number(p.valor||0).toFixed(2)].join('|')
+  ).sort().join(';');
+
+  return base + '##' + itens + '##' + pagamentos;
 }
 
 // Monta o conjunto de assinaturas dos lançamentos já existentes no Supabase
@@ -2191,6 +2244,9 @@ async function carregarLancamentosSupabase() {
   const { data: itensRows, error: e2 } = await selecionarTudo('financeiro_itens_lancamento', 'ordem');
   if(e2) { mostrarToast('Erro ao carregar itens: ' + e2.message, true); }
 
+  const { data: pagamentosRows, error: e3 } = await selecionarTudo('financeiro_pagamentos_lancamento', 'ordem');
+  if(e3) { mostrarToast('Erro ao carregar pagamentos divididos: ' + e3.message, true); }
+
   const itensPorLancamento = {};
   (itensRows || []).forEach(item => {
     if(!itensPorLancamento[item.lancamento_id]) itensPorLancamento[item.lancamento_id] = [];
@@ -2198,6 +2254,16 @@ async function carregarLancamentosSupabase() {
       valor:     parseFloat(item.valor) || 0,
       categoria: item.categoria || '',
       descricao: item.descricao || ''
+    });
+  });
+
+  const pagamentosPorLancamento = {};
+  (pagamentosRows || []).forEach(p => {
+    if(!pagamentosPorLancamento[p.lancamento_id]) pagamentosPorLancamento[p.lancamento_id] = [];
+    pagamentosPorLancamento[p.lancamento_id].push({
+      banco: p.banco || '',
+      forma: p.forma || '',
+      valor: parseFloat(p.valor) || 0
     });
   });
 
@@ -2215,7 +2281,8 @@ async function carregarLancamentosSupabase() {
     credor:          l.credor || '',
     devedor:         l.devedor || '',
     pago:            !!l.pago,
-    itens:           itensPorLancamento[l.id] || []
+    itens:           itensPorLancamento[l.id] || [],
+    pagamentos:      pagamentosPorLancamento[l.id] || []
   }));
 }
 
@@ -3147,12 +3214,38 @@ function aplicarDadosIAaoFormulario(dados) {
     preenchidos.push('Valor');
   }
 
+  // Pagamento dividido: só entra em jogo quando a IA identificou 2 ou mais
+  // formas/contas de pagamento distintas no documento (ex.: NFC-e paga parte
+  // no débito de um banco, parte no de outro). Com 1 forma só, ou sem o
+  // campo, o lançamento continua com Banco/Forma únicos como sempre foi.
+  const pagamentosIA = Array.isArray(dados.pagamentos)
+    ? dados.pagamentos.filter(p => p && !isNaN(parseFloat(p.valor)))
+    : [];
+  const usarPagamentos = pagamentosIA.length >= 2;
+
+  if(usarPagamentos) {
+    if(!pagamentoDivididoAtivo) alternarPagamentoDividido(true, true);
+    else limparPagamentos();
+    pagamentosIA.forEach(pagIA => {
+      const idLocal = proximoPagamentoId++;
+      const valorAbs = Math.abs(parseFloat(pagIA.valor)).toFixed(2);
+      const bancoEquiv = pagIA.banco ? (encontrarOpcaoEquivalente('banco', pagIA.banco) || '') : '';
+      const formaEquiv = pagIA.forma_pagamento ? (encontrarOpcaoEquivalente('forma', pagIA.forma_pagamento) || '') : '';
+      pagamentosFormulario.push({ id: idLocal, valor: valorAbs, banco: bancoEquiv, forma: formaEquiv });
+      adicionarPagamento(pagamentosFormulario[pagamentosFormulario.length - 1]);
+    });
+    atualizarTotalPagamentos();
+    preenchidos.push('Pagamento dividido (' + pagamentosIA.length + ' formas)');
+  }
+
   // Campos de seleção (banco, estabelecimento, forma, categoria, credor, devedor)
   // Quando há itens múltiplos, Categoria pertence a cada item — o campo principal
-  // é ignorado no salvamento, então nem tentamos preenchê-lo aqui.
+  // é ignorado no salvamento, então nem tentamos preenchê-lo aqui. Banco/Forma
+  // são ignorados do mesmo jeito quando o pagamento veio dividido.
   Object.keys(CAMPOS_IA_PARA_SELECT).forEach(campoIA => {
     const campoSelect = CAMPOS_IA_PARA_SELECT[campoIA];
     if(usarItens && campoSelect === 'categoria') return;
+    if(usarPagamentos && (campoSelect === 'banco' || campoSelect === 'forma')) return;
     const sugestao = dados[campoIA];
     if(!sugestao) return;
 
@@ -3443,6 +3536,20 @@ async function confirmarModal() {
     s.innerHTML = buildCategoriaOptions();
     if(cur) s.value = cur;
   });
+  if(campoSalvo === 'banco') {
+    document.querySelectorAll('.pagamento-sel-banco').forEach(s => {
+      const cur = s.value;
+      s.innerHTML = buildBancoOptionsPagamento();
+      if(cur) s.value = cur;
+    });
+  }
+  if(campoSalvo === 'forma') {
+    document.querySelectorAll('.pagamento-sel-forma').forEach(s => {
+      const cur = s.value;
+      s.innerHTML = buildFormaOptionsPagamento();
+      if(cur) s.value = cur;
+    });
+  }
 
   document.getElementById('modal-overlay').classList.remove('open');
   modalCampo = null; modalOrigemBotaoId = null;
@@ -3451,6 +3558,14 @@ async function confirmarModal() {
     const itemId = origemSalvo.replace('btn-add-cat-item-','');
     const selItem = document.getElementById('item-cat-'+itemId);
     if(selItem){ selItem.value = val; selItem.focus(); }
+  } else if(origemSalvo && origemSalvo.startsWith('btn-add-banco-pag-')) {
+    const pagId = origemSalvo.replace('btn-add-banco-pag-','');
+    const selPag = document.getElementById('pagamento-banco-'+pagId);
+    if(selPag){ selPag.value = val; onPagamentoBancoChange(Number(pagId), selPag); selPag.focus(); }
+  } else if(origemSalvo && origemSalvo.startsWith('btn-add-forma-pag-')) {
+    const pagId = origemSalvo.replace('btn-add-forma-pag-','');
+    const selPag = document.getElementById('pagamento-forma-'+pagId);
+    if(selPag){ selPag.value = val; onPagamentoFormaChange(Number(pagId), selPag); selPag.focus(); }
   } else {
     const selPrincipal = document.getElementById('f-'+campoSalvo);
     if(selPrincipal){ selPrincipal.value = val; selPrincipal.focus(); }
@@ -3502,6 +3617,13 @@ async function confirmarEdicaoOpcao(campo, valorAntigo, valorNovo) {
     if(errItens) console.warn('Erro ao atualizar itens com a nova categoria:', errItens.message);
   }
 
+  if(campo === 'banco' || campo === 'forma') {
+    const { error: errPag } = await sb.from('financeiro_pagamentos_lancamento')
+      .update({ [campo]: valorNovo })
+      .eq('user_id', usuarioAtual.id).eq(campo, valorAntigo);
+    if(errPag) console.warn('Erro ao atualizar pagamentos divididos com o novo valor:', errPag.message);
+  }
+
   if(campo === 'banco' && contasConfig[valorAntigo]) {
     const { error: errConta } = await sb.from('financeiro_contas_config')
       .update({ nome_banco: valorNovo })
@@ -3525,6 +3647,9 @@ async function confirmarEdicaoOpcao(campo, valorAntigo, valorNovo) {
     if(campo === 'categoria' && l.itens && l.itens.length) {
       l.itens.forEach(it => { if(it.categoria === valorAntigo) it.categoria = valorNovo; });
     }
+    if((campo === 'banco' || campo === 'forma') && l.pagamentos && l.pagamentos.length) {
+      l.pagamentos.forEach(p => { if(p[campo] === valorAntigo) p[campo] = valorNovo; });
+    }
   });
 
   renderizarSelect(campo);
@@ -3533,6 +3658,20 @@ async function confirmarEdicaoOpcao(campo, valorAntigo, valorNovo) {
     document.querySelectorAll('.item-sel-categoria').forEach(s => {
       const cur = s.value;
       s.innerHTML = buildCategoriaOptions();
+      if(cur) s.value = (cur === valorAntigo ? valorNovo : cur);
+    });
+  }
+  if(campo === 'banco') {
+    document.querySelectorAll('.pagamento-sel-banco').forEach(s => {
+      const cur = s.value;
+      s.innerHTML = buildBancoOptionsPagamento();
+      if(cur) s.value = (cur === valorAntigo ? valorNovo : cur);
+    });
+  }
+  if(campo === 'forma') {
+    document.querySelectorAll('.pagamento-sel-forma').forEach(s => {
+      const cur = s.value;
+      s.innerHTML = buildFormaOptionsPagamento();
       if(cur) s.value = (cur === valorAntigo ? valorNovo : cur);
     });
   }
@@ -3769,6 +3908,7 @@ function atualizarNotaValor() {
   colorirValor(campoValor);
   nota.style.display = '';
   nota.innerHTML = 'Valor calculado automaticamente pela soma dos itens: <span>'+fmtValor(totalAbs*sinal)+'</span>';
+  if(pagamentoDivididoAtivo) atualizarTotalPagamentos();
 }
 
 function limparItens() {
@@ -3785,6 +3925,251 @@ function limparItens() {
   secao.appendChild(wrapBtn);
   atualizarTotalItens();
   document.getElementById('f-valor-nota').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+//  PAGAMENTO DIVIDIDO (múltiplas contas/cartões num só lançamento)
+//  Espelha o padrão de ITENS acima, mas para a forma de pagamento em
+//  vez dos produtos. Ativado pelo link "Dividir pagamento?" — enquanto
+//  inativo, o comportamento é idêntico ao de sempre (campos Banco/Cartão
+//  e Forma de Pagamento no topo do formulário).
+// ═══════════════════════════════════════════════════
+function buildBancoOptionsPagamento() {
+  return '<option value="">— Selecionar —</option>' +
+    (opcoesSelects.banco||[]).map(op =>
+      '<option value="'+op.replace(/"/g,"&quot;")+'">'+op+'</option>'
+    ).join('') +
+    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>';
+}
+function buildFormaOptionsPagamento() {
+  return '<option value="">— Selecionar —</option>' +
+    (opcoesSelects.forma||[]).map(op =>
+      '<option value="'+op.replace(/"/g,"&quot;")+'">'+op+'</option>'
+    ).join('') +
+    '<option value="'+VALOR_OUTRO+'">'+ROTULO_OPCAO_OUTRO+'</option>';
+}
+
+// Liga/desliga o modo de pagamento dividido. Ligado: esconde Banco/Cartão e
+// Forma de Pagamento do topo (eles ficam null ao salvar) e mostra a seção
+// Pagamento. Desligado: comportamento normal de sempre.
+function alternarPagamentoDividido(forcar, semAutoAdicionar) {
+  pagamentoDivididoAtivo = (typeof forcar === 'boolean') ? forcar : !pagamentoDivididoAtivo;
+  const btn = document.getElementById('btn-toggle-pagamento-dividido');
+  const secao = document.getElementById('secao-pagamentos');
+  const grupoBanco = document.getElementById('grupo-banco');
+  const grupoForma = document.getElementById('grupo-forma');
+
+  secao.style.display = pagamentoDivididoAtivo ? '' : 'none';
+  btn.setAttribute('aria-expanded', pagamentoDivididoAtivo ? 'true' : 'false');
+  btn.textContent = pagamentoDivididoAtivo ? 'Pagamento dividido ativado — usar forma única em vez disso' : 'Dividir pagamento?';
+
+  // Some com os campos únicos de Banco/Forma quando dividido, evitando
+  // confusão sobre qual dos dois vale — o select principal de Banco/Cartão
+  // continua existindo no DOM (para não quebrar leitura da IA), só ocultado.
+  const selBanco = document.getElementById('f-banco');
+  const selForma = document.getElementById('f-forma');
+  if(pagamentoDivididoAtivo) {
+    grupoBanco.querySelector('.select-wrapper').style.display = 'none';
+    document.getElementById('f-banco-outro').style.display = 'none';
+    grupoForma.querySelector('.select-wrapper').style.display = 'none';
+    document.getElementById('f-forma-outro').style.display = 'none';
+    selBanco.value = ''; selForma.value = '';
+    if(!semAutoAdicionar && pagamentosFormulario.length === 0) adicionarPagamento();
+    if(!semAutoAdicionar) anunciar('Pagamento dividido ativado. Adicione cada forma de pagamento usada, com o valor correspondente.');
+  } else {
+    grupoBanco.querySelector('.select-wrapper').style.display = '';
+    grupoForma.querySelector('.select-wrapper').style.display = '';
+    limparPagamentos();
+    anunciar('Pagamento dividido desativado. Voltando ao campo único de Banco/Cartão e Forma de Pagamento.');
+  }
+}
+
+function adicionarPagamento(dados) {
+  // dados = { id, banco, forma, valor } (usado ao editar/carregar)
+  const id = dados ? dados.id : proximoPagamentoId++;
+  if(!dados) pagamentosFormulario.push({id, banco:'', forma:'', valor:''});
+
+  const idx = pagamentosFormulario.length;
+  const el  = document.createElement('div');
+  el.className = 'item-row';
+  el.setAttribute('role','listitem');
+  el.id = 'pagamento-row-'+id;
+  el.innerHTML =
+    '<span class="item-numero" aria-hidden="true">Pagamento '+idx+'</span>' +
+
+    // Banco/Cartão do pagamento
+    '<div class="form-group">' +
+      '<label for="pagamento-banco-'+id+'">Banco / Cartão <span class="sr-only">(pagamento '+idx+')</span></label>' +
+      '<div class="select-wrapper">' +
+        '<select id="pagamento-banco-'+id+'" class="pagamento-sel-banco"' +
+                ' onchange="onPagamentoBancoChange('+id+', this)">' +
+          buildBancoOptionsPagamento() +
+        '</select>' +
+        '<button type="button" class="btn-icon" id="btn-add-banco-pag-'+id+'"' +
+                ' onclick="openModal(\'banco\',\'btn-add-banco-pag-'+id+'\')"' +
+                ' aria-label="Adicionar novo banco ou cartão para pagamento '+idx+'">+</button>' +
+      '</div>' +
+      '<input type="text" id="pagamento-banco-outro-'+id+'" class="campo-outro-texto"' +
+             ' style="display:none" aria-hidden="true"' +
+             ' placeholder="Digite o banco/cartão (não será salvo na lista)"' +
+             ' aria-label="Texto livre para o banco/cartão do pagamento '+idx+' — não será salvo na lista de opções"' +
+             ' oninput="onPagamentoBancoOutroInput('+id+', this)" autocomplete="off">' +
+    '</div>' +
+
+    // Forma do pagamento
+    '<div class="form-group">' +
+      '<label for="pagamento-forma-'+id+'">Forma de Pagamento <span class="sr-only">(pagamento '+idx+')</span></label>' +
+      '<div class="select-wrapper">' +
+        '<select id="pagamento-forma-'+id+'" class="pagamento-sel-forma"' +
+                ' onchange="onPagamentoFormaChange('+id+', this)">' +
+          buildFormaOptionsPagamento() +
+        '</select>' +
+        '<button type="button" class="btn-icon" id="btn-add-forma-pag-'+id+'"' +
+                ' onclick="openModal(\'forma\',\'btn-add-forma-pag-'+id+'\')"' +
+                ' aria-label="Adicionar nova forma de pagamento para pagamento '+idx+'">+</button>' +
+      '</div>' +
+      '<input type="text" id="pagamento-forma-outro-'+id+'" class="campo-outro-texto"' +
+             ' style="display:none" aria-hidden="true"' +
+             ' placeholder="Digite a forma de pagamento (não será salva na lista)"' +
+             ' aria-label="Texto livre para a forma do pagamento '+idx+' — não será salvo na lista de opções"' +
+             ' oninput="onPagamentoFormaOutroInput('+id+', this)" autocomplete="off">' +
+    '</div>' +
+
+    // Valor do pagamento
+    '<div class="form-group">' +
+      '<label for="pagamento-val-'+id+'">Valor <span class="sr-only">(pagamento '+idx+')</span></label>' +
+      '<input type="number" id="pagamento-val-'+id+'" step="0.01" min="0"' +
+             ' placeholder="Ex.: 27,59"' +
+             ' aria-describedby="pagamentos-total-badge"' +
+             ' value="'+(dados&&dados.valor!==''?dados.valor:'')+'"' +
+             ' oninput="onPagamentoValorInput('+id+', this)" autocomplete="off">' +
+    '</div>' +
+
+    // Botão remover
+    '<button type="button" class="btn-remover-item" id="btn-rem-pagamento-'+id+'"' +
+            ' onclick="removerPagamento('+id+')"' +
+            ' aria-label="Remover pagamento '+idx+' do lançamento">✕</button>';
+
+  document.getElementById('lista-pagamentos').appendChild(el);
+  document.getElementById('pagamentos-vazio-msg').style.display = 'none';
+
+  if(dados && dados.banco) {
+    definirValorSelectComOutro(document.getElementById('pagamento-banco-'+id), document.getElementById('pagamento-banco-outro-'+id), dados.banco);
+  }
+  if(dados && dados.forma) {
+    definirValorSelectComOutro(document.getElementById('pagamento-forma-'+id), document.getElementById('pagamento-forma-outro-'+id), dados.forma);
+  }
+
+  if(!dados) {
+    const wrapBtn = document.getElementById('wrap-btn-add-pagamento');
+    el.appendChild(wrapBtn);
+  }
+
+  atualizarTotalPagamentos();
+
+  if(!dados) {
+    requestAnimationFrame(()=>
+      document.getElementById('pagamento-banco-'+id).focus()
+    );
+    anunciar('Pagamento '+idx+' adicionado. Escolha banco, forma e valor.');
+  }
+}
+
+function onPagamentoBancoChange(id, el) {
+  const p = pagamentosFormulario.find(x=>x.id===id);
+  const outroInput = document.getElementById('pagamento-banco-outro-'+id);
+  if(el.value === VALOR_OUTRO) {
+    if(outroInput) {
+      outroInput.style.display = ''; outroInput.removeAttribute('aria-hidden'); outroInput.value = '';
+      requestAnimationFrame(() => requestAnimationFrame(() => outroInput.focus()));
+    }
+    if(p) p.banco = '';
+  } else {
+    if(outroInput) { outroInput.style.display = 'none'; outroInput.setAttribute('aria-hidden','true'); outroInput.value=''; }
+    if(p) p.banco = el.value;
+  }
+}
+function onPagamentoBancoOutroInput(id, el) {
+  const p = pagamentosFormulario.find(x=>x.id===id);
+  if(p) p.banco = el.value;
+}
+function onPagamentoFormaChange(id, el) {
+  const p = pagamentosFormulario.find(x=>x.id===id);
+  const outroInput = document.getElementById('pagamento-forma-outro-'+id);
+  if(el.value === VALOR_OUTRO) {
+    if(outroInput) {
+      outroInput.style.display = ''; outroInput.removeAttribute('aria-hidden'); outroInput.value = '';
+      requestAnimationFrame(() => requestAnimationFrame(() => outroInput.focus()));
+    }
+    if(p) p.forma = '';
+  } else {
+    if(outroInput) { outroInput.style.display = 'none'; outroInput.setAttribute('aria-hidden','true'); outroInput.value=''; }
+    if(p) p.forma = el.value;
+  }
+}
+function onPagamentoFormaOutroInput(id, el) {
+  const p = pagamentosFormulario.find(x=>x.id===id);
+  if(p) p.forma = el.value;
+}
+function onPagamentoValorInput(id, el) {
+  const p = pagamentosFormulario.find(x=>x.id===id);
+  if(p) p.valor = el.value;
+  atualizarTotalPagamentos();
+}
+
+function removerPagamento(id) {
+  const idx = pagamentosFormulario.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  pagamentosFormulario.splice(idx,1);
+  const row = document.getElementById('pagamento-row-'+id);
+
+  const wrapBtn = document.getElementById('wrap-btn-add-pagamento');
+  const btnEstaNesteRow = row && row.contains(wrapBtn);
+  if(btnEstaNesteRow) document.getElementById('secao-pagamentos').appendChild(wrapBtn);
+  if(row) row.remove();
+
+  document.querySelectorAll('#lista-pagamentos .item-numero').forEach((el,i)=>{
+    el.textContent = 'Pagamento '+(i+1);
+  });
+
+  if(pagamentosFormulario.length===0) {
+    document.getElementById('pagamentos-vazio-msg').style.display='';
+    if(!document.getElementById('secao-pagamentos').contains(wrapBtn))
+      document.getElementById('secao-pagamentos').appendChild(wrapBtn);
+  } else {
+    const linhas = document.querySelectorAll('#lista-pagamentos .item-row');
+    const ultimaLinha = linhas[linhas.length-1];
+    if(ultimaLinha && btnEstaNesteRow) ultimaLinha.appendChild(wrapBtn);
+  }
+
+  atualizarTotalPagamentos();
+  anunciar('Pagamento removido. '+(pagamentosFormulario.length)+' forma'+(pagamentosFormulario.length!==1?'s':'')+' de pagamento no lançamento.');
+}
+
+function atualizarTotalPagamentos() {
+  const total = pagamentosFormulario.reduce((s,p)=>{
+    const v = parseFloat(p.valor); return s + (isNaN(v)?0:v);
+  }, 0);
+  const badge = document.getElementById('pagamentos-total-badge');
+  badge.textContent = 'Total: '+fmtValor(total);
+
+  // Compara com o Valor total do lançamento e sinaliza divergência
+  const valorLanc = Math.abs(parseFloat(document.getElementById('f-valor').value) || 0);
+  const bate = Math.abs(total - valorLanc) < 0.005;
+  badge.className = 'itens-total-badge'+(!bate && valorLanc>0 ? ' neg' : '');
+}
+
+function limparPagamentos() {
+  pagamentosFormulario = [];
+  const wrapBtn = document.getElementById('wrap-btn-add-pagamento');
+  const secao   = document.getElementById('secao-pagamentos');
+  if(!secao.contains(wrapBtn) || document.getElementById('lista-pagamentos').contains(wrapBtn)) {
+    secao.appendChild(wrapBtn);
+  }
+  document.getElementById('lista-pagamentos').innerHTML = '';
+  document.getElementById('pagamentos-vazio-msg').style.display = '';
+  secao.appendChild(wrapBtn);
+  atualizarTotalPagamentos();
 }
 
 // ═══════════════════════════════════════════════════
@@ -3841,7 +4226,10 @@ async function salvarLancamento() {
   }
 
   // Valida os campos com "Outro" selecionado mas sem texto digitado ainda
+  // (Banco/Forma ficam de fora dessa checagem quando o pagamento está
+  // dividido, já que nesse modo eles não são usados — ver validação própria abaixo)
   for(const campo of CAMPOS_SELECT) {
+    if(pagamentoDivididoAtivo && (campo==='banco'||campo==='forma')) continue;
     const sel = document.getElementById('f-'+campo);
     if(sel && sel.value === VALOR_OUTRO && !obterValorCampoPrincipal(campo)) {
       anunciar('Digite o texto de ' + CAMPOS_NOMES[campo] + ', ou escolha outra opção.', true);
@@ -3851,14 +4239,55 @@ async function salvarLancamento() {
     }
   }
 
+  // Valida a seção de Pagamento Dividido, se ativa
+  let pagamentosParaSalvar = [];
+  if(pagamentoDivididoAtivo) {
+    if(pagamentosFormulario.length === 0) {
+      anunciar('Adicione ao menos uma forma de pagamento, ou desative "Dividir pagamento?".', true);
+      return;
+    }
+    for(let i=0;i<pagamentosFormulario.length;i++) {
+      const p = pagamentosFormulario[i];
+      const selBanco = document.getElementById('pagamento-banco-'+p.id);
+      const selForma = document.getElementById('pagamento-forma-'+p.id);
+      if(!p.banco) {
+        anunciar('Escolha o Banco/Cartão do pagamento '+(i+1)+'.', true);
+        selBanco.focus();
+        return;
+      }
+      if(selBanco.value===VALOR_OUTRO && !p.banco) {
+        anunciar('Digite o texto do Banco/Cartão do pagamento '+(i+1)+'.', true);
+        document.getElementById('pagamento-banco-outro-'+p.id).focus();
+        return;
+      }
+      if(selForma.value===VALOR_OUTRO && !p.forma) {
+        anunciar('Digite o texto da Forma de Pagamento do pagamento '+(i+1)+'.', true);
+        document.getElementById('pagamento-forma-outro-'+p.id).focus();
+        return;
+      }
+      const v = parseFloat(p.valor);
+      if(p.valor===''||isNaN(v)||v<=0) {
+        anunciar('Informe um valor maior que zero para o pagamento '+(i+1)+'.', true);
+        document.getElementById('pagamento-val-'+p.id).focus();
+        return;
+      }
+      pagamentosParaSalvar.push({ banco: p.banco, forma: p.forma||null, valor: v });
+    }
+    const somaPagamentos = pagamentosParaSalvar.reduce((s,p)=>s+p.valor,0);
+    if(Math.abs(somaPagamentos - Math.abs(valor)) > 0.005) {
+      anunciar('A soma dos pagamentos ('+fmtValor(somaPagamentos)+') não bate com o Valor total do lançamento ('+fmtValor(Math.abs(valor))+').', true);
+      return;
+    }
+  }
+
   const dadosLancamento = {
     user_id:         usuarioAtual.id,
     data_origem:     dataOrigem,
     data_vencimento: document.getElementById('f-data-vencimento').value || null,
     valor,
-    banco:           obterValorCampoPrincipal('banco') || null,
+    banco:           pagamentoDivididoAtivo ? null : (obterValorCampoPrincipal('banco') || null),
     estabelecimento: obterValorCampoPrincipal('estabelecimento') || null,
-    forma:           obterValorCampoPrincipal('forma') || null,
+    forma:           pagamentoDivididoAtivo ? null : (obterValorCampoPrincipal('forma') || null),
     parcela:         parcelaEmEdicao || null,
     descricao:       itensFormulario.length>0 ? null : (document.getElementById('f-descricao').value || null),
     categoria:       itensFormulario.length>0 ? null : (obterValorCampoPrincipal('categoria') || null),
@@ -3914,6 +4343,16 @@ async function salvarLancamento() {
         if(errItens) throw errItens;
       }
 
+      // Substitui todos os pagamentos: remove os antigos e insere os novos
+      await sb.from('financeiro_pagamentos_lancamento').delete().eq('lancamento_id', editandoId);
+      if(pagamentosParaSalvar.length > 0) {
+        const pagamentosComFk = pagamentosParaSalvar.map((p, idx) => ({
+          ...p, lancamento_id: editandoId, user_id: usuarioAtual.id, ordem: idx
+        }));
+        const { error: errPag } = await sb.from('financeiro_pagamentos_lancamento').insert(pagamentosComFk);
+        if(errPag) throw errPag;
+      }
+
       editandoId = null;
       anunciar('Lançamento atualizado com sucesso.');
     } else {
@@ -3933,7 +4372,15 @@ async function salvarLancamento() {
         if(errItens) throw errItens;
       }
 
-      anunciar('Lançamento salvo' + (itensParaSalvar.length>0 ? ' com '+itensParaSalvar.length+' item'+(itensParaSalvar.length!==1?'s':'') : '') + '.');
+      if(pagamentosParaSalvar.length > 0) {
+        const pagamentosComFk = pagamentosParaSalvar.map((p, idx) => ({
+          ...p, lancamento_id: novo.id, user_id: usuarioAtual.id, ordem: idx
+        }));
+        const { error: errPag } = await sb.from('financeiro_pagamentos_lancamento').insert(pagamentosComFk);
+        if(errPag) throw errPag;
+      }
+
+      anunciar('Lançamento salvo' + (itensParaSalvar.length>0 ? ' com '+itensParaSalvar.length+' item'+(itensParaSalvar.length!==1?'s':'') : '') + (pagamentosParaSalvar.length>0 ? ' e pagamento dividido em '+pagamentosParaSalvar.length+' formas' : '') + '.');
     }
 
     // Vincula o documento pendente (se houver) a este lançamento — não impede
@@ -3991,6 +4438,8 @@ function limparFormulario() {
   document.getElementById('f-pago').checked = false;
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
+  if(pagamentoDivididoAtivo) alternarPagamentoDividido(false);
+  else limparPagamentos();
   limparVinculoDocumentoPendente();
 }
 
@@ -4011,6 +4460,16 @@ function editarLancamento(id) {
   definirValorSelectComOutro(document.getElementById('f-devedor'), document.getElementById('f-devedor-outro'), l.devedor);
   document.getElementById('f-pago').checked = !!l.pago;
   limparItens();
+  if(pagamentoDivididoAtivo) alternarPagamentoDividido(false);
+  else limparPagamentos();
+  if(l.pagamentos && l.pagamentos.length>0) {
+    alternarPagamentoDividido(true, true);
+    l.pagamentos.forEach(p=>{
+      pagamentosFormulario.push({id:proximoPagamentoId++, banco:p.banco, forma:p.forma, valor:p.valor});
+      adicionarPagamento(pagamentosFormulario[pagamentosFormulario.length-1]);
+    });
+    atualizarTotalPagamentos();
+  }
   if(l.itens && l.itens.length>0) {
     definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
     l.itens.forEach(item=>{
@@ -4024,6 +4483,7 @@ function editarLancamento(id) {
     valEl.value = Math.abs(l.valor);
     colorirValor(valEl);
   }
+  if(l.pagamentos && l.pagamentos.length>0) atualizarTotalPagamentos();
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">✏️</span> Atualizar Lançamento';
   mudarAba('novolanc');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -4110,8 +4570,17 @@ function aplicarFiltrosSilencioso() {
     if(vencAte   && l.dataVencimento && l.dataVencimento>vencAte) return false;
     if(status==='pago'    &&!l.pago) return false;
     if(status==='pendente'&&l.pago)  return false;
-    if(banco && l.banco!==banco) return false;
-    if(forma && l.forma!==forma) return false;
+    // Filtro por banco: lançamento simples OU alguma forma de pagamento dividida bate
+    if(banco){
+      const temBancoPrincipal = l.banco===banco;
+      const temBancoPagamento = (l.pagamentos||[]).some(p=>p.banco===banco);
+      if(!temBancoPrincipal && !temBancoPagamento) return false;
+    }
+    if(forma){
+      const temFormaPrincipal = l.forma===forma;
+      const temFormaPagamento = (l.pagamentos||[]).some(p=>p.forma===forma);
+      if(!temFormaPrincipal && !temFormaPagamento) return false;
+    }
     if(estab && l.estabelecimento!==estab) return false;
     // Filtro por categoria: lançamento simples OU algum item bate
     if(cat){
@@ -4509,6 +4978,24 @@ async function excluirContaConfig(nomeBanco) {
   mostrarToast('Configuração removida.');
 }
 
+// Fatia do valor de um lançamento que pertence a um banco/cartão específico.
+// Lançamento simples: tudo ou nada (bate ou não bate com l.banco).
+// Lançamento com pagamento dividido: só a fatia daquele banco no array
+// l.pagamentos, com o mesmo sinal (entrada/saída) do lançamento como um todo
+// — a nota nunca tem parte "entrada" e parte "saída" no mesmo pagamento.
+function valorLancamentoParaBanco(l, nomeBanco) {
+  if(l.pagamentos && l.pagamentos.length > 0) {
+    const soma = l.pagamentos
+      .filter(p => p.banco === nomeBanco)
+      .reduce((s,p) => s + (parseFloat(p.valor)||0), 0);
+    return l.valor < 0 ? -soma : soma;
+  }
+  return l.banco === nomeBanco ? l.valor : 0;
+}
+function lancamentoEnvolveBanco(l, nomeBanco) {
+  return l.banco === nomeBanco || (l.pagamentos||[]).some(p => p.banco === nomeBanco);
+}
+
 // Recalcula saldo/limite de cada conta configurada, usando TODOS os lançamentos
 // (sem filtro de tela), já que representam o estado real da conta/cartão.
 function atualizarContas() {
@@ -4518,14 +5005,14 @@ function atualizarContas() {
     if(!el) return;
 
     const cfg = contasConfig[nomeBanco];
-    const doBanco = lancamentos.filter(l => l.banco === nomeBanco);
+    const doBanco = lancamentos.filter(l => lancamentoEnvolveBanco(l, nomeBanco));
 
     if(cfg.tipo === 'conta_corrente') {
       // Só lançamentos PAGOS representam dinheiro que de fato entrou ou saiu da
       // conta. Um lançamento Pendente é algo agendado/previsto — ainda não
       // aconteceu de verdade, então não deve mexer no saldo atual.
       const doBancoPago = doBanco.filter(l => l.pago);
-      const saldoAtual = (cfg.saldo_inicial || 0) + doBancoPago.reduce((s,l)=>s+l.valor,0);
+      const saldoAtual = (cfg.saldo_inicial || 0) + doBancoPago.reduce((s,l)=>s+valorLancamentoParaBanco(l, nomeBanco),0);
       el.textContent = 'Saldo atual: ' + fmtValor(saldoAtual);
       el.classList.toggle('alerta', saldoAtual < 0);
     } else if(cfg.tipo === 'cartao_credito') {
@@ -4535,7 +5022,7 @@ function atualizarContas() {
       // Banco/Cartão que decide se aquilo consome o limite deste cartão.
       // Pendente CONTA (ao contrário da conta corrente), porque no cartão
       // normalmente significa "já comprado, fatura em aberto".
-      const limiteUsado = Math.max(0, -doBanco.reduce((s,l)=>s+l.valor,0));
+      const limiteUsado = Math.max(0, -doBanco.reduce((s,l)=>s+valorLancamentoParaBanco(l, nomeBanco),0));
       const limiteTotal = cfg.limite_total || 0;
       const limiteRestante = limiteTotal - limiteUsado;
       el.textContent = 'Limite restante: ' + fmtValor(limiteRestante) + ' de ' + fmtValor(limiteTotal) + ' (usado: ' + fmtValor(limiteUsado) + ')';
@@ -4555,18 +5042,22 @@ function exportarPlanilha(){
   lancamentosFiltrados
     .slice().sort((a,b)=>a.dataOrigem.localeCompare(b.dataOrigem)||a.id-b.id)
     .forEach(l=>{
-      if(l.itens&&l.itens.length>0){
-        // Linha principal
+      const temItens = l.itens&&l.itens.length>0;
+      const temPagamentos = l.pagamentos&&l.pagamentos.length>0;
+      if(temItens||temPagamentos){
+        // Linha principal — Banco/Forma viram "(dividido)" quando o pagamento
+        // está dividido, pelo mesmo motivo que Categoria vira "(múltiplas)"
+        // quando há itens: são textos gerados, não os dados reais.
         dados.push({
           'Data Origem':fmtData(l.dataOrigem),'Data Vencimento':fmtData(l.dataVencimento),
-          'Valor (R$)':l.valor,'Banco / Cartão':l.banco||'',
-          'Estabelecimento':l.estabelecimento||'','Forma de Pagamento':l.forma||'',
-          'Parcela':l.parcela||'À vista','Descrição':'(lançamento com '+l.itens.length+' itens)',
-          'Categoria':'(múltiplas)','Credor':l.credor||'','Devedor':l.devedor||'',
+          'Valor (R$)':l.valor,'Banco / Cartão':temPagamentos?'(dividido)':(l.banco||''),
+          'Estabelecimento':l.estabelecimento||'','Forma de Pagamento':temPagamentos?'(dividido)':(l.forma||''),
+          'Parcela':l.parcela||'À vista','Descrição':temItens?'(lançamento com '+l.itens.length+' itens)':(l.descricao||''),
+          'Categoria':temItens?'(múltiplas)':(l.categoria||''),'Credor':l.credor||'','Devedor':l.devedor||'',
           'Status':l.pago?'Pago':'Pendente','Tipo':'Principal'
         });
         // Sub-linhas de itens
-        l.itens.forEach((item,idx)=>{
+        (l.itens||[]).forEach((item,idx)=>{
           dados.push({
             'Data Origem':'','Data Vencimento':'',
             'Valor (R$)':item.valor,'Banco / Cartão':'',
@@ -4574,6 +5065,16 @@ function exportarPlanilha(){
             'Parcela':'','Descrição':item.descricao||'',
             'Categoria':item.categoria||'','Credor':'','Devedor':'',
             'Status':'','Tipo':'Item '+(idx+1)
+          });
+        });
+        // Sub-linhas de pagamento dividido
+        (l.pagamentos||[]).forEach((p,idx)=>{
+          dados.push({
+            'Data Origem':'','Data Vencimento':'',
+            'Valor (R$)':p.valor,'Banco / Cartão':p.banco||'',
+            'Estabelecimento':'','Forma de Pagamento':p.forma||'',
+            'Parcela':'','Descrição':'','Categoria':'','Credor':'','Devedor':'',
+            'Status':'','Tipo':'Pagamento '+(idx+1)
           });
         });
       } else {
@@ -4655,20 +5156,40 @@ function lerArquivoXLSX(event){
         }
         return;
       }
+      if(tipo.startsWith('Pagamento ')){
+        if(lancAtual){
+          const bancoPag = row['Banco / Cartão']||'';
+          const formaPag = row['Forma de Pagamento']||'';
+          lancAtual.pagamentos.push({
+            banco: bancoPag,
+            forma: formaPag,
+            valor: parseFloat(String(row['Valor (R$)']||'0').replace(',','.'))||0
+          });
+          if(bancoPag) opcoesParaColetar.banco.add(bancoPag);
+          if(formaPag) opcoesParaColetar.forma.add(formaPag);
+        }
+        return;
+      }
+      const bancoBruto = row['Banco / Cartão']||'';
+      const formaBruta = row['Forma de Pagamento']||'';
+      // "(dividido)" é um texto gerado na exportação (como "(múltiplas)" para
+      // categoria) — o banco/forma real de cada parte vive nas sub-linhas
+      // "Pagamento N" abaixo, não neste campo.
       lancAtual = {
         dataOrigem:     parseDateBR(row['Data Origem']||''),
         dataVencimento: parseDateBR(row['Data Vencimento']||''),
         valor:          parseFloat(String(row['Valor (R$)']||'0').replace(',','.'))||0,
-        banco:          row['Banco / Cartão']||'',
+        banco:          bancoBruto==='(dividido)' ? '' : bancoBruto,
         estabelecimento:row['Estabelecimento']||'',
-        forma:          row['Forma de Pagamento']||'',
+        forma:          formaBruta==='(dividido)' ? '' : formaBruta,
         parcela:        normalizarParcelaImportada(row['Parcela']),
         descricao:      row['Descrição']||'',
         categoria:      row['Categoria']||'',
         credor:         row['Credor']||'',
         devedor:        row['Devedor']||'',
         pago:           (row['Status']||'').toLowerCase()==='pago',
-        itens:          []
+        itens:          [],
+        pagamentos:     []
       };
       ['banco','estabelecimento','forma','categoria','credor','devedor'].forEach(campo=>{
         const v = lancAtual[campo];
@@ -4746,6 +5267,17 @@ function lerArquivoXLSX(event){
             ordem:         idx
           }));
           await sb.from('financeiro_itens_lancamento').insert(itensComFk);
+        }
+        if(l.pagamentos.length > 0) {
+          const pagamentosComFk = l.pagamentos.map((p, idx) => ({
+            lancamento_id: lancInserido.id,
+            user_id:       usuarioAtual.id,
+            banco:         p.banco || null,
+            forma:         p.forma || null,
+            valor:         p.valor,
+            ordem:         idx
+          }));
+          await sb.from('financeiro_pagamentos_lancamento').insert(pagamentosComFk);
         }
         importados++;
       } catch(err) {

@@ -4,6 +4,35 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.14.0 — 08/08/2026
+
+- **Pagamento dividido entre bancos/cartões**: um novo link "Dividir pagamento?", logo abaixo do
+  campo Banco/Cartão no formulário de Novo Lançamento, revela uma seção "Pagamento" onde é
+  possível registrar que a mesma compra foi paga fracionada entre duas ou mais contas/cartões/formas
+  — o caso típico é uma nota fiscal que saiu parte no débito de um banco, parte no de outro.
+  - Cada linha da seção tem Banco/Cartão, Forma de Pagamento (ambos com a opção "Outro" para texto
+    livre, igual aos demais campos do formulário) e Valor daquela parte específica.
+  - Um indicador mostra o total já informado e avisa em vermelho quando a soma ainda não bate com
+    o Valor total do lançamento — a gravação só é permitida quando os dois valores coincidem.
+  - Quando o pagamento é dividido, os campos únicos de Banco/Cartão e Forma de Pagamento do topo
+    do formulário ficam de fora (o pagamento real vive nas linhas da seção); no caso comum
+    (pagamento único, como sempre foi) nada muda.
+  - Lançamentos com pagamento dividido são reconhecidos automaticamente pelo Leitor de Notas com
+    IA quando o documento mostrar 2 ou mais formas/valores de pagamento distintos — de forma
+    independente de o documento também ter múltiplos itens/produtos (uma nota pode ter as duas
+    coisas ao mesmo tempo, só uma delas, ou nenhuma).
+  - Saldo de conta corrente e limite de cartão de crédito (aba Saldos) passam a contar corretamente
+    apenas a fatia de cada lançamento dividido que pertence a cada conta.
+  - Filtro por Banco/Cartão e por Forma de Pagamento (aba Lançamentos) também encontram
+    lançamentos com pagamento dividido, considerando qualquer uma das partes.
+  - Exportação e Importação em XLSX ganharam sub-linhas "Pagamento N" (no mesmo padrão das
+    sub-linhas "Item N" já existentes para múltiplos itens), preservando os dados na ida e volta
+    pela planilha sem gerar duplicatas.
+  - Renomear uma opção de Banco/Cartão ou Forma de Pagamento (aba Configurações → Gerenciar
+    Listas) agora propaga corretamente também para os pagamentos divididos já salvos.
+  - Nova tabela no banco de dados: `financeiro_pagamentos_lancamento` (mesmo padrão de
+    `financeiro_itens_lancamento`, mas para as partes do pagamento em vez dos produtos).
+
 ## v1.13.0 — 06/08/2026
 
 - **Atalho de teclado para limpar filtros**: `Alt+L` limpa todos os campos da aba Filtros e volta

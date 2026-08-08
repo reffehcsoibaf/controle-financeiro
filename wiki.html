@@ -225,6 +225,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#lanc-status" class="sub">Marcar como pago</a>
       <a href="#lanc-selecao" class="sub">Selecionar linha e atalhos</a>
       <a href="#itens-multiplos">Itens Múltiplos</a>
+      <a href="#pagamento-dividido">Pagamento Dividido</a>
       <a href="#parcelamento">Parcelamento Automático</a>
       <a href="#filtros">Filtros</a>
       <a href="#saldos">Saldos</a>
@@ -397,6 +398,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span class="callout-icon" aria-hidden="true">✅</span>
         <span><strong>Itens múltiplos automáticos:</strong> se o documento listar 2 ou mais produtos/serviços com valores individuais (ex.: uma nota de mercado), o app preenche sozinho a seção <a href="#itens-multiplos">Itens do Lançamento</a> — um item para cada produto, com valor, categoria (quando reconhecida entre as já cadastradas) e descrição. Com 1 item só, ou num comprovante de pagamento único (Pix, transferência, boleto), o lançamento continua simples, sem usar essa seção.</span>
       </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Pagamento dividido automático:</strong> se o documento mostrar 2 ou mais formas/valores de pagamento distintos (ex.: uma NFC-e paga parte no débito de um cartão, parte no de outro), o app ativa sozinho a seção <a href="#pagamento-dividido">Pagamento</a> e preenche uma linha para cada parte identificada. Isso é independente dos itens/produtos — uma nota pode ter várias formas de pagamento e vários produtos ao mesmo tempo, ou só uma das duas coisas.</span>
+      </div>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span><strong>A IA aprende com suas correções:</strong> toda vez que você corrige, antes de salvar, o Banco/Cartão, Estabelecimento, Forma de Pagamento, Categoria, Credor ou Devedor que a IA sugeriu, o app memoriza isso automaticamente e passa a priorizar essa preferência nas próximas leituras. Veja a seção <a href="#correcoes-ia">Correções Aprendidas (IA)</a>, na aba Configurações.</span>
@@ -421,9 +426,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
           <tr><td class="campo-nome">Data Origem</td><td>Data</td><td>Obrigatório. Data em que o lançamento foi gerado.</td></tr>
           <tr><td class="campo-nome">Data Vencimento</td><td>Data</td><td>Opcional. Usada como base para o parcelamento automático.</td></tr>
           <tr><td class="campo-nome">Entrada de Valor</td><td>Toggle + Número</td><td>Obrigatório. Escolha primeiro <strong>🔻 Saída (despesa)</strong> ou <strong><span class="icone-triangulo-cima" aria-hidden="true"></span> Entrada (receita)</strong> no botão de alternância, depois digite o valor sempre <strong>positivo</strong> — o sinal é definido pelo toggle, não pelo número. O campo mostra apenas o texto "Valor" como dica, sem um número de exemplo.</td></tr>
-          <tr><td class="campo-nome">Banco / Cartão</td><td>Lista</td><td>Gerenciável — veja a seção abaixo. Se configurado em Contas e Cartões, afeta o saldo ou o limite calculado.</td></tr>
+          <tr><td class="campo-nome">Banco / Cartão</td><td>Lista</td><td>Gerenciável — veja a seção abaixo. Se configurado em Contas e Cartões, afeta o saldo ou o limite calculado. Ignorado se o <a href="#pagamento-dividido">pagamento estiver dividido</a> entre mais de uma conta/cartão.</td></tr>
           <tr><td class="campo-nome">Estabelecimento</td><td>Lista</td><td>Gerenciável.</td></tr>
-          <tr><td class="campo-nome">Forma de Pagamento</td><td>Lista</td><td>Gerenciável.</td></tr>
+          <tr><td class="campo-nome">Forma de Pagamento</td><td>Lista</td><td>Gerenciável. Ignorada se o <a href="#pagamento-dividido">pagamento estiver dividido</a>.</td></tr>
           <tr><td class="campo-nome">Categoria</td><td>Lista</td><td>Gerenciável. Ignorada se o lançamento tiver itens múltiplos (cada item tem sua própria categoria).</td></tr>
           <tr><td class="campo-nome">Credor</td><td>Lista</td><td>Gerenciável.</td></tr>
           <tr><td class="campo-nome">Devedor</td><td>Lista</td><td>Gerenciável.</td></tr>
@@ -595,6 +600,53 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </p>
     </section>
 
+    <!-- ══ PAGAMENTO DIVIDIDO ══ -->
+    <section class="card" id="pagamento-dividido">
+      <h2><span aria-hidden="true">💳</span> Pagamento Dividido</h2>
+      <p class="secao-desc">Para quando a mesma compra foi paga em mais de um banco/cartão</p>
+      <p>
+        Use essa funcionalidade quando o valor total de uma compra foi pago fracionado entre duas
+        ou mais contas, cartões ou formas de pagamento diferentes — por exemplo, uma nota fiscal
+        (NFC-e) em que parte saiu no débito de um cartão e o restante no débito de outro. É
+        independente dos <a href="#itens-multiplos">Itens Múltiplos</a>: um lançamento pode ter
+        vários produtos <em>e</em> pagamento dividido ao mesmo tempo, só um dos dois, ou nenhum.
+      </p>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Preenchimento automático pela IA:</strong> se você usar o <a href="#leitor-ia">Leitor de Notas com IA</a> e o documento mostrar 2 ou mais formas/valores de pagamento distintos, essa seção é preenchida sozinha — uma linha por forma de pagamento identificada. Os passos abaixo são para quando você quer montar manualmente (ou ajustar o que a IA já preencheu).</span>
+      </div>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">No formulário de lançamento, logo abaixo do campo <strong>Banco / Cartão</strong>, clique no link <strong>"Dividir pagamento?"</strong>.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Os campos únicos de Banco/Cartão e Forma de Pagamento do topo do formulário são ocultados, e a seção <strong>Pagamento</strong> aparece com uma primeira linha em branco.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Para cada parte do pagamento, preencha <strong>Banco/Cartão</strong>, <strong>Forma de Pagamento</strong> e o <strong>Valor</strong> daquela parte específica. Clique em <span class="btn-demo btn-demo-teal">＋ Adicionar Forma de Pagamento</span> para incluir mais linhas.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">4</div>
+          <div class="passo-texto">Acompanhe o indicador de total no topo da seção — ele soma as linhas já preenchidas e fica vermelho quando a soma ainda não bate com o <strong>Valor</strong> total do lançamento. O app não deixa salvar enquanto os dois números não coincidirem.</div>
+        </div>
+      </div>
+      <p>
+        Para remover uma forma de pagamento, clique no <strong>✕</strong> ao lado dela. Para
+        desativar o modo dividido e voltar ao campo único de Banco/Cartão, clique novamente no
+        link (agora mostrando "Pagamento dividido ativado") — as linhas preenchidas são descartadas.
+      </p>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Assim como os campos únicos, Banco/Cartão e Forma de Pagamento de cada linha aceitam a opção <strong>"Outro (digitar uma vez)"</strong> para um valor avulso que não fica salvo na lista — e o botão <strong>+</strong> ao lado de cada um cadastra uma opção nova sem sair da linha.</span>
+      </div>
+      <p>
+        Um lançamento com pagamento dividido é levado em conta corretamente no <a href="#contas-cartoes">Saldo de cada conta e no limite de cada cartão</a> — cada conta soma só a fatia que lhe pertence, não o valor total da compra. Os <a href="#filtros">Filtros</a> por Banco/Cartão e por Forma de Pagamento também encontram esses lançamentos, considerando qualquer uma das partes.
+      </p>
+    </section>
+
     <!-- ══ PARCELAMENTO ══ -->
     <section class="card" id="parcelamento">
       <h2><span aria-hidden="true">🗓</span> Parcelamento Automático</h2>
@@ -704,6 +756,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span>Para o limite do cartão ser calculado, o único requisito é escolher o <strong>Banco/Cartão</strong> certo no lançamento (o mesmo nome configurado aqui como "Cartão de Crédito") — tipo <strong>Saída</strong> para compras, <strong>Entrada</strong> para o pagamento da fatura. A <strong>Categoria</strong> do lançamento é livre e não precisa ser "Cartão de Crédito": pode (e deve) descrever o gasto de verdade, como Alimentação ou Transporte.</span>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-icon" aria-hidden="true">💡</span>
+        <span>Num lançamento com <a href="#pagamento-dividido">pagamento dividido</a>, cada conta/cartão envolvido soma apenas a fatia do valor total que lhe pertence — não o valor total da compra.</span>
       </div>
       <div class="callout callout-warn">
         <span class="callout-icon" aria-hidden="true">⚠️</span>

@@ -156,11 +156,34 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.14.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-14-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-14-0"><span aria-hidden="true">🏷️</span> v1.14.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">08/08/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Pagamento dividido entre bancos/cartões</h3>
+          <ul>
+            <li>Um novo link <strong>"Dividir pagamento?"</strong>, logo abaixo do campo Banco/Cartão no formulário de Novo Lançamento, revela uma seção "Pagamento" onde é possível registrar que a mesma compra foi paga fracionada entre duas ou mais contas/cartões/formas — o caso típico é uma nota fiscal que saiu parte no débito de um banco, parte no de outro.</li>
+            <li>Cada linha da seção tem Banco/Cartão, Forma de Pagamento (ambos com a opção "Outro" para texto livre, igual aos demais campos do formulário) e o Valor daquela parte específica.</li>
+            <li>Um indicador mostra o total já informado e avisa em vermelho quando a soma ainda não bate com o Valor total do lançamento — a gravação só é permitida quando os dois valores coincidem.</li>
+            <li>Quando o pagamento é dividido, os campos únicos de Banco/Cartão e Forma de Pagamento do topo do formulário ficam de fora (o pagamento real vive nas linhas da seção); no caso comum (pagamento único, como sempre foi) nada muda.</li>
+            <li>Lançamentos com pagamento dividido são reconhecidos automaticamente pelo Leitor de Notas com IA quando o documento mostrar 2 ou mais formas/valores de pagamento distintos — de forma independente de o documento também ter múltiplos itens/produtos.</li>
+            <li>Saldo de conta corrente e limite de cartão de crédito (aba Saldos) passam a contar corretamente apenas a fatia de cada lançamento dividido que pertence a cada conta.</li>
+            <li>Filtro por Banco/Cartão e por Forma de Pagamento (aba Lançamentos) também encontram lançamentos com pagamento dividido, considerando qualquer uma das partes.</li>
+            <li>Exportação e Importação em XLSX ganharam sub-linhas "Pagamento N" (no mesmo padrão das sub-linhas "Item N" já existentes), preservando os dados na ida e volta pela planilha sem gerar duplicatas.</li>
+            <li>Renomear uma opção de Banco/Cartão ou Forma de Pagamento (aba Configurações → Gerenciar Listas) agora propaga corretamente também para os pagamentos divididos já salvos.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.13.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-13-0">
+      <section class="versao-bloco" aria-labelledby="v1-13-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-13-0"><span aria-hidden="true">🏷️</span> v1.13.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">06/08/2026</span>
         </div>
 

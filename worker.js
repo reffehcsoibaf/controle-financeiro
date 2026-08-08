@@ -35,6 +35,7 @@ Analise o documento enviado e devolva APENAS um objeto JSON (sem markdown, sem c
   "devedor": "quem paga o valor (pagador/titular do documento), ou null",
   "descricao": "descrição curta e objetiva do lançamento, ou null — só preencha se NÃO for usar o campo \"itens\" abaixo",
   "itens": [ { "valor": número positivo, "categoria_sugerida": "categoria deste item específico, ou null", "descricao": "descrição curta deste item específico, ou null" } ] — ou null,
+  "pagamentos": [ { "banco": "banco/cartão usado nesta parte do pagamento", "forma_pagamento": "ex.: Cartão de Débito, Cartão de Crédito, Pix, Dinheiro, ou null", "valor": número positivo desta parte do pagamento } ] — ou null,
   "observacoes": "qualquer detalhe relevante que não se encaixe nos campos acima, ou null"
 }
 
@@ -56,6 +57,20 @@ Regras importantes:
   Se o documento tiver apenas 1 produto/serviço, ou for um comprovante de pagamento único (Pix,
   transferência, boleto, mensalidade), deixe "itens" como null e preencha normalmente
   "categoria_sugerida" e "descricao" no nível raiz.
+- **Campo "pagamentos" (pagamento dividido entre bancos/cartões/formas)**: preencha esta lista
+  APENAS quando o documento mostrar explicitamente que o valor total foi pago fracionado entre
+  2 (duas) ou mais formas/contas de pagamento distintas — o caso típico é uma NFC-e com duas
+  linhas de "FORMA PAGAMENTO" / "VALOR PAGO", cada uma com um valor diferente (ex.: "Cartão de
+  Débito R$ 6,12" e "Cartão de Débito R$ 27,59"). Cada elemento deve ter seu próprio "valor"
+  (sempre positivo), e "banco"/"forma_pagamento" preenchidos com o que o documento indicar para
+  aquela parte específica (podem ser iguais entre si, como no exemplo acima, ou diferentes). A
+  soma dos valores de "pagamentos" deve bater com o "valor" total informado no nível raiz. Quando
+  "pagamentos" tiver 2 ou mais elementos, deixe "banco" e "forma_pagamento" do nível raiz como
+  null (eles são ignorados nesse caso). O campo "pagamentos" é completamente independente do
+  campo "itens" — um documento pode ter vários produtos (itens) E pagamento dividido
+  (pagamentos) ao mesmo tempo, só um dos dois, ou nenhum. Se o documento mostrar apenas 1 forma
+  de pagamento, deixe "pagamentos" como null e preencha normalmente "banco" e "forma_pagamento"
+  no nível raiz.
 - **Banco "Next"**: se o banco/instituição identificado for a fintech Next — mesmo que apareça no
   documento junto com o nome do parceiro emissor do cartão (ex.: "Next Bradesco", "Next 237
   Bradesco S.A.", "Next Bradescard", ou qualquer variação parecida contendo "Next") — preencha o
