@@ -576,53 +576,13 @@ select option{background:#1e2436;}
     <a href="wiki.html" target="_blank" class="login-guia-link">📖 O que é o Controle Financeiro? Veja o guia de uso</a>
     <a href="changelog.html" target="_blank" class="login-guia-link">🗒️ Veja o histórico de mudanças (changelog)</a>
 
-    <div class="auth-tabs" role="tablist" aria-label="Escolha entre entrar ou criar conta">
-      <button type="button" class="auth-tab active" id="tab-login" role="tab"
-              aria-selected="true" aria-controls="form-login"
-              onclick="mostrarAbaAuth('login')">Entrar</button>
-      <button type="button" class="auth-tab" id="tab-cadastro" role="tab"
-              aria-selected="false" aria-controls="form-cadastro"
-              onclick="mostrarAbaAuth('cadastro')">Criar conta</button>
-    </div>
-
     <div id="auth-error" class="auth-error" role="alert" aria-live="assertive"></div>
     <div id="auth-success" class="auth-success" role="status" aria-live="polite"></div>
 
-    <!-- FORM LOGIN -->
-    <form id="form-login" class="auth-form" onsubmit="event.preventDefault(); fazerLogin();">
-      <div class="form-group">
-        <label for="login-email">E-mail</label>
-        <input type="email" id="login-email" autocomplete="username" required placeholder="seu@email.com">
-      </div>
-      <div class="form-group">
-        <label for="login-senha">Senha</label>
-        <input type="password" id="login-senha" autocomplete="current-password" required placeholder="••••••••">
-      </div>
-      <button type="submit" class="btn btn-primary btn-full" id="btn-login">
-        <span aria-hidden="true">🔓</span> Entrar
-      </button>
-    </form>
-
-    <!-- FORM CADASTRO -->
-    <form id="form-cadastro" class="auth-form" style="display:none;" onsubmit="event.preventDefault(); fazerCadastro();">
-      <div class="form-group">
-        <label for="cadastro-email">E-mail</label>
-        <input type="email" id="cadastro-email" autocomplete="username" required placeholder="seu@email.com">
-      </div>
-      <div class="form-group">
-        <label for="cadastro-senha">Senha</label>
-        <input type="password" id="cadastro-senha" autocomplete="new-password" required minlength="6" placeholder="mínimo 6 caracteres" aria-describedby="cadastro-senha-hint">
-        <span id="cadastro-senha-hint" class="sr-only">Mínimo de 6 caracteres.</span>
-      </div>
-      <div class="form-group">
-        <label for="cadastro-senha-confirma">Confirmar Senha</label>
-        <input type="password" id="cadastro-senha-confirma" autocomplete="new-password" required placeholder="repita a senha">
-      </div>
-      <button type="submit" class="btn btn-primary btn-full" id="btn-cadastro">
-        <span aria-hidden="true">✨</span> Criar Conta
-      </button>
-      <p class="auth-hint">Após criar a conta você poderá ser solicitado a confirmar o e-mail, dependendo da configuração do sistema.</p>
-    </form>
+    <p class="auth-hint" style="margin-top:12px;">O login agora é feito pelo Hub. Entre por lá e clique no módulo Controle Financeiro para acessar.</p>
+    <a href="https://hub.fabioscheffer.workers.dev" class="btn btn-primary btn-full" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;">
+      <span aria-hidden="true">🏠</span> Ir para o Hub
+    </a>
   </div>
 </div>
 
@@ -1514,18 +1474,6 @@ function mostrarToast(msg, isError) {
 // ═══════════════════════════════════════════════════
 //  AUTENTICAÇÃO
 // ═══════════════════════════════════════════════════
-function mostrarAbaAuth(aba) {
-  const isLogin = aba === 'login';
-  document.getElementById('tab-login').classList.toggle('active', isLogin);
-  document.getElementById('tab-cadastro').classList.toggle('active', !isLogin);
-  document.getElementById('tab-login').setAttribute('aria-selected', isLogin);
-  document.getElementById('tab-cadastro').setAttribute('aria-selected', !isLogin);
-  document.getElementById('form-login').style.display    = isLogin ? '' : 'none';
-  document.getElementById('form-cadastro').style.display = isLogin ? 'none' : '';
-  esconderErroAuth();
-  esconderSucessoAuth();
-}
-
 function mostrarErroAuth(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg;
@@ -1541,75 +1489,6 @@ function mostrarSucessoAuth(msg) {
 }
 function esconderSucessoAuth() {
   document.getElementById('auth-success').classList.remove('show');
-}
-
-function traduzirErroAuth(msg) {
-  const m = (msg || '').toLowerCase();
-  if(m.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
-  if(m.includes('user already registered') || m.includes('already registered')) return 'Este e-mail já possui uma conta. Tente entrar.';
-  if(m.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.';
-  if(m.includes('password should be at least')) return 'A senha deve ter pelo menos 6 caracteres.';
-  if(m.includes('unable to validate email')) return 'E-mail inválido.';
-  if(m.includes('rate limit')) return 'Muitas tentativas. Aguarde um momento e tente novamente.';
-  return msg || 'Ocorreu um erro. Tente novamente.';
-}
-
-async function fazerLogin() {
-  esconderErroAuth(); esconderSucessoAuth();
-  const email = document.getElementById('login-email').value.trim();
-  const senha  = document.getElementById('login-senha').value;
-  if(!email || !senha) { mostrarErroAuth('Preencha e-mail e senha.'); return; }
-
-  const btn = document.getElementById('btn-login');
-  const textoOriginal = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Entrando...';
-
-  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
-
-  btn.disabled = false;
-  btn.innerHTML = textoOriginal;
-
-  if(error) {
-    mostrarErroAuth(traduzirErroAuth(error.message));
-    return;
-  }
-  // Sucesso: onAuthStateChange chama iniciarAppLogado() automaticamente
-}
-
-async function fazerCadastro() {
-  esconderErroAuth(); esconderSucessoAuth();
-  const email   = document.getElementById('cadastro-email').value.trim();
-  const senha    = document.getElementById('cadastro-senha').value;
-  const confirma = document.getElementById('cadastro-senha-confirma').value;
-
-  if(!email || !senha || !confirma) { mostrarErroAuth('Preencha todos os campos.'); return; }
-  if(senha.length < 6) { mostrarErroAuth('A senha deve ter pelo menos 6 caracteres.'); return; }
-  if(senha !== confirma) { mostrarErroAuth('As senhas não coincidem.'); document.getElementById('cadastro-senha-confirma').focus(); return; }
-
-  const btn = document.getElementById('btn-cadastro');
-  const textoOriginal = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Criando conta...';
-
-  const { data, error } = await sb.auth.signUp({ email, password: senha });
-
-  btn.disabled = false;
-  btn.innerHTML = textoOriginal;
-
-  if(error) {
-    mostrarErroAuth(traduzirErroAuth(error.message));
-    return;
-  }
-
-  // Se a confirmação de e-mail estiver desabilitada, já vem com sessão ativa
-  // e onAuthStateChange cuida do resto. Se estiver habilitada, avisamos.
-  if(data && data.session) {
-    return;
-  }
-  mostrarSucessoAuth('Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
-  document.getElementById('form-cadastro').reset();
-  mostrarAbaAuth('login');
 }
 
 // ═══════════════════════════════════════════════════
@@ -5584,7 +5463,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     history.replaceState(null, '', location.pathname + location.search);
   }
-  mostrarAbaAuth("login");
 });
 </script>
 </body>
