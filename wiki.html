@@ -213,7 +213,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#visao-geral">Visão Geral</a>
       <a href="#abas">As 6 Abas do App</a>
       <a href="#conta">Conta e Acesso</a>
-      <a href="#conta-criar" class="sub">Criar conta e entrar</a>
+      <a href="#conta-criar" class="sub">Como entrar</a>
       <a href="#conta-migracao" class="sub">Migração de dados antigos</a>
       <a href="#conta-saida" class="sub">Sair da conta</a>
       <a href="#leitor-ia">Leitor de Notas com IA</a>
@@ -308,17 +308,29 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <h2><span aria-hidden="true">🔐</span> Conta e Acesso</h2>
       <p class="secao-desc">Como entrar, migrar dados antigos e sair</p>
 
-      <h3 id="conta-criar">Criar conta e entrar</h3>
-      <p>Na tela inicial você escolhe entre duas abas:</p>
-      <ul>
-        <li><strong>Entrar</strong> — para quem já tem conta. Informe e-mail e senha.</li>
-        <li><strong>Criar conta</strong> — informe e-mail, senha (mínimo 6 caracteres) e confirme a senha.</li>
-      </ul>
+      <h3 id="conta-criar">Como entrar</h3>
+      <p>O login do Controle Financeiro agora é feito pelo <strong>Hub</strong> — um portal único que reúne todos os módulos (Banca Pro, Controle Financeiro, Plano de Saúde). Ao abrir o Controle Financeiro sem estar logado, aparece uma tela com um botão <strong>🏠 Ir para o Hub</strong>.</p>
+      <ol class="passos">
+        <li class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">Toque em <strong>🏠 Ir para o Hub</strong>.</div>
+        </li>
+        <li class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">No Hub, faça login com e-mail e senha (ou com sua conta Google, se essa opção estiver habilitada).</div>
+        </li>
+        <li class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Na tela de módulos do Hub, toque em <strong>Controle Financeiro</strong> — você entra direto, sem precisar digitar login de novo.</div>
+        </li>
+      </ol>
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">💡</span>
-        <span><strong>Confirmação de e-mail:</strong> dependendo da configuração do sistema, pode ser
-        pedido que você confirme seu e-mail antes do primeiro login. Se isso acontecer, verifique sua
-        caixa de entrada (e o spam) após criar a conta.</span>
+        <span><strong>Um login para todos os módulos:</strong> como o login é centralizado no Hub, uma vez logado lá você pode alternar entre Controle Financeiro, Banca Pro e Plano de Saúde sem repetir e-mail e senha em cada um.</span>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span><strong>Criação de conta:</strong> contas novas não são mais criadas dentro do Controle Financeiro. Isso é feito pelo administrador, ou pelo próprio Hub, dependendo da configuração de autocadastro do sistema.</span>
       </div>
 
       <h3 id="conta-migracao">Migração de dados antigos</h3>
