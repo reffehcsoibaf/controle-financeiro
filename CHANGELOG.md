@@ -4,6 +4,16 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.15.1 — 11/08/2026
+
+- **Seletor "Itens por página" movido para a tabela de Lançamentos**: para deixar consistente com
+  as demais tabelas do app (que já tinham seu próprio seletor logo abaixo delas), o controle que
+  antes ficava isolado na aba Configurações → Exibição agora vive junto da paginação da tabela de
+  Lançamentos, ao lado dos botões Primeira/Anterior/Próxima/Última. A seção "Exibição" foi
+  removida de Configurações, já que não tinha mais nada além desse controle.
+  - Comportamento e preferência salva no navegador continuam os mesmos — só mudou onde o
+    controle aparece.
+
 ## v1.15.0 — 11/08/2026
 
 - **Retrair/expandir itens de lançamentos múltiplos**: na tabela de Lançamentos, o selo "N itens"

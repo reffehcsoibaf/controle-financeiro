@@ -1023,12 +1023,22 @@ select option{background:#1e2436;}
     </div>
     <nav class="pag-nav" id="pag-nav" aria-label="Paginação de lançamentos" style="display:none;">
       <span class="pag-info" id="pag-info" aria-live="polite" aria-atomic="true"></span>
-      <div class="pag-botoes">
+      <div class="pag-botoes" id="pag-botoes">
         <button type="button" class="btn btn-secondary" id="pag-primeira" onclick="irParaPagina(1)" aria-label="Ir para a primeira página">⏮ Primeira</button>
         <button type="button" class="btn btn-secondary" id="pag-anterior" onclick="irParaPagina(paginaAtual-1)" aria-label="Ir para a página anterior">◀ Anterior</button>
         <button type="button" class="btn btn-secondary" id="pag-proxima" onclick="irParaPagina(paginaAtual+1)" aria-label="Ir para a próxima página">Próxima ▶</button>
         <button type="button" class="btn btn-secondary" id="pag-ultima" onclick="irParaPagina(totalPaginas())" aria-label="Ir para a última página">Última ⏭</button>
       </div>
+      <label class="pag-generica-select-label">Itens por página
+        <select id="cfg-itens-por-pagina" onchange="alterarItensPorPagina(this.value)" aria-label="Itens por página">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="0">Todos</option>
+        </select>
+      </label>
     </nav>
   </section>
 
@@ -1136,22 +1146,6 @@ select option{background:#1e2436;}
 
   <!-- ══════ PAINEL: CONFIGURAÇÕES ══════ -->
   <div id="painel-config" role="tabpanel" aria-labelledby="tab-btn-config" tabindex="0" hidden>
-
-  <!-- ══ PREFERÊNCIAS DE EXIBIÇÃO ══ -->
-  <section class="card" aria-labelledby="titulo-exibicao">
-    <h2 class="card-title" id="titulo-exibicao"><span aria-hidden="true">🖥️</span> Exibição</h2>
-    <div class="form-group" style="max-width:260px;">
-      <label for="cfg-itens-por-pagina">Itens por página (Lançamentos)</label>
-      <select id="cfg-itens-por-pagina" onchange="alterarItensPorPagina(this.value)">
-        <option value="10">10</option>
-        <option value="25">25</option>
-        <option value="50" selected>50</option>
-        <option value="100">100</option>
-        <option value="200">200</option>
-        <option value="0">Mostrar todos (sem paginação)</option>
-      </select>
-    </div>
-  </section>
 
   <!-- ══ EXPORTAR / IMPORTAR / DUPLICADOS ══ -->
   <section class="card" aria-labelledby="titulo-dados">
@@ -1386,7 +1380,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.15.0 · 11/08/2026
+  Controle Financeiro · v1.15.1 · 11/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -4679,16 +4673,21 @@ function totalPaginas(){
 function renderizarPaginacao(totalPag, qtd){
   const nav = document.getElementById('pag-nav');
   const info = document.getElementById('pag-info');
-  if(itensPorPagina<=0 || qtd===0 || totalPag<=1){
+  const botoes = document.getElementById('pag-botoes');
+  if(qtd===0){
     nav.style.display='none';
     return;
   }
   nav.style.display='';
-  info.textContent='Página '+paginaAtual+' de '+totalPag;
-  document.getElementById('pag-primeira').disabled  = paginaAtual<=1;
-  document.getElementById('pag-anterior').disabled  = paginaAtual<=1;
-  document.getElementById('pag-proxima').disabled   = paginaAtual>=totalPag;
-  document.getElementById('pag-ultima').disabled    = paginaAtual>=totalPag;
+  const mostrarBotoes = itensPorPagina>0 && totalPag>1;
+  botoes.style.display = mostrarBotoes ? '' : 'none';
+  info.textContent = mostrarBotoes ? ('Página '+paginaAtual+' de '+totalPag) : (qtd+' lançamento'+(qtd!==1?'s':''));
+  if(mostrarBotoes){
+    document.getElementById('pag-primeira').disabled  = paginaAtual<=1;
+    document.getElementById('pag-anterior').disabled  = paginaAtual<=1;
+    document.getElementById('pag-proxima').disabled   = paginaAtual>=totalPag;
+    document.getElementById('pag-ultima').disabled    = paginaAtual>=totalPag;
+  }
 }
 
 function irParaPagina(n){
