@@ -156,11 +156,36 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.15.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-15-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-15-0"><span aria-hidden="true">🏷️</span> v1.15.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">11/08/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🧾</span> Retrair/expandir itens de lançamentos múltiplos</h3>
+          <ul>
+            <li>Na tabela de <strong>Lançamentos</strong>, o selo "N itens" de um lançamento múltiplo agora é um botão — clique para expandir e ver as sub-linhas de cada item, ou para retrair de volta e deixar a tabela mais compacta. Por padrão os itens começam retraídos.</li>
+            <li>Novos botões <strong>Expandir todos</strong> e <strong>Retrair todos</strong> no cabeçalho da tabela de Lançamentos, para abrir ou fechar de uma vez os itens de todos os lançamentos múltiplos visíveis.</li>
+            <li>Acessível: o botão usa <code>aria-expanded</code> e o leitor de tela anuncia quando os itens são expandidos ou retraídos.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📑</span> Paginação padronizada em todas as tabelas</h3>
+          <ul>
+            <li>Além da tabela de Lançamentos (que já tinha), agora também têm paginação com as mesmas opções — <strong>10, 25, 50, 100, 200 ou Todos</strong> — as tabelas de <strong>Documentos</strong> guardados na nuvem, <strong>Correções Aprendidas (IA)</strong>, <strong>Gerenciar Listas</strong> (uma paginação independente por campo: Banco/Cartão, Categoria, Credor, Devedor, Forma de Pagamento, Estabelecimento) e <strong>Contas e Cartões</strong> (aba Saldos).</li>
+            <li>A preferência de itens por página é salva por tabela no navegador, e a navegação (Primeira/Anterior/Próxima/Última) segue o mesmo padrão visual já usado em Lançamentos.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.14.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-14-0">
+      <section class="versao-bloco" aria-labelledby="v1-14-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-14-0"><span aria-hidden="true">🏷️</span> v1.14.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">08/08/2026</span>
         </div>
 

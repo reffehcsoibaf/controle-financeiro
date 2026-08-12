@@ -514,6 +514,36 @@ input[type="checkbox"]:checked::after{
   .pag-botoes .btn{flex:1;}
 }
 
+/* ── PAGINAÇÃO GENÉRICA (Documentos, Correções IA, Gerenciar Listas, Contas) ── */
+.pag-generica{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:12px;color:var(--text3);
+}
+.pag-generica-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.pag-generica-nav .btn{padding:5px 9px;font-size:11px;}
+.pag-generica-nav .btn:disabled{opacity:.4;}
+.pag-generica-pagina{font-size:12px;color:var(--text3);white-space:nowrap;}
+.pag-generica-select-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);}
+.pag-generica-select-label select{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);padding:4px 8px;font-size:12px;font-family:inherit;cursor:pointer;
+}
+@media(max-width:640px){
+  .pag-generica{flex-direction:column;align-items:stretch;}
+}
+
+/* ── EXPANDIR/RETRAIR ITENS DE LANÇAMENTO MÚLTIPLO ── */
+.btn-expandir-itens{
+  display:inline-flex;align-items:center;gap:3px;
+  border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;
+  background:rgba(20,184,166,.15);color:var(--teal);
+  border-radius:20px;padding:3px 9px;transition:background .15s;
+}
+.btn-expandir-itens:hover{background:rgba(20,184,166,.28);}
+.btn-expandir-itens:focus-visible{outline:3px solid var(--teal);outline-offset:2px;}
+.expandir-seta{display:inline-block;font-size:10px;}
+
 /* ── EMPTY STATE ── */
 .empty-state{text-align:center;padding:48px 20px;color:var(--text3);}
 .empty-icon{font-size:40px;margin-bottom:12px;}
@@ -951,6 +981,14 @@ select option{background:#1e2436;}
         <h2 class="card-title" id="titulo-tabela" style="margin-bottom:4px;"><span aria-hidden="true">📋</span> Lançamentos</h2>
         <div class="table-info" id="table-info" aria-live="polite" aria-atomic="true">0 registros</div>
       </div>
+      <div class="table-actions">
+        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="expandirTodosItens()" aria-label="Expandir os itens de todos os lançamentos múltiplos">
+          <span aria-hidden="true">▾</span> Expandir todos
+        </button>
+        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="retrairTodosItens()" aria-label="Retrair os itens de todos os lançamentos múltiplos">
+          <span aria-hidden="true">▸</span> Retrair todos
+        </button>
+      </div>
     </div>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Tabela de lançamentos — role horizontalmente se necessário">
       <table id="tabela-lancamentos" aria-label="Lançamentos financeiros" aria-describedby="table-info">
@@ -1090,6 +1128,7 @@ select option{background:#1e2436;}
         <tbody id="documentos-armazenados-lista"></tbody>
       </table>
     </div>
+    <div id="documentos-pag-nav"></div>
   </section>
 
   </div>
@@ -1347,7 +1386,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.14.0 · 08/08/2026
+  Controle Financeiro · v1.15.0 · 11/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1392,6 +1431,11 @@ let documentoParaVincularNome = '';
 // Paginação da tabela de Lançamentos. 0 = sem paginação (mostrar todos).
 let itensPorPagina = parseInt(localStorage.getItem('cf_itens_por_pagina')) || 50;
 let paginaAtual     = 1;
+
+// IDs de lançamentos múltiplos (com "itens") cujas sub-linhas estão expandidas
+// na tabela de Lançamentos. Vazio por padrão = todos retraídos, mostrando só
+// a linha-resumo com o selo "N itens" até o usuário clicar para expandir.
+let itensExpandidos = new Set();
 let modalCampo            = null;
 let modalOrigemBotaoId    = null;
 // Modo de edição do modal genérico (openModal): quando true, o modal serve
@@ -2280,6 +2324,8 @@ function renderCorrecoesIA() {
     return;
   }
   const ordenadas = correcoesIA.slice().sort((a,b) => (b.criadoEm||'').localeCompare(a.criadoEm||''));
+  pagRenderers.correcoesIA = renderCorrecoesIA;
+  const infoPag = pagFatiar('correcoesIA', ordenadas);
   container.innerHTML =
     '<div class="table-wrap">' +
       '<table aria-label="Correções aprendidas pela IA">' +
@@ -2291,7 +2337,7 @@ function renderCorrecoesIA() {
           '<th scope="col">Ações</th>' +
         '</tr></thead>' +
         '<tbody>' +
-          ordenadas.map(c => (
+          infoPag.pagina.map(c => (
             '<tr>' +
               '<td>'+escaparHTML(CAMPOS_NOMES[c.campo]||c.campo)+'</td>' +
               '<td style="white-space:normal;word-break:break-word;">'+escaparHTML(c.valorErrado)+'</td>' +
@@ -2309,7 +2355,8 @@ function renderCorrecoesIA() {
           )).join('') +
         '</tbody>' +
       '</table>' +
-    '</div>';
+    '</div>' +
+    pagNavHTML('correcoesIA', infoPag, 'correções');
 }
 
 // Abre o modal de edição de uma correção aprendida já existente, permitindo
@@ -2714,11 +2761,19 @@ function limparFiltroDocumentos() {
 // "Analisar". Começa true para não esconder nada antes da primeira checagem.
 let iaHabilitadaAtual = true;
 
+// Guarda a última lista filtrada, para que a navegação de página (que só
+// troca de página, sem refazer a busca) redesenhe com o mesmo filtro.
+let documentosUltimoFiltro = null;
+
 function renderizarDocumentosArmazenados(lista) {
   const container = document.getElementById('documentos-armazenados-lista');
+  const navContainer = document.getElementById('documentos-pag-nav');
   const info = document.getElementById('documentos-info');
   if(!container) return;
-  const itens = lista || documentosArmazenados;
+  if(lista !== undefined) documentosUltimoFiltro = lista;
+  const itens = documentosUltimoFiltro || documentosArmazenados;
+
+  pagRenderers.documentos = () => renderizarDocumentosArmazenados();
 
   if(!documentosArmazenados.length) {
     container.innerHTML = '<tr><td colspan="5">' +
@@ -2728,6 +2783,7 @@ function renderizarDocumentosArmazenados(lista) {
       '</div>' +
     '</td></tr>';
     if(info) info.textContent = '0 documentos';
+    if(navContainer) navContainer.innerHTML = '';
     return;
   }
   if(!itens.length) {
@@ -2738,13 +2794,17 @@ function renderizarDocumentosArmazenados(lista) {
       '</div>' +
     '</td></tr>';
     if(info) info.textContent = '0 documentos (filtrados de ' + documentosArmazenados.length + ')';
+    if(navContainer) navContainer.innerHTML = '';
     return;
   }
 
   if(info) info.textContent = itens.length + ' documento' + (itens.length!==1?'s':'') +
     (itens.length !== documentosArmazenados.length ? ' (de ' + documentosArmazenados.length + ' no total)' : '');
 
-  container.innerHTML = itens.map(doc => {
+  const infoPag = pagFatiar('documentos', itens);
+  if(navContainer) navContainer.innerHTML = pagNavHTML('documentos', infoPag, 'documentos');
+
+  container.innerHTML = infoPag.pagina.map(doc => {
     const lancVinc = doc.lancamento_id ? lancamentos.find(l => l.id === doc.lancamento_id) : null;
     let celulaVinculo;
     if(lancVinc) {
@@ -3229,7 +3289,11 @@ function renderizarListasConfig() {
   if(!container) return;
 
   container.innerHTML = CAMPOS_SELECT.map(campo => {
-    const lista = opcoesSelects[campo] || [];
+    const listaCompleta = opcoesSelects[campo] || [];
+    const chavePag = 'listaOpcoes-' + campo;
+    pagRenderers[chavePag] = renderizarListasConfig;
+    const infoPag = pagFatiar(chavePag, listaCompleta);
+    const lista = infoPag.pagina;
     const corpoTabela = lista.length
       ? lista.map(valor =>
           '<tr>' +
@@ -3257,6 +3321,7 @@ function renderizarListasConfig() {
             '<tbody>'+corpoTabela+'</tbody>' +
           '</table>' +
         '</div>' +
+        pagNavHTML(chavePag, infoPag, 'opções') +
         '<div class="config-lista-add">' +
           '<label for="cfg-add-'+campo+'" class="sr-only">Nova opção para '+CAMPOS_NOMES[campo]+'</label>' +
           '<input type="text" id="cfg-add-'+campo+'" placeholder="Nova opção..." ' +
@@ -4536,6 +4601,7 @@ function renderizarTabela() {
     const vNeg = l.valor<0;
     const docVinculado = documentosArmazenados.find(d => d.lancamento_id === l.id);
 
+    const expandido = temItens && itensExpandidos.has(l.id);
     const rotuloLinha = 'Lançamento: '+fmtData(l.dataOrigem)+', '+(l.banco||'sem banco informado')+', '+fmtValor(l.valor)+', '+(l.pago?'pago':'pendente')+
       (docVinculado ? ', com documento vinculado' : '')+'.';
 
@@ -4546,7 +4612,14 @@ function renderizarTabela() {
       '<td><div class="chk-wrap"><label class="chk-label"><input type="checkbox"'+(l.pago?' checked':'')+
         ' tabindex="-1" aria-label="'+chkLabel+'" onchange="togglePago('+l.id+',this)"></label></div></td>'+
       '<td>'+
-          (temItens?'<span class="badge badge-multi" aria-label="'+l.itens.length+' itens">'+l.itens.length+' itens</span>':'')+
+          (temItens?
+            '<button type="button" class="badge badge-multi btn-expandir-itens" tabindex="-1" '+
+              'onclick="toggleItensLancamento('+l.id+')" '+
+              'aria-expanded="'+expandido+'" '+
+              'aria-label="'+l.itens.length+' itens — clique para '+(expandido?'retrair':'expandir')+'">'+
+              '<span class="expandir-seta" aria-hidden="true">'+(expandido?'▾':'▸')+'</span> '+l.itens.length+' itens'+
+            '</button>'
+            :'')+
           (docVinculado?'<span class="badge" style="background:rgba(79,124,255,.15);color:var(--accent);margin-left:4px;" aria-hidden="true" title="Documento vinculado">📎</span>':'')+
           (!temItens && !docVinculado?'<span aria-hidden="true" style="color:var(--text3);">—</span>':'')+
       '</td>'+
@@ -4574,12 +4647,12 @@ function renderizarTabela() {
       '</tr>'
     );
 
-    // Sub-linhas de itens
-    if(temItens) {
+    // Sub-linhas de itens — só aparecem quando o lançamento está expandido
+    if(temItens && expandido) {
       l.itens.forEach((item,idx)=>{
         const ivNeg=item.valor<0;
         linhas.push(
-          '<tr class="sub-row" aria-label="Item '+(idx+1)+' de '+l.itens.length+'">'+
+          '<tr class="sub-row" data-lancamento-pai="'+l.id+'" aria-label="Item '+(idx+1)+' de '+l.itens.length+'">'+
           '<td></td>'+
           '<td style="color:var(--text3);font-style:italic;">Item '+(idx+1)+'</td>'+
           '<td colspan="2"></td>'+
@@ -4639,6 +4712,125 @@ function alterarItensPorPagina(valor){
     : 'Agora mostrando todos os lançamentos, sem paginação.');
 }
 
+// Retrai/expande as sub-linhas de itens de um lançamento múltiplo, mantendo
+// a posição de rolagem (não refaz a página nem os filtros — só troca o
+// estado desse lançamento e redesenha a tabela).
+function toggleItensLancamento(id){
+  if(itensExpandidos.has(id)){
+    itensExpandidos.delete(id);
+    anunciar('Itens retraídos.');
+  } else {
+    itensExpandidos.add(id);
+    anunciar('Itens expandidos.');
+  }
+  renderizarTabela();
+}
+
+// Expande/retrai de uma vez todos os lançamentos múltiplos visíveis na
+// página atual da tabela.
+function expandirTodosItens(){
+  lancamentosFiltrados.filter(l=>l.itens&&l.itens.length).forEach(l=>itensExpandidos.add(l.id));
+  renderizarTabela();
+  anunciar('Todos os itens expandidos.');
+}
+function retrairTodosItens(){
+  itensExpandidos.clear();
+  renderizarTabela();
+  anunciar('Todos os itens retraídos.');
+}
+
+// ═══════════════════════════════════════════════════
+//  PAGINAÇÃO GENÉRICA — reaproveitada por todas as demais
+//  tabelas da app (Documentos, Correções IA, Gerenciar Listas,
+//  Contas e Cartões), com as mesmas opções de itens por página
+//  usadas na tabela de Lançamentos: 10, 25, 50, 100, 200 ou Todos.
+// ═══════════════════════════════════════════════════
+const OPCOES_ITENS_POR_PAGINA = [10,25,50,100,200,0]; // 0 = todos
+const paginacaoGenerica = {}; // chave -> {itensPorPagina, paginaAtual}
+
+function pagGetEstado(chave, padrao){
+  if(!paginacaoGenerica[chave]){
+    const salvo = parseInt(localStorage.getItem('cf_pag_'+chave));
+    paginacaoGenerica[chave] = {
+      itensPorPagina: OPCOES_ITENS_POR_PAGINA.includes(salvo) ? salvo : (padrao!==undefined ? padrao : 50),
+      paginaAtual: 1
+    };
+  }
+  return paginacaoGenerica[chave];
+}
+
+// Recorta `lista` conforme a página atual salva para `chave` e devolve a
+// fatia junto com os metadados necessários para desenhar a navegação.
+function pagFatiar(chave, lista, padrao){
+  const est = pagGetEstado(chave, padrao);
+  const total = lista.length;
+  const totalPag = est.itensPorPagina>0 ? Math.max(1, Math.ceil(total/est.itensPorPagina)) : 1;
+  if(est.paginaAtual>totalPag) est.paginaAtual = totalPag;
+  if(est.paginaAtual<1) est.paginaAtual = 1;
+  const pagina = est.itensPorPagina>0
+    ? lista.slice((est.paginaAtual-1)*est.itensPorPagina, est.paginaAtual*est.itensPorPagina)
+    : lista;
+  return { pagina, total, totalPag, itensPorPagina: est.itensPorPagina, paginaAtual: est.paginaAtual };
+}
+
+// Monta o HTML do controle de paginação (contador + navegação + seletor de
+// itens por página) para inserir logo abaixo de qualquer tabela paginada.
+function pagNavHTML(chave, info, rotuloItem){
+  if(info.total===0) return '';
+  rotuloItem = rotuloItem || 'itens';
+  const de  = info.itensPorPagina>0 ? (info.paginaAtual-1)*info.itensPorPagina+1 : 1;
+  const ate = info.itensPorPagina>0 ? Math.min(info.paginaAtual*info.itensPorPagina, info.total) : info.total;
+  const opts = OPCOES_ITENS_POR_PAGINA.map(v=>
+    '<option value="'+v+'"'+(v===info.itensPorPagina?' selected':'')+'>'+(v===0?'Todos':v)+'</option>'
+  ).join('');
+  return (
+    '<div class="pag-generica" data-pag-chave="'+chave+'">' +
+      '<span aria-live="polite" aria-atomic="true">'+de+'–'+ate+' de '+info.total+' '+rotuloItem+'</span>' +
+      (info.totalPag>1 ?
+        '<div class="pag-generica-nav">' +
+          '<button type="button" class="btn btn-secondary" data-pag-ir="1" '+(info.paginaAtual<=1?'disabled':'')+' aria-label="Primeira página">⏮</button>' +
+          '<button type="button" class="btn btn-secondary" data-pag-ir="'+(info.paginaAtual-1)+'" '+(info.paginaAtual<=1?'disabled':'')+' aria-label="Página anterior">◀</button>' +
+          '<span class="pag-generica-pagina">Página '+info.paginaAtual+' de '+info.totalPag+'</span>' +
+          '<button type="button" class="btn btn-secondary" data-pag-ir="'+(info.paginaAtual+1)+'" '+(info.paginaAtual>=info.totalPag?'disabled':'')+' aria-label="Próxima página">▶</button>' +
+          '<button type="button" class="btn btn-secondary" data-pag-ir="'+info.totalPag+'" '+(info.paginaAtual>=info.totalPag?'disabled':'')+' aria-label="Última página">⏭</button>' +
+        '</div>' : '') +
+      '<label class="pag-generica-select-label">Itens por página ' +
+        '<select data-pag-tam aria-label="Itens por página">'+opts+'</select>' +
+      '</label>' +
+    '</div>'
+  );
+}
+
+// Cada tabela paginada registra aqui sua própria função de re-render, para
+// que o clique num botão de navegação ou a troca do seletor "itens por
+// página" saiba o que redesenhar.
+const pagRenderers = {};
+
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('[data-pag-ir]');
+  if(!btn || btn.disabled) return;
+  const wrap = btn.closest('[data-pag-chave]');
+  if(!wrap) return;
+  const chave = wrap.dataset.pagChave;
+  const n = parseInt(btn.dataset.pagIr);
+  const est = pagGetEstado(chave);
+  if(!n || n===est.paginaAtual) return;
+  est.paginaAtual = n;
+  if(pagRenderers[chave]) pagRenderers[chave]();
+});
+document.addEventListener('change', e=>{
+  const sel = e.target.closest('[data-pag-tam]');
+  if(!sel) return;
+  const wrap = sel.closest('[data-pag-chave]');
+  if(!wrap) return;
+  const chave = wrap.dataset.pagChave;
+  const est = pagGetEstado(chave);
+  est.itensPorPagina = parseInt(sel.value) || 0;
+  est.paginaAtual = 1;
+  localStorage.setItem('cf_pag_'+chave, String(est.itensPorPagina));
+  if(pagRenderers[chave]) pagRenderers[chave]();
+});
+
 // ═══════════════════════════════════════════════════
 //  SALDOS
 // ═══════════════════════════════════════════════════
@@ -4668,7 +4860,10 @@ function renderizarContasConfig() {
     return;
   }
 
-  const linhas = bancos.map(nome => {
+  pagRenderers.contasConfig = renderizarContasConfig;
+  const infoPag = pagFatiar('contasConfig', bancos);
+
+  const linhas = infoPag.pagina.map(nome => {
     const cfg  = contasConfig[nome] || {};
     const tipo = cfg.tipo || '';
     const idSafe = 'conta-' + nome.replace(/[^a-zA-Z0-9]/g,'_');
@@ -4704,7 +4899,8 @@ function renderizarContasConfig() {
         '</tr></thead>' +
         '<tbody>'+linhas+'</tbody>' +
       '</table>' +
-    '</div>';
+    '</div>' +
+    pagNavHTML('contasConfig', infoPag, 'contas/cartões');
 
   atualizarContas();
 }
