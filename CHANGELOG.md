@@ -4,6 +4,15 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.16.0 — 16/08/2026
+
+- **Validação de soma de itens ao preencher com IA**: quando o formulário é preenchido a partir de
+  um documento lido pela IA, a soma dos valores dos itens múltiplos não pode mais exceder o valor
+  total extraído do documento — o app avisa e trunca o valor para o máximo permitido. Isso previne
+  erros de digitação que resultariam em um lançamento maior do que o documento original.
+- **Rótulos simplificados para itens**: o campo de valor dos itens agora usa rótulos mais diretos
+  — "Valor do item 1", "Valor do item 2", etc. — removendo o contorno verboso anterior.
+
 ## v1.15.1 — 11/08/2026
 
 - **Seletor "Itens por página" movido para a tabela de Lançamentos**: para deixar consistente com

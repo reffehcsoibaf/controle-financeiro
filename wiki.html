@@ -610,6 +610,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
         <span class="callout-icon" aria-hidden="true">💡</span>
         <span><strong>Desconto:</strong> adicione um item com valor <strong>negativo</strong> (ex.: <code>-10,00</code>) para descontar do total — útil quando a nota tem um desconto que não é um item de verdade. O toggle Entrada/Saída continua controlando a direção do total líquido.</span>
       </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span><strong>Validação com IA:</strong> quando o formulário é preenchido a partir de um documento lido pela IA, a soma dos valores dos itens não pode exceder o valor total extraído do documento. Se você tentar digitar um valor que faria ultrapassar esse máximo, o app avisa e trunca o valor para o permitido — evitando erros que resultariam em um lançamento maior do que o documento original.</span>
+      </div>
       <p>
         Na tabela, lançamentos com itens mostram um selo <span class="badge badge-multi">▸ 3 itens</span>
         na coluna Detalhes. Clique nele para expandir e ver uma linha de detalhe abaixo da linha

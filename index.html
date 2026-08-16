@@ -1380,7 +1380,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.15.1 · 11/08/2026
+  Controle Financeiro · v1.16.0 · 16/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1421,6 +1421,10 @@ let parcelaEmEdicao       = '';
 // guardado) e limpo ao salvar, limpar o formulário, ou editar outro lançamento.
 let documentoParaVincularId   = null;
 let documentoParaVincularNome = '';
+
+// Valor do documento lido pela IA — usado para validar que a soma dos itens
+// não ultrapasse o valor original do documento. Resetado ao limpar o formulário.
+let valorDocumentoIA = null;
 
 // Paginação da tabela de Lançamentos. 0 = sem paginação (mostrar todos).
 let itensPorPagina = parseInt(localStorage.getItem('cf_itens_por_pagina')) || 50;
@@ -3084,6 +3088,19 @@ function aplicarDadosIAaoFormulario(dados) {
   const preenchidos = [];
   const naoEncontrados = [];
 
+  // Registra o valor do documento para validação de soma de itens
+  // Se há itens, calcula a soma; senão, usa o valor principal extraído
+  const itensIA = Array.isArray(dados.itens) ? dados.itens.filter(i => i && !isNaN(parseFloat(i.valor))) : [];
+  const usarItens = itensIA.length >= 2;
+  
+  if(usarItens) {
+    valorDocumentoIA = Math.abs(
+      itensIA.reduce((soma, itemIA) => soma + Math.abs(parseFloat(itemIA.valor)), 0)
+    );
+  } else if(dados.valor !== null && dados.valor !== undefined && !isNaN(parseFloat(dados.valor))) {
+    valorDocumentoIA = Math.abs(parseFloat(dados.valor));
+  }
+
   // Data
   if(dados.data) {
     const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dados.data);
@@ -3114,8 +3131,6 @@ function aplicarDadosIAaoFormulario(dados) {
   // Itens múltiplos: só entram em jogo quando a IA identificou 2 ou mais
   // produtos/serviços distintos no documento (ex.: nota de mercado). Com 1
   // item só, ou sem itens, o lançamento continua simples como sempre foi.
-  const itensIA = Array.isArray(dados.itens) ? dados.itens.filter(i => i && !isNaN(parseFloat(i.valor))) : [];
-  const usarItens = itensIA.length >= 2;
   let categoriasItemNaoReconhecidas = 0;
 
   if(usarItens) {
@@ -3659,7 +3674,7 @@ function adicionarItem(dados) {
 
     // Valor do item
     '<div class="form-group">' +
-      '<label for="item-val-'+id+'">Valor do item <span class="sr-only">(item '+idx+')</span></label>' +
+      '<label for="item-val-'+id+'">Valor do item '+idx+'</label>' +
       '<input type="number" id="item-val-'+id+'" step="0.01"' +
              ' placeholder="Ex.: 50,00 (ou -10,00 para desconto)"' +
              ' aria-describedby="itens-total-badge"' +
@@ -3737,7 +3752,34 @@ function onItemValorInput(id, el) {
   const v = parseFloat(el.value);
   el.classList.toggle('negativo', !isNaN(v) && v<0);
   const item = itensFormulario.find(i=>i.id===id);
-  if(item) item.valor = el.value;
+  if(!item) return;
+  
+  // Validação: se há um valor máximo (documento lido por IA), 
+  // impedir que a soma dos itens ultrapasse esse valor
+  if(valorDocumentoIA !== null && !isNaN(v)) {
+    const outrosItens = itensFormulario
+      .filter(it => it.id !== id)
+      .reduce((soma, it) => soma + Math.abs(parseFloat(it.valor) || 0), 0);
+    const valorAbsoluto = Math.abs(v);
+    
+    if(outrosItens + valorAbsoluto > valorDocumentoIA) {
+      const maxPermitido = Math.max(0, valorDocumentoIA - outrosItens);
+      anunciar('Aviso: a soma dos itens não pode exceder ' + fmtValor(valorDocumentoIA) + ' (valor do documento). Máximo para este item: ' + fmtValor(maxPermitido) + '.', true);
+      
+      // Trunca o valor para o máximo permitido
+      if(maxPermitido > 0) {
+        el.value = maxPermitido.toFixed(2);
+      } else {
+        el.value = '';
+      }
+      item.valor = el.value;
+      atualizarTotalItens();
+      atualizarNotaValor();
+      return;
+    }
+  }
+  
+  item.valor = el.value;
   atualizarTotalItens();
   atualizarNotaValor();
 }
@@ -4373,6 +4415,7 @@ function limparFormulario() {
   });
   editandoId=null;
   parcelaEmEdicao='';
+  valorDocumentoIA=null;
   document.getElementById('f-pago').checked = false;
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
@@ -4385,6 +4428,7 @@ function editarLancamento(id) {
   const l = lancamentos.find(x=>x.id===id);
   if(!l) return;
   editandoId=id;
+  valorDocumentoIA=null; // Ao editar um lançamento existente, não há restrição de IA
   limparVinculoDocumentoPendente(); // edição de um lançamento existente não herda vínculo pendente de outra análise
   document.getElementById('f-data-origem').value     = l.dataOrigem;
   document.getElementById('f-data-vencimento').value = l.dataVencimento;
