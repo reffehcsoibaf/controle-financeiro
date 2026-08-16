@@ -3676,7 +3676,6 @@ function adicionarItem(dados) {
     '<div class="form-group">' +
       '<label for="item-val-'+id+'">Valor do item '+idx+'</label>' +
       '<input type="number" id="item-val-'+id+'" step="0.01"' +
-             ' placeholder="Ex.: 50,00 (ou -10,00 para desconto)"' +
              ' aria-describedby="itens-total-badge"' +
              ' value="'+(dados&&dados.valor!==''?dados.valor:'')+'"' +
              ' oninput="onItemValorInput('+id+', this)" autocomplete="off">' +
