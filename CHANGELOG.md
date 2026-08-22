@@ -4,6 +4,13 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.16.1 — 22/08/2026
+
+- **Quantidade/peso nos itens lidos por IA**: quando uma nota fiscal com múltiplos itens mostra a
+  quantidade (ex.: "2 UN") ou o peso (ex.: "0,536 kg") de cada produto, essa informação agora entra
+  automaticamente na Descrição daquele item, junto com o nome do produto — antes ela era descartada
+  pela leitura da IA. Só é preenchida quando o documento mostra esse dado explicitamente.
+
 ## v1.16.0 — 16/08/2026
 
 - **Validação de soma de itens ao preencher com IA**: quando o formulário é preenchido a partir de

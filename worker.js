@@ -57,6 +57,12 @@ Regras importantes:
   Se o documento tiver apenas 1 produto/serviço, ou for um comprovante de pagamento único (Pix,
   transferência, boleto, mensalidade), deixe "itens" como null e preencha normalmente
   "categoria_sugerida" e "descricao" no nível raiz.
+- **Quantidade/peso de cada item**: se a nota indicar a quantidade (ex.: "2 UN", "3x") ou o peso
+  (ex.: "0,536 kg", "536g") de um item da lista "itens", inclua essa informação dentro da própria
+  "descricao" daquele item, junto com o nome do produto (ex.: "Banana Prata (0,536 kg)", "Arroz 5kg
+  (2 UN)"). Não crie um campo separado para isso — deve ficar embutido no texto da descrição. Só
+  inclua quando o documento mostrar esse dado explicitamente; não invente nem assuma quantidade 1
+  quando a nota não a exibir.
 - **Campo "pagamentos" (pagamento dividido entre bancos/cartões/formas)**: preencha esta lista
   APENAS quando o documento mostrar explicitamente que o valor total foi pago fracionado entre
   2 (duas) ou mais formas/contas de pagamento distintas — o caso típico é uma NFC-e com duas
