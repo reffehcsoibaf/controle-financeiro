@@ -4,6 +4,27 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.16.2 — 23/08/2026
+
+### Correção: atalhos Alt+ não funcionavam com teclado Bluetooth no iPhone/iPad
+
+- **Causa raiz:** os atalhos globais (Alt+1 a Alt+6 para trocar de aba, e
+  Alt+S, Alt+L, Alt+P, Alt+E, Alt+X) liam a tecla pressionada via `e.key`,
+  que reflete o **caractere produzido**. No Windows isso não é problema, mas
+  em teclados Apple a tecla Option — que faz o papel do Alt — **troca o
+  caractere gerado** (ex.: Option+1 produz "¡", Option+S produz "ß").
+  Resultado: nenhum atalho Alt+ funcionava no iPhone/iPad com teclado
+  Bluetooth.
+- **Correção:** todos os atalhos Alt+ agora leem `e.code`/`ev.code` em vez
+  de `e.key`. `e.code` identifica a **tecla física** (ex.: `"Digit1"`,
+  `"KeyS"`) e não é afetado por nenhum modificador ou layout de teclado — o
+  mesmo atalho funciona de forma idêntica no Windows/NVDA e no
+  iPhone/iPad/VoiceOver.
+- Nenhuma tecla de atalho mudou de lugar; apenas a forma de detectá-la.
+- Atualizada a Wiki com uma nota explicando a compatibilidade com teclado
+  Bluetooth no iPhone/iPad.
+- Nenhuma mudança de banco de dados nesta versão.
+
 ## v1.16.1 — 22/08/2026
 
 - **Quantidade/peso nos itens lidos por IA**: quando uma nota fiscal com múltiplos itens mostra a

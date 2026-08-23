@@ -1380,7 +1380,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.16.1 · 22/08/2026
+  Controle Financeiro · v1.16.2 · 23/08/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1718,13 +1718,20 @@ function navegarAbasTeclado(e) {
 //  Funciona em qualquer lugar da tela principal (não precisa
 //  estar com foco na navegação de abas). Ignorado se o app
 //  ainda não estiver logado/visível.
+//
+//  Usa e.code (posição física da tecla) em vez de e.key (caractere
+//  produzido), porque em teclados Apple (Mac/iPhone/iPad) a tecla
+//  Option — que faz o papel do Alt — troca o caractere gerado (ex.:
+//  Option+1 produz "¡", não "1"). e.code (ex.: "Digit1") não muda
+//  com nenhum modificador ou layout, então o atalho funciona igual
+//  no Windows/NVDA e no iPhone/iPad/VoiceOver com teclado Bluetooth.
 // ═══════════════════════════════════════════════════
-const ATALHO_ABA_POR_TECLA = { '1':'novolanc', '2':'lancamentos', '3':'filtros', '4':'saldos', '5':'documentos', '6':'config' };
+const ATALHO_ABA_POR_TECLA = { 'Digit1':'novolanc', 'Digit2':'lancamentos', 'Digit3':'filtros', 'Digit4':'saldos', 'Digit5':'documentos', 'Digit6':'config' };
 
 function registrarAtalhosGlobaisAbas() {
   document.addEventListener('keydown', function(e) {
     if(!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
-    const alvo = ATALHO_ABA_POR_TECLA[e.key];
+    const alvo = ATALHO_ABA_POR_TECLA[e.code];
     if(!alvo) return;
     if(document.getElementById('app-principal').style.display === 'none') return;
     e.preventDefault();
@@ -1757,7 +1764,9 @@ function registrarAtalhosAcoesLancamento() {
   document.addEventListener('keydown', function(e) {
     if(!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return;
     if(document.getElementById('app-principal').style.display === 'none') return;
-    const tecla = e.key.toLowerCase();
+    const mapaTeclas = { 'KeyS':'s', 'KeyL':'l', 'KeyP':'p', 'KeyE':'e', 'KeyX':'x' };
+    const tecla = mapaTeclas[e.code];
+    if(!tecla) return;
 
     if(tecla === 's') {
       e.preventDefault();
