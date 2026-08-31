@@ -723,8 +723,9 @@ select option{background:#1e2436;}
   <section class="card" id="secao-leitor-ia" aria-labelledby="titulo-leitor">
     <h2 class="card-title" id="titulo-leitor"><span aria-hidden="true">📄</span> Leitor de Notas e Comprovantes (IA)</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
-      Envie uma imagem, PDF, TXT, XML ou XLSX de uma nota fiscal ou comprovante — ou cole o texto abaixo.
-      A IA vai ler o conteúdo e pré-preencher o formulário de lançamento. Confira sempre os campos antes de salvar.
+      Envie uma imagem, PDF, TXT, XML ou XLSX de uma nota fiscal ou comprovante, cole o arquivo com Ctrl+V
+      em qualquer lugar desta aba, ou cole o texto abaixo. A IA vai ler o conteúdo e pré-preencher o
+      formulário de lançamento. Confira sempre os campos antes de salvar.
     </p>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <label for="input-leitor-ia"
@@ -1084,7 +1085,8 @@ select option{background:#1e2436;}
     <h2 class="card-title" id="titulo-documentos"><span aria-hidden="true">📂</span> Documentos Armazenados</h2>
     <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">
       Notas fiscais e comprovantes guardados na nuvem. Analise qualquer um deles com a IA quando quiser,
-      baixe o arquivo original, ou apenas guarde um novo documento sem analisar agora.
+      baixe o arquivo original, ou apenas guarde um novo documento sem analisar agora. Também é possível
+      colar um arquivo com Ctrl+V em qualquer lugar desta aba.
     </p>
 
     <div id="bloco-guardar-documento" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
@@ -1652,6 +1654,7 @@ async function iniciarAppLogado() {
   registrarEventosModais();
   registrarAtalhosGlobaisAbas();
   registrarAtalhosAcoesLancamento();
+  registrarColarArquivoGlobal();
   registrarEventosContasConfig();
 
   const selItensPag = document.getElementById('cfg-itens-por-pagina');
@@ -1738,6 +1741,71 @@ function registrarAtalhosGlobaisAbas() {
     mudarAba(alvo);
     const btn = document.getElementById('tab-btn-' + alvo);
     if(btn) btn.focus();
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  COLAR ARQUIVO (Ctrl+V) — mesma ideia usada em apps de mensagem
+//  (Claude, WhatsApp, Telegram, Gemini): a pessoa copia um arquivo
+//  (Ctrl+C num PDF no Explorer) ou uma imagem (print de tela) e cola
+//  direto no app, sem precisar salvar o arquivo em algum lugar antes.
+//
+//  O gatilho é o documento inteiro, não um campo específico: funciona
+//  com o foco em qualquer lugar da aba, inclusive em campos de texto
+//  que já existem (busca, observações). Isso importa pro NVDA — não é
+//  preciso localizar um alvo exato antes de colar.
+//
+//  Só intercepta quando a área de transferência contém de fato um
+//  arquivo. Colar texto normal (nomes, valores, observações) segue o
+//  comportamento padrão do navegador, sem nenhuma mudança.
+// ═══════════════════════════════════════════════════
+function extrairArquivoDoClipboard(clipboardData) {
+  if(!clipboardData) return null;
+
+  // Arquivo copiado de verdade (ex.: Ctrl+C num PDF no Explorer do Windows)
+  if(clipboardData.files && clipboardData.files.length > 0) {
+    return clipboardData.files[0];
+  }
+
+  // Imagem colada (ex.: print de tela, imagem copiada de outro app/site)
+  if(clipboardData.items) {
+    for(const item of clipboardData.items) {
+      if(item.kind === 'file') {
+        const arquivo = item.getAsFile();
+        if(arquivo) return arquivo;
+      }
+    }
+  }
+  return null;
+}
+
+// Imagens coladas (print de tela) às vezes chegam sem nome útil.
+// Garante um nome antes de seguir para o mesmo fluxo de upload/leitura.
+function garantirNomeArquivo(file) {
+  if(file.name && file.name.trim() && file.name !== 'blob') return file;
+  const ext = (file.type && file.type.split('/')[1]) ? '.' + file.type.split('/')[1] : '';
+  const nomeGerado = 'colado-' + Date.now() + ext;
+  return new File([file], nomeGerado, { type: file.type || 'application/octet-stream' });
+}
+
+function registrarColarArquivoGlobal() {
+  document.addEventListener('paste', function(e) {
+    if(document.getElementById('app-principal').style.display === 'none') return;
+
+    const bruto = extrairArquivoDoClipboard(e.clipboardData);
+    if(!bruto) return; // não é um arquivo: deixa o paste de texto seguir normal
+
+    e.preventDefault();
+    const arquivo = garantirNomeArquivo(bruto);
+
+    if(abaAtual === 'documentos') {
+      processarGuardarArquivo(arquivo);
+    } else if(abaAtual === 'novolanc') {
+      processarLeituraIA(arquivo);
+    } else {
+      anunciar('Arquivo colado, mas esta aba não aceita documentos. Vá para Novo Lançamento ou Documentos.', true);
+      mostrarToast('Vá para "Novo Lançamento" ou "Documentos" para colar um arquivo.');
+    }
   });
 }
 
@@ -2647,7 +2715,15 @@ async function lerDocumentoIA(event) {
   const input = event.target;
   const file = input.files && input.files[0];
   if(!file) return;
+  try {
+    await processarLeituraIA(file);
+  } finally {
+    input.value = '';
+  }
+}
 
+// Núcleo compartilhado por seleção manual (input file) e por colar (Ctrl+V).
+async function processarLeituraIA(file) {
   const btn = document.getElementById('btn-leitor-ia');
   if(btn) btn.setAttribute('aria-disabled', 'true');
 
@@ -2674,7 +2750,6 @@ async function lerDocumentoIA(event) {
     anunciar('Erro ao ler documento: ' + err.message, true);
   } finally {
     if(btn) btn.removeAttribute('aria-disabled');
-    input.value = '';
   }
 }
 
@@ -2946,7 +3021,15 @@ async function guardarArquivoSemAnalisar(event) {
   const input = event.target;
   const file = input.files && input.files[0];
   if(!file) return;
+  try {
+    await processarGuardarArquivo(file);
+  } finally {
+    input.value = '';
+  }
+}
 
+// Núcleo compartilhado por seleção manual (input file) e por colar (Ctrl+V).
+async function processarGuardarArquivo(file) {
   const btn = document.getElementById('btn-leitor-guardar');
   if(btn) btn.setAttribute('aria-disabled', 'true');
   mostrarStatusDocumentos('Guardando arquivo na nuvem, aguarde...');
@@ -2962,7 +3045,6 @@ async function guardarArquivoSemAnalisar(event) {
     anunciar('Erro ao guardar arquivo: ' + err.message, true);
   } finally {
     if(btn) btn.removeAttribute('aria-disabled');
-    input.value = '';
   }
 }
 
