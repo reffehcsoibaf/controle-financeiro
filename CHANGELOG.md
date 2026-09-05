@@ -4,6 +4,14 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.17.0 — 04/09/2026
+
+- **Resumo em Tempo Real agora começa recolhido**: o painel fixo no topo (Total Geral, Total Pago,
+  Total Pendente e Registros visíveis) não aparece mais expandido automaticamente ao carregar a
+  página. Um botão **"Mostrar resumo"**, ao lado do título, expande o painel; vira **"Ocultar
+  resumo"** quando expandido, para recolher de novo. Cada exibição/ocultação é anunciada por voz
+  para quem usa leitor de tela. O painel volta a ficar recolhido a cada novo carregamento da página.
+
 ## v1.16.2 — 23/08/2026
 
 ### Correção: atalhos Alt+ não funcionavam com teclado Bluetooth no iPhone/iPad

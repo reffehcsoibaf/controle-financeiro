@@ -59,6 +59,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;
   letter-spacing:.06em;margin-bottom:16px;display:flex;align-items:center;gap:8px;
 }
+.card-title-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:16px;flex-wrap:wrap;
+}
+.card-title-row .card-title{margin-bottom:0;}
+#btn-toggle-resumo{padding:7px 14px;font-size:12px;white-space:nowrap;}
 
 /* ── SALDOS ── */
 .saldos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
@@ -676,10 +682,17 @@ select option{background:#1e2436;}
     </div>
   </div>
 
-  <!-- ══ RESUMO EM TEMPO REAL (sempre visível, em qualquer aba) ══ -->
+  <!-- ══ RESUMO EM TEMPO REAL (sempre visível, em qualquer aba — recolhido por padrão) ══ -->
   <section class="card" aria-labelledby="titulo-saldos">
-    <h2 class="card-title" id="titulo-saldos"><span aria-hidden="true">📊</span> Resumo em Tempo Real</h2>
-    <div class="saldos-grid" role="list">
+    <div class="card-title-row">
+      <h2 class="card-title" id="titulo-saldos" style="margin-bottom:0;"><span aria-hidden="true">📊</span> Resumo em Tempo Real</h2>
+      <button type="button" id="btn-toggle-resumo" class="btn btn-secondary"
+              aria-expanded="false" aria-controls="resumo-conteudo"
+              onclick="toggleResumo()">
+        <span aria-hidden="true">▾</span> Mostrar resumo
+      </button>
+    </div>
+    <div class="saldos-grid" id="resumo-conteudo" role="list" hidden>
       <div class="saldo-item" role="listitem">
         <div class="saldo-label" id="lbl-total">Total Geral</div>
         <div class="saldo-valor total" id="saldo-total" aria-labelledby="lbl-total" aria-live="polite" aria-atomic="true">R$ 0,00</div>
@@ -1382,7 +1395,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.16.2 · 23/08/2026
+  Controle Financeiro · v1.17.0 · 04/09/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1679,6 +1692,26 @@ async function iniciarAppLogado() {
   mostrarToast('Pronto! ' + lancamentos.length + ' lançamento(s) carregado(s).');
 
   verificarDadosLocaisParaMigrar();
+}
+
+// ═══════════════════════════════════════════════════
+//  RESUMO EM TEMPO REAL — RECOLHER / EXPANDIR
+//  Painel recolhido por padrão a cada carregamento da página;
+//  um botão alterna a visibilidade e anuncia a mudança para
+//  quem usa leitor de tela.
+// ═══════════════════════════════════════════════════
+function toggleResumo() {
+  const conteudo = document.getElementById('resumo-conteudo');
+  const btn      = document.getElementById('btn-toggle-resumo');
+  const abrir    = conteudo.hidden;
+
+  conteudo.hidden = !abrir;
+  btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  btn.innerHTML = abrir
+    ? '<span aria-hidden="true">▴</span> Ocultar resumo'
+    : '<span aria-hidden="true">▾</span> Mostrar resumo';
+
+  anunciar(abrir ? 'Resumo em tempo real exibido.' : 'Resumo em tempo real ocultado.');
 }
 
 // ═══════════════════════════════════════════════════
