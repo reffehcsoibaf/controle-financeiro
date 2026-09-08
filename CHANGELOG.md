@@ -4,6 +4,13 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.18.2 — 08/09/2026
+
+- **Pagamento de Fatura de Cartão**: o lançamento espelho criado automaticamente no cartão agora
+  herda a **Data de Vencimento**, a **Forma de Pagamento** e a **Categoria** do lançamento
+  principal (antes ficavam em branco / com um valor fixo). Corrige o caso do lançamento espelho
+  chegar faltando essas informações.
+
 ## v1.18.1 — 08/09/2026
 
 - **Confirmação por voz ao ativar/desativar "Pagamento de Fatura de Cartão"**: marcar ou desmarcar
