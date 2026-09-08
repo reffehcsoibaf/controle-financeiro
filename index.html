@@ -971,22 +971,16 @@ select option{background:#1e2436;}
         </label>
       </div>
 
-      <div style="margin-top:10px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="f-fatura-cartao-ativo" style="width:auto;"
-                 onchange="alternarFaturaCartao(this.checked)"
-                 aria-describedby="f-fatura-cartao-explicacao">
-          <label for="f-fatura-cartao-ativo" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
-            <span aria-hidden="true">💳</span> Este lançamento é o pagamento de uma fatura de cartão de crédito
-          </label>
-        </div>
-        <p id="f-fatura-cartao-explicacao" style="font-size:11px;color:var(--text3);margin:4px 0 0 26px;">
-          Marque para o app criar automaticamente, junto com este, um segundo lançamento de entrada no cartão
-          escolhido — assim o limite dele é recuperado sem precisar lançar os dois separadamente.
-        </p>
-        <div class="form-group" id="grupo-fatura-cartao-select" style="display:none;margin:8px 0 0 26px;max-width:360px;">
-          <label for="f-fatura-cartao-select">Cartão a quitar</label>
-          <select id="f-fatura-cartao-select"></select>
+      <div id="bloco-fatura-cartao" style="margin-top:10px;">
+        <div class="form-group" id="grupo-fatura-cartao-select" style="display:none;max-width:360px;">
+          <label for="f-fatura-cartao-select"><span aria-hidden="true">💳</span> Cartão a quitar</label>
+          <select id="f-fatura-cartao-select" onchange="onCartaoFaturaSelectChange(this)" aria-describedby="f-fatura-cartao-explicacao"></select>
+          <p id="f-fatura-cartao-explicacao" style="font-size:11px;color:var(--text3);margin-top:4px;">
+            Categoria "Cartão de crédito" detectada — escolha aqui o cartão sendo quitado e o app cria
+            automaticamente, junto com este, um segundo lançamento de entrada nele (recupera o limite
+            sem precisar lançar os dois separadamente). Deixe em "— Não vincular —" se este lançamento
+            não for um pagamento de fatura.
+          </p>
           <p id="fatura-cartao-aviso" style="font-size:11px;color:var(--amber);margin-top:4px;display:none;">
             Nenhum cartão de crédito configurado ainda. Configure um na aba Saldos, em Contas e Cartões.
           </p>
@@ -1467,7 +1461,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.18.2 · 08/09/2026
+  Controle Financeiro · v1.19.0 · 08/09/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -2627,18 +2621,21 @@ function renderizarSelect(campo) {
 // opcoes_listas — o texto só existe no formulário, até o momento de salvar.
 function onSelectPrincipalChange(campo, selEl) {
   const outroInput = document.getElementById('f-'+campo+'-outro');
-  if(!outroInput) return;
-  if(selEl.value === VALOR_OUTRO) {
-    outroInput.style.display = '';
-    outroInput.removeAttribute('aria-hidden');
-    outroInput.value = '';
-    requestAnimationFrame(() => requestAnimationFrame(() => outroInput.focus()));
-    anunciar('Digite o valor de ' + CAMPOS_NOMES[campo] + '. Este texto não será salvo na lista de opções.');
-  } else {
-    outroInput.style.display = 'none';
-    outroInput.setAttribute('aria-hidden', 'true');
-    outroInput.value = '';
+  if(outroInput) {
+    if(selEl.value === VALOR_OUTRO) {
+      outroInput.style.display = '';
+      outroInput.removeAttribute('aria-hidden');
+      outroInput.value = '';
+      requestAnimationFrame(() => requestAnimationFrame(() => outroInput.focus()));
+      anunciar('Digite o valor de ' + CAMPOS_NOMES[campo] + '. Este texto não será salvo na lista de opções.');
+    } else {
+      outroInput.style.display = 'none';
+      outroInput.setAttribute('aria-hidden', 'true');
+      outroInput.value = '';
+    }
   }
+  if(campo === 'categoria') verificarCategoriaFaturaCartao();
+  else if(campo === 'banco' && document.getElementById('grupo-fatura-cartao-select').style.display !== 'none') renderizarSelectCartoesFatura();
 }
 
 // Devolve o valor final de um campo de select principal (banco, estabelecimento,
@@ -3407,6 +3404,7 @@ function aplicarDadosIAaoFormulario(dados) {
       naoEncontrados.push({ campo: campoSelect, valor: sugestao });
     }
   });
+  if(!usarItens) verificarCategoriaFaturaCartao();
 
   // Descrição (campo livre) — também ignorada quando há itens múltiplos
   if(!usarItens && dados.descricao) {
@@ -3724,6 +3722,7 @@ async function confirmarModal() {
   } else {
     const selPrincipal = document.getElementById('f-'+campoSalvo);
     if(selPrincipal){ selPrincipal.value = val; selPrincipal.focus(); }
+    if(campoSalvo === 'categoria') verificarCategoriaFaturaCartao();
   }
   anunciar('Opção "'+val+'" adicionada em '+CAMPOS_NOMES[campoSalvo]+' e selecionada.');
 }
@@ -4541,28 +4540,48 @@ function colorirValor(el) {
 
 // ═══════════════════════════════════════════════════
 //  PAGAMENTO DE FATURA DE CARTÃO VINCULADO
-//  Ao marcar o checkbox, o app cria automaticamente um segundo lançamento
-//  (entrada, no Banco/Cartão escolhido) junto com o lançamento principal —
-//  evitando ter que lançar manualmente a saída na conta corrente E a
-//  entrada no cartão para recuperar o limite. Os dois ficam vinculados
-//  (lancamento_vinculado_id) para facilitar navegar entre eles e excluir
-//  os dois juntos, se for o caso. Só se aplica ao CRIAR um lançamento novo.
+//  Detectado automaticamente pela Categoria "Cartão de crédito" (a mesma
+//  categoria já usada por hábito para esse tipo de lançamento) — assim que
+//  ela é escolhida, aparece o campo "Cartão a quitar". Ao salvar com um
+//  cartão escolhido, o app cria um segundo lançamento (entrada, naquele
+//  cartão) junto com o principal — evitando lançar os dois manualmente
+//  para recuperar o limite. Os dois ficam vinculados (lancamento_vinculado_id)
+//  para navegar entre eles e excluir os dois juntos, se for o caso.
+//  Só se aplica ao CRIAR um lançamento novo, nunca ao editar.
 // ═══════════════════════════════════════════════════
-function alternarFaturaCartao(ativo, silencioso) {
-  document.getElementById('grupo-fatura-cartao-select').style.display = ativo ? '' : 'none';
-  if(ativo) {
+const CATEGORIA_FATURA_CARTAO = 'cartão de crédito';
+
+function categoriaEhFaturaCartao() {
+  return obterValorCampoPrincipal('categoria').trim().toLowerCase() === CATEGORIA_FATURA_CARTAO;
+}
+
+// Chamada pelo onchange do campo Categoria (ver onSelectPrincipalChange) e
+// pelos resets do formulário. Nunca aparece durante uma edição.
+function verificarCategoriaFaturaCartao(silencioso) {
+  const grupo = document.getElementById('grupo-fatura-cartao-select');
+  const deveMostrar = !editandoId && categoriaEhFaturaCartao();
+  grupo.style.display = deveMostrar ? '' : 'none';
+  if(deveMostrar) {
     renderizarSelectCartoesFatura();
-    if(!silencioso) anunciar('Pagamento de fatura de cartão ativado. Escolha o cartão a quitar antes de salvar.');
-  } else if(!silencioso) {
-    anunciar('Pagamento de fatura de cartão desativado.');
+    if(!silencioso) anunciar('Categoria "Cartão de crédito" detectada. Escolha o cartão a quitar se este lançamento for um pagamento de fatura.');
+  } else {
+    document.getElementById('f-fatura-cartao-select').value = '';
   }
+}
+
+function onCartaoFaturaSelectChange(sel) {
+  if(sel.value) anunciar('Cartão a quitar: '+sel.value+'. Ao salvar, um lançamento de entrada será criado nele automaticamente.');
 }
 
 function renderizarSelectCartoesFatura() {
   const sel   = document.getElementById('f-fatura-cartao-select');
   const aviso = document.getElementById('fatura-cartao-aviso');
+  const valorAnterior = sel.value;
+  // O próprio banco já selecionado no lançamento não pode ser o cartão "a
+  // quitar" — evita o absurdo de tentar pagar um cartão com ele mesmo.
+  const bancoPrincipal = obterValorCampoPrincipal('banco');
   const cartoes = Object.keys(contasConfig)
-    .filter(nome => contasConfig[nome].tipo === 'cartao_credito')
+    .filter(nome => contasConfig[nome].tipo === 'cartao_credito' && nome !== bancoPrincipal)
     .sort((a,b) => a.localeCompare(b,'pt-BR'));
 
   if(cartoes.length === 0) {
@@ -4572,7 +4591,12 @@ function renderizarSelectCartoesFatura() {
   } else {
     sel.disabled = false;
     aviso.style.display = 'none';
-    sel.innerHTML = cartoes.map(c => '<option value="'+c.replace(/"/g,'&quot;')+'">'+c+'</option>').join('');
+    // Com um só cartão configurado, já vem pré-selecionado (menos um passo);
+    // com mais de um, fica em branco para o usuário escolher conscientemente.
+    const opcaoVazia = '<option value="">— Não vincular —</option>';
+    sel.innerHTML = opcaoVazia + cartoes.map(c => '<option value="'+c.replace(/"/g,'&quot;')+'">'+c+'</option>').join('');
+    if(valorAnterior && cartoes.includes(valorAnterior)) sel.value = valorAnterior;
+    else if(cartoes.length === 1) sel.value = cartoes[0];
   }
 }
 
@@ -4594,18 +4618,13 @@ async function salvarLancamento() {
     }
   }
 
-  // Pagamento de fatura de cartão vinculado — só faz sentido ao CRIAR um
-  // lançamento novo (evita criar pares extras ao simplesmente editar um já existente).
-  const faturaCartaoAtivo = !estaEditando && document.getElementById('f-fatura-cartao-ativo').checked;
-  let cartaoFaturaSelecionado = '';
-  if(faturaCartaoAtivo) {
-    cartaoFaturaSelecionado = document.getElementById('f-fatura-cartao-select').value;
-    if(!cartaoFaturaSelecionado) {
-      anunciar('Escolha o cartão a quitar, ou desmarque a opção de pagamento de fatura.', true);
-      document.getElementById('f-fatura-cartao-select').focus();
-      return;
-    }
-  }
+  // Pagamento de fatura de cartão vinculado — detectado pela Categoria "Cartão
+  // de crédito" + um cartão escolhido no campo que aparece automaticamente.
+  // Só se aplica ao CRIAR (evita criar pares extras ao editar um já existente),
+  // e é sempre opcional: se a categoria bater mas nenhum cartão for escolhido,
+  // o lançamento é salvo normalmente, sem vínculo — sem bloquear nada.
+  const cartaoFaturaSelecionado = !estaEditando ? document.getElementById('f-fatura-cartao-select').value : '';
+  const faturaCartaoAtivo = !estaEditando && categoriaEhFaturaCartao() && !!cartaoFaturaSelecionado;
 
   const dataOrigem = document.getElementById('f-data-origem').value;
   if(!dataOrigem){
@@ -4903,8 +4922,7 @@ function limparFormulario() {
   parcelaEmEdicao='';
   valorDocumentoIA=null;
   document.getElementById('f-pago').checked = false;
-  document.getElementById('f-fatura-cartao-ativo').checked = false;
-  alternarFaturaCartao(false, true);
+  verificarCategoriaFaturaCartao(true);
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
   if(pagamentoDivididoAtivo) alternarPagamentoDividido(false);
@@ -4930,10 +4948,10 @@ function editarLancamento(id) {
   definirValorSelectComOutro(document.getElementById('f-devedor'), document.getElementById('f-devedor-outro'), l.devedor);
   document.getElementById('f-pago').checked = !!l.pago;
   // Pagamento de fatura vinculado só se aplica ao CRIAR um lançamento novo —
-  // ao editar, o bloco fica sempre desmarcado/oculto, mesmo que este próprio
-  // lançamento já tenha um vínculo (ver badge/botão "🔗" na tabela para isso).
-  document.getElementById('f-fatura-cartao-ativo').checked = false;
-  alternarFaturaCartao(false, true);
+  // ao editar, o bloco fica sempre oculto, mesmo que este próprio lançamento
+  // já tenha um vínculo (ver badge/botão "🔗" na tabela para isso) ou que a
+  // categoria dele seja "Cartão de crédito".
+  verificarCategoriaFaturaCartao(true);
   limparItens();
   if(pagamentoDivididoAtivo) alternarPagamentoDividido(false);
   else limparPagamentos();

@@ -4,6 +4,17 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.19.0 — 08/09/2026
+
+- **Pagamento de Fatura de Cartão: gatilho trocado de checkbox para Categoria.** Em vez de marcar
+  uma caixa separada, o app agora detecta automaticamente pela **Categoria "Cartão de crédito"**
+  (a mesma que já era usada por hábito nesse tipo de lançamento) — assim que ela é escolhida, o
+  campo "Cartão a quitar" aparece sozinho. Com um só cartão de crédito configurado, ele já vem
+  pré-selecionado. O campo nunca some sozinho: se a categoria bater mas nenhum cartão for
+  escolhido, o lançamento é salvo normalmente, sem vínculo, sem bloquear nada. O cartão já
+  selecionado como Banco/Cartão principal do lançamento não aparece como opção (evita "pagar o
+  cartão com ele mesmo"). O checkbox antigo foi removido.
+
 ## v1.18.2 — 08/09/2026
 
 - **Pagamento de Fatura de Cartão**: o lançamento espelho criado automaticamente no cartão agora

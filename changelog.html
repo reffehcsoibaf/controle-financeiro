@@ -156,11 +156,29 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.19.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-19-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-19-0"><span aria-hidden="true">🏷️</span> v1.19.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">08/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Pagamento de Fatura de Cartão: gatilho por Categoria</h3>
+          <ul>
+            <li>Trocado o gatilho de um checkbox separado para a Categoria "Cartão de crédito" — a mesma já usada por hábito nesse tipo de lançamento.</li>
+            <li>Ao escolher essa categoria, o campo "Cartão a quitar" aparece automaticamente. Com um só cartão de crédito configurado, ele já vem pré-selecionado.</li>
+            <li>Nunca bloqueia o salvamento: se a categoria bater mas nenhum cartão for escolhido, o lançamento é salvo normalmente, sem vínculo.</li>
+            <li>O próprio Banco/Cartão selecionado como principal do lançamento não aparece mais como opção de "Cartão a quitar", evitando vincular um cartão a ele mesmo.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.18.2 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-18-2">
+      <section class="versao-bloco" aria-labelledby="v1-18-2">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-18-2"><span aria-hidden="true">🏷️</span> v1.18.2</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">08/09/2026</span>
         </div>
 
