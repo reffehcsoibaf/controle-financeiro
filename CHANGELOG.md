@@ -4,6 +4,13 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.18.1 — 08/09/2026
+
+- **Confirmação por voz ao ativar/desativar "Pagamento de Fatura de Cartão"**: marcar ou desmarcar
+  a caixa agora é anunciado por voz ("Pagamento de fatura de cartão ativado/desativado"), para
+  confirmar que a marcação realmente registrou antes de salvar — evita o caso de a caixa parecer
+  marcada mas não estar, silenciosamente.
+
 ## v1.18.0 — 07/09/2026
 
 - **Importar Lançamentos**: nova opção na seção Itens do Lançamento (📥 Importar Lançamentos) para
