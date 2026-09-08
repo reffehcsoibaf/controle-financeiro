@@ -225,12 +225,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <a href="#lanc-status" class="sub">Marcar como pago</a>
       <a href="#lanc-selecao" class="sub">Selecionar linha e atalhos</a>
       <a href="#itens-multiplos">Itens Múltiplos</a>
+      <a href="#importar-lancamentos">Importar Lançamentos</a>
       <a href="#pagamento-dividido">Pagamento Dividido</a>
       <a href="#parcelamento">Parcelamento Automático</a>
       <a href="#filtros">Filtros</a>
       <a href="#saldos">Saldos</a>
       <a href="#saldos-resumo" class="sub">Resumo em Tempo Real</a>
       <a href="#contas-cartoes" class="sub">Contas e Cartões</a>
+      <a href="#fatura-cartao-vinculada" class="sub">Pagamento de Fatura Vinculado</a>
       <a href="#documentos">Documentos</a>
       <a href="#documentos-guardar" class="sub">Guardar um arquivo</a>
       <a href="#documentos-acoes" class="sub">Analisar, baixar e excluir</a>
@@ -630,6 +632,50 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       </p>
     </section>
 
+    <!-- ══ IMPORTAR LANÇAMENTOS ══ -->
+    <section class="card" id="importar-lancamentos">
+      <h2><span aria-hidden="true">📥</span> Importar Lançamentos</h2>
+      <p class="secao-desc">Para consolidar várias dívidas pequenas num único pagamento</p>
+      <p>
+        Use essa funcionalidade quando você já tem vários lançamentos separados — por exemplo,
+        pequenas dívidas com uma pessoa, registradas uma a uma ao longo do tempo — e vai agora
+        fazer <strong>um único pagamento</strong> (um Pix, por exemplo) que quita tudo de uma vez.
+        Em vez de criar mais um lançamento do pagamento e ainda ter que ir marcar cada dívida antiga
+        como paga, você importa as dívidas antigas para dentro do novo lançamento: elas viram itens
+        dele, e os registros separados somem, sem duplicar valores.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">No formulário de <strong>Novo Lançamento</strong>, na seção <strong>Itens do Lançamento</strong>, clique em <span class="btn-demo btn-demo-secondary">📥 Importar Lançamentos</span>.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Busque por credor, devedor, descrição ou banco, e marque os lançamentos que quer consolidar. Por padrão só aparecem os <strong>pendentes</strong> — marque "Incluir lançamentos já pagos" se precisar de um que já foi quitado.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Clique em <strong>Importar Selecionados</strong>. Cada lançamento marcado vira um item no novo lançamento (com o valor, categoria e descrição preservados), e o Credor/Devedor do formulário são preenchidos automaticamente se todos os selecionados combinarem.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">4</div>
+          <div class="passo-texto">Complete os campos que faltarem (Data, Banco, Forma de Pagamento) e clique em <strong>Salvar Lançamento</strong> normalmente.</div>
+        </div>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span><strong>Os lançamentos importados são excluídos ao salvar</strong> — o app pede uma confirmação explícita antes disso. Como o valor deles passa a existir como item dentro do novo lançamento consolidado, mantê-los como registros separados duplicaria o total. Se você remover um item importado (✕) antes de salvar, ele deixa de ser excluído — nada acontece com o lançamento original.</span>
+      </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Data original preservada:</strong> mesmo depois de importado, cada item guarda a data do lançamento de onde veio — ela aparece junto ao item no formulário, na coluna Data Origem quando você expande os itens na tabela, e numa coluna própria ao exportar em XLSX. Nada se perde, só deixa de ser um lançamento separado.</span>
+      </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">✅</span>
+        <span><strong>Documentos preservados:</strong> se algum dos lançamentos importados tinha um documento anexado (na aba Documentos), esse vínculo é transferido automaticamente para o novo lançamento consolidado — o arquivo continua guardado normalmente.</span>
+      </div>
+    </section>
+
     <!-- ══ PAGAMENTO DIVIDIDO ══ -->
     <section class="card" id="pagamento-dividido">
       <h2><span aria-hidden="true">💳</span> Pagamento Dividido</h2>
@@ -813,6 +859,40 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <div class="callout callout-tip">
         <span class="callout-icon" aria-hidden="true">📑</span>
         <span>Essa tabela também tem paginação (10, 25, 50, 100, 200 ou Todos), como as demais tabelas do app.</span>
+      </div>
+
+      <h3 id="fatura-cartao-vinculada">Pagamento de Fatura Vinculado</h3>
+      <p>
+        Antes, para o limite do cartão subir de volta depois de pagar a fatura, era preciso criar
+        <strong>dois</strong> lançamentos manualmente: a saída na conta corrente (o pagamento em si)
+        e uma entrada no próprio cartão (para "devolver" o limite usado). Agora o app faz os dois de
+        uma vez só.
+      </p>
+      <div class="passos">
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">1</div>
+          <div class="passo-texto">No formulário de <strong>Novo Lançamento</strong>, registre normalmente a saída da fatura na sua <strong>conta corrente</strong> (Banco/Cartão = a conta, tipo Saída, valor da fatura).</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">2</div>
+          <div class="passo-texto">Marque a caixa <strong>"💳 Este lançamento é o pagamento de uma fatura de cartão de crédito"</strong>, logo acima dos botões Salvar/Parcelar.</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">3</div>
+          <div class="passo-texto">Escolha, na lista que aparece, <strong>qual cartão</strong> está sendo quitado (só aparecem os Bancos/Cartões já configurados como Cartão de Crédito em Contas e Cartões).</div>
+        </div>
+        <div class="passo">
+          <div class="passo-num" aria-hidden="true">4</div>
+          <div class="passo-texto">Clique em <strong>Salvar Lançamento</strong>. O app cria os dois lançamentos: o que você preencheu (saída na conta corrente) e, automaticamente, uma entrada de mesmo valor no cartão escolhido — o limite dele já aparece recuperado na aba Saldos.</div>
+        </div>
+      </div>
+      <div class="callout callout-ok">
+        <span class="callout-icon" aria-hidden="true">🔗</span>
+        <span>Os dois lançamentos ficam <strong>vinculados</strong>: na tabela de Lançamentos, cada um mostra um selo 🔗 com um botão para pular direto para o outro. Ao excluir um dos dois, o app pergunta se você quer excluir os dois juntos, ou só aquele (desfazendo o vínculo e mantendo o outro).</span>
+      </div>
+      <div class="callout callout-warn">
+        <span class="callout-icon" aria-hidden="true">⚠️</span>
+        <span>Essa opção só aparece ao <strong>criar</strong> um lançamento novo — não ao editar um já existente, para evitar criar um par extra sem querer. Se precisar corrigir um pagamento de fatura já criado, edite cada um dos dois lançamentos vinculados normalmente (use o botão 🔗 para navegar entre eles).</span>
       </div>
     </section>
 

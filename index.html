@@ -948,11 +948,16 @@ select option{background:#1e2436;}
 
           <div id="lista-itens" role="list" aria-label="Itens do lançamento"></div>
 
-          <div id="wrap-btn-add-item" style="display:flex;justify-content:flex-start;padding-top:4px;">
+          <div id="wrap-btn-add-item" style="display:flex;justify-content:flex-start;gap:8px;flex-wrap:wrap;padding-top:4px;">
             <button type="button" class="btn btn-teal" id="btn-add-item"
                     onclick="adicionarItem()"
                     aria-label="Adicionar novo item ao lançamento com valor, categoria e descrição próprios">
               <span aria-hidden="true">＋</span> Adicionar Item
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-importar-lancamentos"
+                    onclick="abrirModalImportarLancamentos()"
+                    aria-label="Importar lançamentos já existentes como itens deste novo lançamento — útil para consolidar várias dívidas num único pagamento">
+              <span aria-hidden="true">📥</span> Importar Lançamentos
             </button>
           </div>
         </div>
@@ -964,6 +969,28 @@ select option{background:#1e2436;}
         <label for="f-pago" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
           Marcar como pago (deixe desmarcado para pendente)
         </label>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="f-fatura-cartao-ativo" style="width:auto;"
+                 onchange="alternarFaturaCartao(this.checked)"
+                 aria-describedby="f-fatura-cartao-explicacao">
+          <label for="f-fatura-cartao-ativo" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
+            <span aria-hidden="true">💳</span> Este lançamento é o pagamento de uma fatura de cartão de crédito
+          </label>
+        </div>
+        <p id="f-fatura-cartao-explicacao" style="font-size:11px;color:var(--text3);margin:4px 0 0 26px;">
+          Marque para o app criar automaticamente, junto com este, um segundo lançamento de entrada no cartão
+          escolhido — assim o limite dele é recuperado sem precisar lançar os dois separadamente.
+        </p>
+        <div class="form-group" id="grupo-fatura-cartao-select" style="display:none;margin:8px 0 0 26px;max-width:360px;">
+          <label for="f-fatura-cartao-select">Cartão a quitar</label>
+          <select id="f-fatura-cartao-select"></select>
+          <p id="fatura-cartao-aviso" style="font-size:11px;color:var(--amber);margin-top:4px;display:none;">
+            Nenhum cartão de crédito configurado ainda. Configure um na aba Saldos, em Contas e Cartões.
+          </p>
+        </div>
       </div>
 
       <div class="form-actions" style="margin-top:16px;">
@@ -1390,12 +1417,57 @@ select option{background:#1e2436;}
   </div>
 </div>
 
+<!-- ══ MODAL IMPORTAR LANÇAMENTOS ══ -->
+<div class="modal-overlay" id="modal-importar-overlay"
+     role="dialog" aria-modal="true"
+     aria-labelledby="mi-titulo" aria-describedby="mi-desc">
+  <div class="modal" style="width:520px;max-width:calc(100vw - 32px);">
+    <h2 id="mi-titulo"><span aria-hidden="true">📥</span> Importar Lançamentos</h2>
+    <p id="mi-desc" style="font-size:12px;color:var(--text3);">
+      Marque os lançamentos que quer consolidar dentro deste novo lançamento — cada um vira um item
+      aqui. Ao salvar, os lançamentos marcados são excluídos como registros separados (os documentos
+      anexados a eles continuam guardados, só passam a ficar vinculados a este novo lançamento).
+      Pressione Escape para cancelar.
+    </p>
+
+    <div class="form-group" style="margin-top:4px;">
+      <label for="importar-busca">Buscar por credor, devedor, descrição ou banco</label>
+      <input type="search" id="importar-busca" autocomplete="off"
+             placeholder="Ex.: João, mercado, nubank..."
+             oninput="onBuscaImportarInput(this.value)">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:6px 0 10px;">
+      <input type="checkbox" id="importar-incluir-pagos" style="width:auto;"
+             onchange="onIncluirPagosImportarChange(this.checked)">
+      <label for="importar-incluir-pagos" style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;cursor:pointer;">
+        Incluir lançamentos já pagos na busca
+      </label>
+    </div>
+
+    <div id="importar-lista" role="list" aria-label="Lançamentos disponíveis para importar"
+         style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);"></div>
+
+    <div id="importar-rodape" style="font-size:12px;color:var(--text2);margin-top:8px;" aria-live="polite" aria-atomic="true">
+      0 selecionado
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="btn-importar-cancelar"
+              onclick="fecharModalImportar()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btn-importar-confirmar"
+              onclick="confirmarImportarLancamentos()">
+        <span aria-hidden="true">📥</span> Importar Selecionados
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ TOAST DE SINCRONIZAÇÃO ══ -->
 <div class="sync-toast" id="sync-toast" role="status" aria-live="polite"></div>
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.17.0 · 04/09/2026
+  Controle Financeiro · v1.18.0 · 07/09/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -1919,6 +1991,10 @@ function registrarEventosModais() {
   ovP.addEventListener('click',   e => { if (e.target === ovP) fecharModalParcelar(); });
   ovP.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModalParcelar(); });
 
+  const ovImp = document.getElementById('modal-importar-overlay');
+  ovImp.addEventListener('click',   e => { if (e.target === ovImp) fecharModalImportar(); });
+  ovImp.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModalImportar(); });
+
   ['mp-valor-total','mp-num-parcelas'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', e => {
       if(e.key === 'Enter') { e.preventDefault(); confirmarParcelamento(); }
@@ -2282,9 +2358,10 @@ async function carregarLancamentosSupabase() {
   (itensRows || []).forEach(item => {
     if(!itensPorLancamento[item.lancamento_id]) itensPorLancamento[item.lancamento_id] = [];
     itensPorLancamento[item.lancamento_id].push({
-      valor:     parseFloat(item.valor) || 0,
-      categoria: item.categoria || '',
-      descricao: item.descricao || ''
+      valor:        parseFloat(item.valor) || 0,
+      categoria:    item.categoria || '',
+      descricao:    item.descricao || '',
+      dataOriginal: item.data_original || ''
     });
   });
 
@@ -2312,6 +2389,7 @@ async function carregarLancamentosSupabase() {
     credor:          l.credor || '',
     devedor:         l.devedor || '',
     pago:            !!l.pago,
+    lancamentoVinculadoId: l.lancamento_vinculado_id || null,
     itens:           itensPorLancamento[l.id] || [],
     pagamentos:      pagamentosPorLancamento[l.id] || []
   }));
@@ -3784,9 +3862,9 @@ function buildCategoriaOptions() {
 }
 
 function adicionarItem(dados) {
-  // dados = { id, valor, categoria, descricao } (usado ao editar/carregar)
+  // dados = { id, valor, categoria, descricao, dataOriginal } (usado ao editar/carregar/importar)
   const id  = dados ? dados.id : proximoItemId++;
-  if(!dados) itensFormulario.push({id, valor:'', categoria:'', descricao:''});
+  if(!dados) itensFormulario.push({id, valor:'', categoria:'', descricao:'', dataOriginal:''});
 
   const idx    = itensFormulario.length; // posição para rótulo
   const itemEl = document.createElement('div');
@@ -3795,6 +3873,11 @@ function adicionarItem(dados) {
   itemEl.id = 'item-row-'+id;
   itemEl.innerHTML =
     '<span class="item-numero" aria-hidden="true">Item '+idx+'</span>' +
+    (dados && dados.dataOriginal ?
+      '<span class="nota-valor" style="grid-column:1 / -1;margin-top:14px;">'+
+        '<span aria-hidden="true">📅</span> Este item veio de um lançamento originalmente datado de <span>'+fmtData(dados.dataOriginal)+'</span>'+
+      '</span>'
+      : '') +
 
     // Valor do item
     '<div class="form-group">' +
@@ -4028,6 +4111,158 @@ function limparItens() {
   secao.appendChild(wrapBtn);
   atualizarTotalItens();
   document.getElementById('f-valor-nota').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+//  IMPORTAR LANÇAMENTOS (consolidar vários lançamentos antigos
+//  dentro de um novo — cada um vira um item, e o original é
+//  excluído ao salvar, evitando lançamentos duplicados/adicionais)
+// ═══════════════════════════════════════════════════
+let buscaImportarTermo      = '';
+let incluirPagosImportar    = false;
+let lancamentosSelecionadosImportar = new Set();
+
+// IDs dos lançamentos já representados como item(ns) no formulário atual —
+// derivado direto de itensFormulario, então remover um item manualmente
+// (✕) já tira o lançamento original da lista de exclusão automaticamente,
+// sem precisar de nenhum controle paralelo.
+function idsLancamentosImportadosAtuais() {
+  return [...new Set(itensFormulario.filter(i => i.origemLancamentoId).map(i => i.origemLancamentoId))];
+}
+
+function abrirModalImportarLancamentos() {
+  lancamentosSelecionadosImportar = new Set();
+  buscaImportarTermo = '';
+  incluirPagosImportar = false;
+  document.getElementById('importar-busca').value = '';
+  document.getElementById('importar-incluir-pagos').checked = false;
+  renderizarListaImportar();
+  document.getElementById('modal-importar-overlay').classList.add('open');
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.getElementById('importar-busca').focus()
+  ));
+  anunciar('Janela de importar lançamentos aberta. Busque e marque os lançamentos que quer consolidar neste novo lançamento.');
+}
+
+function fecharModalImportar() {
+  document.getElementById('modal-importar-overlay').classList.remove('open');
+  document.getElementById('btn-importar-lancamentos').focus();
+}
+
+function onBuscaImportarInput(valor) {
+  buscaImportarTermo = valor.trim().toLowerCase();
+  renderizarListaImportar();
+}
+function onIncluirPagosImportarChange(checked) {
+  incluirPagosImportar = checked;
+  renderizarListaImportar();
+}
+
+function renderizarListaImportar() {
+  const idsJaNoFormulario = idsLancamentosImportadosAtuais();
+  const termo = buscaImportarTermo;
+
+  const candidatos = lancamentos.filter(l => {
+    if(l.id === editandoId) return false;
+    if(idsJaNoFormulario.includes(l.id)) return false;
+    if(!incluirPagosImportar && l.pago) return false;
+    if(!termo) return true;
+    const alvo = [l.credor, l.devedor, l.descricao, l.banco, l.estabelecimento, l.categoria]
+      .filter(Boolean).join(' ').toLowerCase();
+    return alvo.includes(termo);
+  }).sort((a,b) => (b.dataOrigem||'').localeCompare(a.dataOrigem||''));
+
+  const container = document.getElementById('importar-lista');
+  if(candidatos.length === 0) {
+    container.innerHTML = '<p style="font-size:12px;color:var(--text3);text-align:center;padding:16px 10px;">Nenhum lançamento encontrado' +
+      (termo ? ' para essa busca.' : (incluirPagosImportar ? '.' : ' pendente. Marque "Incluir lançamentos já pagos" para ver mais opções.')) + '</p>';
+  } else {
+    container.innerHTML = candidatos.map(l => {
+      const marcado = lancamentosSelecionadosImportar.has(l.id);
+      const descBruta = l.descricao || (l.itens && l.itens.length ? l.itens.map(i=>i.descricao).filter(Boolean).join(' / ') : '') || '—';
+      const quem = [l.credor ? ('Credor: '+l.credor) : null, l.devedor ? ('Devedor: '+l.devedor) : null].filter(Boolean).join(' · ');
+      const rotulo = fmtData(l.dataOrigem)+', '+fmtValor(l.valor)+', '+descBruta+(l.pago?', pago':', pendente');
+      return '<label class="item-importar-row" style="display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;">' +
+        '<input type="checkbox" style="width:auto;margin-top:3px;flex-shrink:0;"'+(marcado?' checked':'')+
+          ' onchange="onToggleImportarItem('+l.id+',this.checked)" aria-label="Selecionar lançamento: '+escaparHTML(rotulo)+'">' +
+        '<span style="font-size:13px;line-height:1.4;min-width:0;">' +
+          '<strong>'+fmtData(l.dataOrigem)+' · '+fmtValor(l.valor)+'</strong>' +
+          (l.pago?' <span class="badge badge-pago" style="margin-left:2px;">Pago</span>':'') + '<br>' +
+          '<span style="color:var(--text2);">'+escaparHTML(descBruta)+'</span>' +
+          (quem ? '<br><span style="color:var(--text3);font-size:11px;">'+escaparHTML(quem)+'</span>' : '') +
+        '</span>' +
+      '</label>';
+    }).join('');
+  }
+  atualizarRodapeImportar();
+}
+
+function onToggleImportarItem(id, checked) {
+  if(checked) lancamentosSelecionadosImportar.add(id);
+  else lancamentosSelecionadosImportar.delete(id);
+  atualizarRodapeImportar();
+}
+
+function atualizarRodapeImportar() {
+  const selecionados = lancamentos.filter(l => lancamentosSelecionadosImportar.has(l.id));
+  const total = selecionados.reduce((s,l) => s + Math.abs(l.valor), 0);
+  document.getElementById('importar-rodape').textContent =
+    selecionados.length + ' selecionado' + (selecionados.length!==1?'s':'') + (selecionados.length ? ' · Total: '+fmtValor(total) : '');
+}
+
+// Se Credor ou Devedor ainda estiverem vazios no formulário e todos os
+// lançamentos importados combinarem no mesmo valor, pré-preenche o campo —
+// só quando há um valor único e claro, para não arriscar um preenchimento errado.
+function tentarPreencherCredorDevedorAoImportar(selecionados) {
+  ['credor','devedor'].forEach(campo => {
+    if(obterValorCampoPrincipal(campo)) return; // já preenchido, não sobrescreve
+    const valores = [...new Set(selecionados.map(l => l[campo]).filter(Boolean))];
+    if(valores.length === 1) {
+      definirValorSelectComOutro(document.getElementById('f-'+campo), document.getElementById('f-'+campo+'-outro'), valores[0]);
+    }
+  });
+}
+
+function confirmarImportarLancamentos() {
+  const selecionados = lancamentos.filter(l => lancamentosSelecionadosImportar.has(l.id));
+  if(selecionados.length === 0) {
+    anunciar('Selecione ao menos um lançamento para importar.', true);
+    return;
+  }
+
+  let totalImportado = 0, algumNegativo = false, algumPositivo = false;
+  const itensJaExistiam = itensFormulario.length > 0;
+
+  selecionados.forEach(l => {
+    if(l.valor < 0) algumNegativo = true; else if(l.valor > 0) algumPositivo = true;
+    const fonteItens = (l.itens && l.itens.length > 0) ? l.itens : [{ valor: l.valor, categoria: l.categoria, descricao: l.descricao }];
+    fonteItens.forEach(it => {
+      const novoItem = {
+        id: proximoItemId++,
+        valor: Math.abs(parseFloat(it.valor) || 0),
+        categoria: it.categoria || '',
+        descricao: it.descricao || '(sem descrição)',
+        dataOriginal: l.dataOrigem || '',
+        origemLancamentoId: l.id
+      };
+      itensFormulario.push(novoItem);
+      adicionarItem(novoItem);
+      totalImportado += novoItem.valor;
+    });
+  });
+
+  // Só decide o tipo (Entrada/Saída) automaticamente se o formulário estava vazio
+  // de itens antes desta importação — evita sobrescrever uma escolha já feita.
+  if(!itensJaExistiam) {
+    if(algumNegativo && !algumPositivo) definirTipoValor('saida');
+    else if(algumPositivo && !algumNegativo) definirTipoValor('entrada');
+  }
+
+  tentarPreencherCredorDevedorAoImportar(selecionados);
+  atualizarNotaValor();
+  fecharModalImportar();
+  anunciar(selecionados.length+' lançamento(s) importado(s) como item(ns), totalizando '+fmtValor(totalImportado)+
+    '. Eles serão excluídos como registros separados ao salvar este lançamento.');
 }
 
 // ═══════════════════════════════════════════════════
@@ -4304,7 +4539,69 @@ function colorirValor(el) {
   el.classList.toggle('negativo', obterTipoValor()==='saida' && !isNaN(v) && v>0);
 }
 
+// ═══════════════════════════════════════════════════
+//  PAGAMENTO DE FATURA DE CARTÃO VINCULADO
+//  Ao marcar o checkbox, o app cria automaticamente um segundo lançamento
+//  (entrada, no Banco/Cartão escolhido) junto com o lançamento principal —
+//  evitando ter que lançar manualmente a saída na conta corrente E a
+//  entrada no cartão para recuperar o limite. Os dois ficam vinculados
+//  (lancamento_vinculado_id) para facilitar navegar entre eles e excluir
+//  os dois juntos, se for o caso. Só se aplica ao CRIAR um lançamento novo.
+// ═══════════════════════════════════════════════════
+function alternarFaturaCartao(ativo) {
+  document.getElementById('grupo-fatura-cartao-select').style.display = ativo ? '' : 'none';
+  if(ativo) renderizarSelectCartoesFatura();
+}
+
+function renderizarSelectCartoesFatura() {
+  const sel   = document.getElementById('f-fatura-cartao-select');
+  const aviso = document.getElementById('fatura-cartao-aviso');
+  const cartoes = Object.keys(contasConfig)
+    .filter(nome => contasConfig[nome].tipo === 'cartao_credito')
+    .sort((a,b) => a.localeCompare(b,'pt-BR'));
+
+  if(cartoes.length === 0) {
+    sel.innerHTML = '<option value="">— Nenhum cartão configurado —</option>';
+    sel.disabled = true;
+    aviso.style.display = '';
+  } else {
+    sel.disabled = false;
+    aviso.style.display = 'none';
+    sel.innerHTML = cartoes.map(c => '<option value="'+c.replace(/"/g,'&quot;')+'">'+c+'</option>').join('');
+  }
+}
+
 async function salvarLancamento() {
+  const estaEditando = !!editandoId;
+
+  // Lançamentos importados (ver "Importar Lançamentos") — capturado ANTES de
+  // qualquer outra coisa, porque limparFormulario() zera itensFormulario logo
+  // após salvar com sucesso.
+  const idsImportadosParaExcluir = idsLancamentosImportadosAtuais();
+  if(idsImportadosParaExcluir.length > 0) {
+    if(!confirm(
+      'Este lançamento vai importar '+idsImportadosParaExcluir.length+' lançamento(s) antigo(s) como itens. '+
+      'Esses lançamentos originais serão EXCLUÍDOS ao salvar (os documentos anexados a eles continuam guardados, '+
+      'só passam a ficar vinculados a este novo lançamento). Deseja continuar?'
+    )) {
+      anunciar('Salvar cancelado. Os itens importados continuam no formulário — remova algum com ✕ se quiser ajustar antes de tentar de novo.', true);
+      return;
+    }
+  }
+
+  // Pagamento de fatura de cartão vinculado — só faz sentido ao CRIAR um
+  // lançamento novo (evita criar pares extras ao simplesmente editar um já existente).
+  const faturaCartaoAtivo = !estaEditando && document.getElementById('f-fatura-cartao-ativo').checked;
+  let cartaoFaturaSelecionado = '';
+  if(faturaCartaoAtivo) {
+    cartaoFaturaSelecionado = document.getElementById('f-fatura-cartao-select').value;
+    if(!cartaoFaturaSelecionado) {
+      anunciar('Escolha o cartão a quitar, ou desmarque a opção de pagamento de fatura.', true);
+      document.getElementById('f-fatura-cartao-select').focus();
+      return;
+    }
+  }
+
   const dataOrigem = document.getElementById('f-data-origem').value;
   if(!dataOrigem){
     anunciar('Preencha a Data de Origem antes de salvar.',true);
@@ -4412,9 +4709,10 @@ async function salvarLancamento() {
 
   const itensParaSalvar = itensFormulario.length>0
     ? itensFormulario.map(i=>({
-        valor:    parseFloat(i.valor)||0,
-        categoria:i.categoria || null,
-        descricao:i.descricao || null
+        valor:         parseFloat(i.valor)||0,
+        categoria:     i.categoria || null,
+        descricao:     i.descricao || null,
+        data_original: i.dataOriginal || null
       }))
     : [];
   itensParaSalvarSnapshot = itensParaSalvar;
@@ -4484,6 +4782,42 @@ async function salvarLancamento() {
       }
 
       anunciar('Lançamento salvo' + (itensParaSalvar.length>0 ? ' com '+itensParaSalvar.length+' item'+(itensParaSalvar.length!==1?'s':'') : '') + (pagamentosParaSalvar.length>0 ? ' e pagamento dividido em '+pagamentosParaSalvar.length+' formas' : '') + '.');
+
+      // Pagamento de fatura de cartão vinculado: cria um segundo lançamento de
+      // entrada no cartão escolhido, com o mesmo valor, para recuperar o limite
+      // automaticamente — e vincula os dois lançamentos entre si.
+      if(faturaCartaoAtivo && cartaoFaturaSelecionado && idLancamentoSalvo) {
+        try {
+          const { data: novoCartao, error: errCartao } = await sb.from('financeiro_lancamentos').insert({
+            user_id:         usuarioAtual.id,
+            data_origem:     dataOrigem,
+            data_vencimento: null,
+            valor:           Math.abs(valor),
+            banco:           cartaoFaturaSelecionado,
+            estabelecimento: null,
+            forma:           'Pagamento de Fatura',
+            parcela:         null,
+            descricao:       'Pagamento de fatura' + (dadosLancamento.banco ? ' — via '+dadosLancamento.banco : '') +
+                              (dadosLancamento.descricao ? ' ('+dadosLancamento.descricao+')' : ''),
+            categoria:       null,
+            credor:          dadosLancamento.credor,
+            devedor:         dadosLancamento.devedor,
+            pago:            dadosLancamento.pago,
+            lancamento_vinculado_id: idLancamentoSalvo
+          }).select().single();
+          if(errCartao) throw errCartao;
+
+          const { error: errVinculoVolta } = await sb.from('financeiro_lancamentos')
+            .update({ lancamento_vinculado_id: novoCartao.id })
+            .eq('id', idLancamentoSalvo)
+            .eq('user_id', usuarioAtual.id);
+          if(errVinculoVolta) throw errVinculoVolta;
+
+          anunciar('Lançamento de entrada criado automaticamente no cartão '+cartaoFaturaSelecionado+' para recuperar o limite.');
+        } catch(erroCartao) {
+          anunciar('Lançamento salvo, mas houve erro ao criar o lançamento espelho no cartão: ' + erroCartao.message, true);
+        }
+      }
     }
 
     // Vincula o documento pendente (se houver) a este lançamento — não impede
@@ -4501,6 +4835,30 @@ async function salvarLancamento() {
         anunciar('Documento vinculado a este lançamento.');
       } catch(erroVinculo) {
         anunciar('Lançamento salvo, mas houve erro ao vincular o documento: ' + erroVinculo.message, true);
+      }
+    }
+
+    // Lançamentos importados (ver "Importar Lançamentos"): os documentos deles
+    // são re-vinculados a este novo lançamento consolidado ANTES de excluí-los,
+    // pra não perder o vínculo (a coluna lancamento_id fica NULL automaticamente
+    // se excluíssemos primeiro).
+    if(idsImportadosParaExcluir.length > 0 && idLancamentoSalvo) {
+      try {
+        await sb.from('financeiro_documentos_armazenados')
+          .update({ lancamento_id: idLancamentoSalvo })
+          .in('lancamento_id', idsImportadosParaExcluir)
+          .eq('user_id', usuarioAtual.id);
+
+        const { error: errExcluirImportados } = await sb.from('financeiro_lancamentos')
+          .delete()
+          .in('id', idsImportadosParaExcluir)
+          .eq('user_id', usuarioAtual.id);
+        if(errExcluirImportados) throw errExcluirImportados;
+
+        await carregarDocumentosArmazenados();
+        anunciar(idsImportadosParaExcluir.length+' lançamento(s) importado(s) foram consolidados neste registro e excluídos como itens separados.');
+      } catch(erroImport) {
+        anunciar('Lançamento salvo, mas houve um erro ao remover os lançamentos importados: ' + erroImport.message, true);
       }
     }
 
@@ -4540,6 +4898,8 @@ function limparFormulario() {
   parcelaEmEdicao='';
   valorDocumentoIA=null;
   document.getElementById('f-pago').checked = false;
+  document.getElementById('f-fatura-cartao-ativo').checked = false;
+  alternarFaturaCartao(false);
   document.getElementById('btn-salvar').innerHTML='<span aria-hidden="true">💾</span> Salvar Lançamento';
   limparItens();
   if(pagamentoDivididoAtivo) alternarPagamentoDividido(false);
@@ -4564,6 +4924,11 @@ function editarLancamento(id) {
   definirValorSelectComOutro(document.getElementById('f-credor'), document.getElementById('f-credor-outro'), l.credor);
   definirValorSelectComOutro(document.getElementById('f-devedor'), document.getElementById('f-devedor-outro'), l.devedor);
   document.getElementById('f-pago').checked = !!l.pago;
+  // Pagamento de fatura vinculado só se aplica ao CRIAR um lançamento novo —
+  // ao editar, o bloco fica sempre desmarcado/oculto, mesmo que este próprio
+  // lançamento já tenha um vínculo (ver badge/botão "🔗" na tabela para isso).
+  document.getElementById('f-fatura-cartao-ativo').checked = false;
+  alternarFaturaCartao(false);
   limparItens();
   if(pagamentoDivididoAtivo) alternarPagamentoDividido(false);
   else limparPagamentos();
@@ -4598,14 +4963,31 @@ function editarLancamento(id) {
 
 async function excluirLancamento(id) {
   const l=lancamentos.find(x=>x.id===id);
-  const desc=(l?(l.descricao||fmtData(l.dataOrigem)):'' ).replace(/"/g,"'");
-  if(!confirm('Excluir o lançamento "'+desc+'"?')) return;
+  if(!l) return;
+  const desc=(l.descricao||fmtData(l.dataOrigem)).replace(/"/g,"'");
+  const vinculado = l.lancamentoVinculadoId ? lancamentos.find(x=>x.id===l.lancamentoVinculadoId) : null;
+
+  let excluirAmbos = false;
+  if(vinculado) {
+    excluirAmbos = confirm(
+      'Este lançamento está vinculado a outro (pagamento de fatura de cartão de crédito): '+
+      fmtData(vinculado.dataOrigem)+' · '+fmtValor(vinculado.valor)+' em '+(vinculado.banco||'—')+'.\n\n'+
+      'Clique OK para excluir OS DOIS lançamentos vinculados, ou Cancelar para excluir só este.'
+    );
+    if(!excluirAmbos) {
+      if(!confirm('Excluir apenas o lançamento "'+desc+'"? O vínculo com o outro lançamento será desfeito, mas ele continua existindo normalmente.')) return;
+    }
+  } else {
+    if(!confirm('Excluir o lançamento "'+desc+'"?')) return;
+  }
+
+  const idsParaExcluir = (excluirAmbos && vinculado) ? [id, vinculado.id] : [id];
 
   const { error } = await sb.from('financeiro_lancamentos')
     .delete()
-    .eq('id', id)
+    .in('id', idsParaExcluir)
     .eq('user_id', usuarioAtual.id);
-  // itens_lancamento é removido automaticamente via ON DELETE CASCADE
+  // itens_lancamento e pagamentos_lancamento são removidos automaticamente via ON DELETE CASCADE
 
   if(error) {
     anunciar('Erro ao excluir: ' + error.message, true);
@@ -4613,10 +4995,10 @@ async function excluirLancamento(id) {
     return;
   }
 
-  lancamentos=lancamentos.filter(x=>x.id!==id);
+  lancamentos=lancamentos.filter(x=>!idsParaExcluir.includes(x.id));
   aplicarFiltros(); atualizarSaldos();
-  anunciar('Lançamento excluído.');
-  mostrarToast('Lançamento excluído.');
+  anunciar(idsParaExcluir.length>1 ? 'Os dois lançamentos vinculados foram excluídos.' : 'Lançamento excluído.');
+  mostrarToast(idsParaExcluir.length>1 ? 'Lançamentos vinculados excluídos.' : 'Lançamento excluído.');
 }
 
 async function togglePago(id, chkEl) {
@@ -4761,10 +5143,11 @@ function renderizarTabela() {
       : l.categoria||'—';
     const vNeg = l.valor<0;
     const docVinculado = documentosArmazenados.find(d => d.lancamento_id === l.id);
+    const lancVinculado = l.lancamentoVinculadoId ? lancamentos.find(x => x.id === l.lancamentoVinculadoId) : null;
 
     const expandido = temItens && itensExpandidos.has(l.id);
     const rotuloLinha = 'Lançamento: '+fmtData(l.dataOrigem)+', '+(l.banco||'sem banco informado')+', '+fmtValor(l.valor)+', '+(l.pago?'pago':'pendente')+
-      (docVinculado ? ', com documento vinculado' : '')+'.';
+      (docVinculado ? ', com documento vinculado' : '')+(lancVinculado ? ', com lançamento vinculado' : '')+'.';
 
     linhas.push(
       '<tr class="linha-lancamento'+(l.pago?' pago-row':'')+(temItens?' has-subitems':'')+'" '+
@@ -4782,7 +5165,8 @@ function renderizarTabela() {
             '</button>'
             :'')+
           (docVinculado?'<span class="badge" style="background:rgba(79,124,255,.15);color:var(--accent);margin-left:4px;" aria-hidden="true" title="Documento vinculado">📎</span>':'')+
-          (!temItens && !docVinculado?'<span aria-hidden="true" style="color:var(--text3);">—</span>':'')+
+          (lancVinculado?'<span class="badge" style="background:rgba(20,184,166,.15);color:var(--teal);margin-left:4px;" aria-hidden="true" title="Lançamento vinculado (pagamento de fatura)">🔗</span>':'')+
+          (!temItens && !docVinculado && !lancVinculado?'<span aria-hidden="true" style="color:var(--text3);">—</span>':'')+
       '</td>'+
       '<td>'+fmtData(l.dataOrigem)+'</td>'+
       '<td>'+fmtData(l.dataVencimento)+'</td>'+
@@ -4800,6 +5184,10 @@ function renderizarTabela() {
           '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
             ' onclick="irParaDocumentoVinculado('+l.id+')" aria-label="Ver documento vinculado a este lançamento: '+escaparHTML(docVinculado.nome_arquivo)+'"><span aria-hidden="true">📎</span></button>'
           : '') +
+        (lancVinculado ?
+          '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
+            ' onclick="irParaLancamentoVinculado('+lancVinculado.id+')" aria-label="Ver lançamento vinculado: pagamento de fatura de '+fmtValor(lancVinculado.valor)+' em '+escaparHTML(lancVinculado.banco||'—')+'"><span aria-hidden="true">🔗</span></button>'
+          : '') +
         '<button type="button" class="btn btn-secondary" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
           ' onclick="editarLancamento('+l.id+')" aria-label="Editar lançamento: '+desc+'"><span aria-hidden="true">✏️</span></button>'+
         '<button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:11px;" tabindex="-1"'+
@@ -4812,11 +5200,12 @@ function renderizarTabela() {
     if(temItens && expandido) {
       l.itens.forEach((item,idx)=>{
         const ivNeg=item.valor<0;
+        const rotuloItem = 'Item '+(idx+1)+' de '+l.itens.length+(item.dataOriginal?', originalmente de '+fmtData(item.dataOriginal):'');
         linhas.push(
-          '<tr class="sub-row" data-lancamento-pai="'+l.id+'" aria-label="Item '+(idx+1)+' de '+l.itens.length+'">'+
+          '<tr class="sub-row" data-lancamento-pai="'+l.id+'" aria-label="'+escaparHTML(rotuloItem)+'">'+
           '<td></td>'+
           '<td style="color:var(--text3);font-style:italic;">Item '+(idx+1)+'</td>'+
-          '<td colspan="2"></td>'+
+          '<td colspan="2" style="color:var(--text3);font-size:11px;">'+(item.dataOriginal?fmtData(item.dataOriginal):'')+'</td>'+
           '<td class="valor-cell '+(ivNeg?'valor-neg':'valor-pos')+'" style="font-size:11px;">'+fmtValor(item.valor)+'</td>'+
           '<td colspan="4"></td>'+
           '<td style="max-width:200px;white-space:normal;word-break:break-word;">'+(item.descricao||'—')+'</td>'+
@@ -5297,10 +5686,12 @@ function exportarPlanilha(){
           'Categoria':temItens?'(múltiplas)':(l.categoria||''),'Credor':l.credor||'','Devedor':l.devedor||'',
           'Status':l.pago?'Pago':'Pendente','Tipo':'Principal'
         });
-        // Sub-linhas de itens
+        // Sub-linhas de itens — a Data Origem do item só é preenchida quando ele
+        // veio de um lançamento importado e consolidado aqui (ver "Importar
+        // Lançamentos"); itens criados manualmente não têm data própria.
         (l.itens||[]).forEach((item,idx)=>{
           dados.push({
-            'Data Origem':'','Data Vencimento':'',
+            'Data Origem':item.dataOriginal?fmtData(item.dataOriginal):'','Data Vencimento':'',
             'Valor (R$)':item.valor,'Banco / Cartão':'',
             'Estabelecimento':'','Forma de Pagamento':'',
             'Parcela':'','Descrição':item.descricao||'',
@@ -5389,9 +5780,10 @@ function lerArquivoXLSX(event){
         if(lancAtual){
           const catItem = row['Categoria']||'';
           lancAtual.itens.push({
-            valor:    parseFloat(String(row['Valor (R$)']||'0').replace(',','.'))||0,
-            categoria:catItem,
-            descricao:row['Descrição']||''
+            valor:        parseFloat(String(row['Valor (R$)']||'0').replace(',','.'))||0,
+            categoria:    catItem,
+            descricao:    row['Descrição']||'',
+            data_original: parseDateBR(row['Data Origem']||'') || null
           });
           if(catItem) opcoesParaColetar.categoria.add(catItem);
         }
@@ -5505,6 +5897,7 @@ function lerArquivoXLSX(event){
             valor:         item.valor,
             categoria:     item.categoria || null,
             descricao:     item.descricao || null,
+            data_original: item.data_original || null,
             ordem:         idx
           }));
           await sb.from('financeiro_itens_lancamento').insert(itensComFk);

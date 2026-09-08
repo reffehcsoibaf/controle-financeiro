@@ -4,6 +4,25 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.18.0 — 07/09/2026
+
+- **Importar Lançamentos**: nova opção na seção Itens do Lançamento (📥 Importar Lançamentos) para
+  consolidar vários lançamentos antigos (ex.: pequenas dívidas com uma pessoa) dentro de um novo
+  lançamento — cada um vira um item, com Credor/Devedor preenchidos automaticamente quando
+  combinam. Os lançamentos originais são excluídos ao salvar (com confirmação explícita antes),
+  evitando duplicar valores; documentos anexados a eles são automaticamente re-vinculados ao novo
+  lançamento consolidado, e a data original de cada um é preservada junto do item (visível no
+  formulário, na tabela ao expandir itens, e na exportação XLSX).
+- **Pagamento de Fatura de Cartão vinculado**: novo checkbox no formulário ("💳 Este lançamento é o
+  pagamento de uma fatura de cartão de crédito") que, ao ser marcado com um cartão selecionado, cria
+  automaticamente um segundo lançamento de entrada naquele cartão — recuperando o limite sem
+  precisar lançar os dois separadamente como antes. Os dois lançamentos ficam vinculados: um selo 🔗
+  na tabela permite pular de um para o outro, e excluir um deles oferece a opção de excluir os dois
+  juntos. Só se aplica ao criar um lançamento novo, não ao editar.
+- Requer rodar a migração SQL `migracao_2026-09-07_importar_e_fatura_cartao.sql` no Supabase antes
+  de usar estas duas funcionalidades (adiciona as colunas `data_original` em
+  `financeiro_itens_lancamento` e `lancamento_vinculado_id` em `financeiro_lancamentos`).
+
 ## v1.17.0 — 04/09/2026
 
 - **Resumo em Tempo Real agora começa recolhido**: o painel fixo no topo (Total Geral, Total Pago,

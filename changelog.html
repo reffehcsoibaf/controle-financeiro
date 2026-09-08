@@ -156,11 +156,41 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.18.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-18-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-18-0"><span aria-hidden="true">🏷️</span> v1.18.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">07/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📥</span> Importar Lançamentos</h3>
+          <ul>
+            <li>Novo botão "📥 Importar Lançamentos" na seção Itens do Lançamento — consolida vários lançamentos antigos (ex.: pequenas dívidas com uma pessoa) dentro de um novo, cada um virando um item.</li>
+            <li>Credor e Devedor são preenchidos automaticamente no formulário quando todos os lançamentos importados combinam no mesmo valor.</li>
+            <li>Os lançamentos originais são excluídos ao salvar — com confirmação explícita antes — evitando duplicar valores entre o registro antigo e o novo consolidado.</li>
+            <li>Documentos anexados aos lançamentos importados são automaticamente re-vinculados ao novo lançamento, sem perder o arquivo guardado.</li>
+            <li>A data original de cada lançamento importado é preservada junto do item que ele virou — visível no formulário, na tabela (ao expandir os itens) e na exportação em XLSX.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Pagamento de Fatura de Cartão Vinculado</h3>
+          <ul>
+            <li>Novo checkbox no formulário de lançamento: "Este lançamento é o pagamento de uma fatura de cartão de crédito".</li>
+            <li>Ao marcar e escolher o cartão, o app cria automaticamente um segundo lançamento de entrada naquele cartão, recuperando o limite — sem precisar lançar os dois separadamente como antes.</li>
+            <li>Os dois lançamentos ficam vinculados: um selo 🔗 na tabela leva direto de um para o outro.</li>
+            <li>Excluir um dos dois lançamentos vinculados oferece a opção de excluir os dois juntos, ou só aquele, desfazendo o vínculo.</li>
+            <li>Recurso disponível apenas ao criar um lançamento novo, não ao editar um já existente.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.17.0 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-17-0">
+      <section class="versao-bloco" aria-labelledby="v1-17-0">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-17-0"><span aria-hidden="true">🏷️</span> v1.17.0</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">04/09/2026</span>
         </div>
 
