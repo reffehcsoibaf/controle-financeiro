@@ -1438,6 +1438,78 @@ select option{background:#1e2436;}
       </label>
     </div>
 
+    <details id="importar-filtros-avancados" style="margin:0 0 10px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;">
+      <summary style="cursor:pointer;font-size:13px;color:var(--text2);">Filtros avançados</summary>
+
+      <div style="margin-top:10px;">
+        <div style="display:flex;align-items:center;margin-bottom:4px;">
+          <label style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;margin:0;">Data de Origem</label>
+          <label for="importar-origem-exata" style="font-size:12px;font-weight:normal;text-transform:none;letter-spacing:normal;display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:auto;">
+            <input type="checkbox" id="importar-origem-exata" style="width:auto;" onchange="onToggleModoDataImportar('origem',this.checked)">
+            Data exata
+          </label>
+        </div>
+        <div id="importar-origem-intervalo" style="display:flex;gap:8px;margin-bottom:10px;">
+          <div class="form-group" style="flex:1;margin:0;">
+            <label for="importar-origem-de" style="font-size:11px;">De</label>
+            <input type="date" id="importar-origem-de" autocomplete="off">
+          </div>
+          <div class="form-group" style="flex:1;margin:0;">
+            <label for="importar-origem-ate" style="font-size:11px;">Até</label>
+            <input type="date" id="importar-origem-ate" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-group" id="importar-origem-unica" style="display:none;margin-bottom:10px;">
+          <label for="importar-origem-data" style="font-size:11px;">Data de Origem exata</label>
+          <input type="date" id="importar-origem-data" autocomplete="off">
+        </div>
+
+        <div style="display:flex;align-items:center;margin-bottom:4px;">
+          <label style="font-size:13px;font-weight:normal;text-transform:none;letter-spacing:normal;margin:0;">Data de Vencimento</label>
+          <label for="importar-venc-exata" style="font-size:12px;font-weight:normal;text-transform:none;letter-spacing:normal;display:flex;align-items:center;gap:4px;cursor:pointer;margin-left:auto;">
+            <input type="checkbox" id="importar-venc-exata" style="width:auto;" onchange="onToggleModoDataImportar('venc',this.checked)">
+            Data exata
+          </label>
+        </div>
+        <div id="importar-venc-intervalo" style="display:flex;gap:8px;margin-bottom:10px;">
+          <div class="form-group" style="flex:1;margin:0;">
+            <label for="importar-venc-de" style="font-size:11px;">De</label>
+            <input type="date" id="importar-venc-de" autocomplete="off">
+          </div>
+          <div class="form-group" style="flex:1;margin:0;">
+            <label for="importar-venc-ate" style="font-size:11px;">Até</label>
+            <input type="date" id="importar-venc-ate" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-group" id="importar-venc-unica" style="display:none;margin-bottom:10px;">
+          <label for="importar-venc-data" style="font-size:11px;">Data de Vencimento exata</label>
+          <input type="date" id="importar-venc-data" autocomplete="off">
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <div class="form-group" style="flex:1;margin:0;">
+            <label for="importar-credor">Credor</label>
+            <input type="text" id="importar-credor" list="importar-credor-lista" autocomplete="off" placeholder="Ex.: João">
+            <datalist id="importar-credor-lista"></datalist>
+          </div>
+          <div class="form-group" style="flex:1;margin:0;">
+            <label for="importar-devedor">Devedor</label>
+            <input type="text" id="importar-devedor" list="importar-devedor-lista" autocomplete="off" placeholder="Ex.: Maria">
+            <datalist id="importar-devedor-lista"></datalist>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-primary" id="btn-importar-buscar-filtros"
+                  onclick="aplicarFiltrosImportar()" style="flex:1;">
+            <span aria-hidden="true">🔍</span> Buscar
+          </button>
+          <button type="button" class="btn btn-secondary" id="btn-importar-limpar-filtros"
+                  onclick="limparFiltrosImportarAvancados()">Limpar</button>
+        </div>
+      </div>
+    </details>
+
     <div id="importar-lista" role="list" aria-label="Lançamentos disponíveis para importar"
          style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg3);"></div>
 
@@ -4121,6 +4193,15 @@ let buscaImportarTermo      = '';
 let incluirPagosImportar    = false;
 let lancamentosSelecionadosImportar = new Set();
 
+// Filtros avançados (aplicados só ao clicar em "Buscar", diferente da busca
+// livre acima que já filtra a cada tecla digitada)
+let filtroImportarOrigemDe  = '';
+let filtroImportarOrigemAte = '';
+let filtroImportarVencDe    = '';
+let filtroImportarVencAte   = '';
+let filtroImportarCredor    = '';
+let filtroImportarDevedor   = '';
+
 // IDs dos lançamentos já representados como item(ns) no formulário atual —
 // derivado direto de itensFormulario, então remover um item manualmente
 // (✕) já tira o lançamento original da lista de exclusão automaticamente,
@@ -4135,6 +4216,8 @@ function abrirModalImportarLancamentos() {
   incluirPagosImportar = false;
   document.getElementById('importar-busca').value = '';
   document.getElementById('importar-incluir-pagos').checked = false;
+  popularDatalistsImportar();
+  limparFiltrosImportarAvancados(true);
   renderizarListaImportar();
   document.getElementById('modal-importar-overlay').classList.add('open');
   requestAnimationFrame(() => requestAnimationFrame(() =>
@@ -4157,6 +4240,76 @@ function onIncluirPagosImportarChange(checked) {
   renderizarListaImportar();
 }
 
+// Alterna cada filtro de data entre "intervalo" (De/Até) e "data exata"
+// (um único campo) — a escolha é só de exibição; quem decide o valor
+// efetivo do filtro é aplicarFiltrosImportar(), ao clicar em "Buscar".
+function onToggleModoDataImportar(tipo, exata) {
+  document.getElementById('importar-'+tipo+'-intervalo').style.display = exata ? 'none' : 'flex';
+  document.getElementById('importar-'+tipo+'-unica').style.display     = exata ? 'block' : 'none';
+}
+
+function popularDatalistsImportar() {
+  const dlCredor  = document.getElementById('importar-credor-lista');
+  const dlDevedor = document.getElementById('importar-devedor-lista');
+  if(dlCredor)  dlCredor.innerHTML  = (opcoesSelects.credor||[]).map(v=>'<option value="'+escaparHTML(v)+'">').join('');
+  if(dlDevedor) dlDevedor.innerHTML = (opcoesSelects.devedor||[]).map(v=>'<option value="'+escaparHTML(v)+'">').join('');
+}
+
+// Lê os campos de filtro avançado da tela e só então atualiza o estado
+// usado por renderizarListaImportar — os filtros de data/credor/devedor
+// não afetam a lista enquanto o usuário não clicar em "Buscar".
+function aplicarFiltrosImportar() {
+  const origemExata = document.getElementById('importar-origem-exata').checked;
+  if(origemExata) {
+    const d = document.getElementById('importar-origem-data').value;
+    filtroImportarOrigemDe = d;
+    filtroImportarOrigemAte = d;
+  } else {
+    filtroImportarOrigemDe  = document.getElementById('importar-origem-de').value;
+    filtroImportarOrigemAte = document.getElementById('importar-origem-ate').value;
+  }
+
+  const vencExata = document.getElementById('importar-venc-exata').checked;
+  if(vencExata) {
+    const d = document.getElementById('importar-venc-data').value;
+    filtroImportarVencDe = d;
+    filtroImportarVencAte = d;
+  } else {
+    filtroImportarVencDe  = document.getElementById('importar-venc-de').value;
+    filtroImportarVencAte = document.getElementById('importar-venc-ate').value;
+  }
+
+  filtroImportarCredor  = document.getElementById('importar-credor').value.trim().toLowerCase();
+  filtroImportarDevedor = document.getElementById('importar-devedor').value.trim().toLowerCase();
+
+  renderizarListaImportar();
+  anunciar('Filtros aplicados à lista de lançamentos para importar.');
+}
+
+// silencioso=true (usado ao abrir o modal) evita re-renderizar e anunciar
+// duas vezes, já que abrirModalImportarLancamentos() renderiza em seguida.
+function limparFiltrosImportarAvancados(silencioso) {
+  ['importar-origem-de','importar-origem-ate','importar-origem-data',
+   'importar-venc-de','importar-venc-ate','importar-venc-data',
+   'importar-credor','importar-devedor'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  document.getElementById('importar-origem-exata').checked = false;
+  document.getElementById('importar-venc-exata').checked = false;
+  onToggleModoDataImportar('origem', false);
+  onToggleModoDataImportar('venc', false);
+
+  filtroImportarOrigemDe = ''; filtroImportarOrigemAte = '';
+  filtroImportarVencDe   = ''; filtroImportarVencAte   = '';
+  filtroImportarCredor   = ''; filtroImportarDevedor   = '';
+
+  if(!silencioso) {
+    renderizarListaImportar();
+    anunciar('Filtros avançados removidos.');
+  }
+}
+
 function renderizarListaImportar() {
   const idsJaNoFormulario = idsLancamentosImportadosAtuais();
   const termo = buscaImportarTermo;
@@ -4165,6 +4318,12 @@ function renderizarListaImportar() {
     if(l.id === editandoId) return false;
     if(idsJaNoFormulario.includes(l.id)) return false;
     if(!incluirPagosImportar && l.pago) return false;
+    if(filtroImportarOrigemDe  && (!l.dataOrigem || l.dataOrigem < filtroImportarOrigemDe))  return false;
+    if(filtroImportarOrigemAte && (!l.dataOrigem || l.dataOrigem > filtroImportarOrigemAte)) return false;
+    if(filtroImportarVencDe    && (!l.dataVencimento || l.dataVencimento < filtroImportarVencDe))  return false;
+    if(filtroImportarVencAte   && (!l.dataVencimento || l.dataVencimento > filtroImportarVencAte)) return false;
+    if(filtroImportarCredor  && !(l.credor||'').toLowerCase().includes(filtroImportarCredor))   return false;
+    if(filtroImportarDevedor && !(l.devedor||'').toLowerCase().includes(filtroImportarDevedor)) return false;
     if(!termo) return true;
     const alvo = [l.credor, l.devedor, l.descricao, l.banco, l.estabelecimento, l.categoria]
       .filter(Boolean).join(' ').toLowerCase();
