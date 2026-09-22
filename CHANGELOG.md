@@ -4,6 +4,69 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.20.0 — 22/09/2026
+
+- **Nova reserva gratuita de IA na leitura de documentos: Cloudflare Workers AI.** A ordem passa
+  a ser: Gemini (grátis) → Cloudflare Workers AI (grátis, com limite diário) → Anthropic (paga).
+  A Anthropic só é usada se os dois gratuitos falharem — evita gastar crédito pago quando o Gemini
+  fica indisponível ou sem cota. O Workers AI roda na própria Cloudflare, sem chave de API
+  (binding `AI` no `wrangler.jsonc`), com Gemma 4 como modelo principal e Llama 4 Scout como
+  reserva. Foto e texto/XML vão direto para o modelo; PDF é convertido em texto antes (PDF
+  escaneado, só imagem, não é lido por ele e segue para a Anthropic). Quando o limite gratuito
+  diário acaba, a chamada só dá erro e o app segue para a Anthropic — sem cobrança surpresa.
+
+## v1.19.0 — 08/09/2026
+
+- **Pagamento de Fatura de Cartão: gatilho trocado de checkbox para Categoria.** Em vez de marcar
+  uma caixa separada, o app agora detecta automaticamente pela **Categoria "Cartão de crédito"**
+  (a mesma que já era usada por hábito nesse tipo de lançamento) — assim que ela é escolhida, o
+  campo "Cartão a quitar" aparece sozinho. Com um só cartão de crédito configurado, ele já vem
+  pré-selecionado. O campo nunca some sozinho: se a categoria bater mas nenhum cartão for
+  escolhido, o lançamento é salvo normalmente, sem vínculo, sem bloquear nada. O cartão já
+  selecionado como Banco/Cartão principal do lançamento não aparece como opção (evita "pagar o
+  cartão com ele mesmo"). O checkbox antigo foi removido.
+
+## v1.18.2 — 08/09/2026
+
+- **Pagamento de Fatura de Cartão**: o lançamento espelho criado automaticamente no cartão agora
+  herda a **Data de Vencimento**, a **Forma de Pagamento** e a **Categoria** do lançamento
+  principal (antes ficavam em branco / com um valor fixo). Corrige o caso do lançamento espelho
+  chegar faltando essas informações.
+
+## v1.18.1 — 08/09/2026
+
+- **Confirmação por voz ao ativar/desativar "Pagamento de Fatura de Cartão"**: marcar ou desmarcar
+  a caixa agora é anunciado por voz ("Pagamento de fatura de cartão ativado/desativado"), para
+  confirmar que a marcação realmente registrou antes de salvar — evita o caso de a caixa parecer
+  marcada mas não estar, silenciosamente.
+
+## v1.18.0 — 07/09/2026
+
+- **Importar Lançamentos**: nova opção na seção Itens do Lançamento (📥 Importar Lançamentos) para
+  consolidar vários lançamentos antigos (ex.: pequenas dívidas com uma pessoa) dentro de um novo
+  lançamento — cada um vira um item, com Credor/Devedor preenchidos automaticamente quando
+  combinam. Os lançamentos originais são excluídos ao salvar (com confirmação explícita antes),
+  evitando duplicar valores; documentos anexados a eles são automaticamente re-vinculados ao novo
+  lançamento consolidado, e a data original de cada um é preservada junto do item (visível no
+  formulário, na tabela ao expandir itens, e na exportação XLSX).
+- **Pagamento de Fatura de Cartão vinculado**: novo checkbox no formulário ("💳 Este lançamento é o
+  pagamento de uma fatura de cartão de crédito") que, ao ser marcado com um cartão selecionado, cria
+  automaticamente um segundo lançamento de entrada naquele cartão — recuperando o limite sem
+  precisar lançar os dois separadamente como antes. Os dois lançamentos ficam vinculados: um selo 🔗
+  na tabela permite pular de um para o outro, e excluir um deles oferece a opção de excluir os dois
+  juntos. Só se aplica ao criar um lançamento novo, não ao editar.
+- Requer rodar a migração SQL `migracao_2026-09-07_importar_e_fatura_cartao.sql` no Supabase antes
+  de usar estas duas funcionalidades (adiciona as colunas `data_original` em
+  `financeiro_itens_lancamento` e `lancamento_vinculado_id` em `financeiro_lancamentos`).
+
+## v1.17.0 — 04/09/2026
+
+- **Resumo em Tempo Real agora começa recolhido**: o painel fixo no topo (Total Geral, Total Pago,
+  Total Pendente e Registros visíveis) não aparece mais expandido automaticamente ao carregar a
+  página. Um botão **"Mostrar resumo"**, ao lado do título, expande o painel; vira **"Ocultar
+  resumo"** quando expandido, para recolher de novo. Cada exibição/ocultação é anunciada por voz
+  para quem usa leitor de tela. O painel volta a ficar recolhido a cada novo carregamento da página.
+
 ## v1.16.2 — 23/08/2026
 
 ### Correção: atalhos Alt+ não funcionavam com teclado Bluetooth no iPhone/iPad

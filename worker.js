@@ -4,8 +4,9 @@
 //  e extrai dados estruturados para pré-preencher o formulário de
 //  lançamento.
 //
-//  ESTRATÉGIA DE PROVEDOR: tenta Gemini primeiro (grátis), e só usa
-//  a Anthropic (paga) se o Gemini falhar (erro, rate limit, resposta
+//  ESTRATÉGIA DE PROVEDOR: tenta Gemini primeiro (grátis); se falhar,
+//  tenta o Cloudflare Workers AI (grátis, com limite diário); e só usa
+//  a Anthropic (paga) se os dois falharem (erro, rate limit, resposta
 //  inválida).
 //
 //  As chaves de API NUNCA ficam no navegador — vivem só aqui, como
@@ -231,23 +232,41 @@ async function handleFetch(request, env, ctx) {
     const textoCorrecoes = montarTextoCorrecoes(payload?.correcoesConhecidas);
 
     // ---- 1ª TENTATIVA: GEMINI (grátis) ----
+    let erroGeminiDetalhe = null;
     if (env.GEMINI_API_KEY) {
       try {
         const dados = await lerComGemini({ apiKey: env.GEMINI_API_KEY, documento, textoCorrecoes });
         ctx.waitUntil(registrarUsoIA(accessToken, env));
         return new Response(JSON.stringify({ ok: true, dados: { ...dados, _provedor: 'gemini' } }), { status: 200, headers });
       } catch (erroGemini) {
-        console.log('[fallback] Gemini falhou, tentando Anthropic:', erroGemini.message);
-        // segue para a Anthropic abaixo
+        erroGeminiDetalhe = String(erroGemini.message || erroGemini).slice(0, 500);
+        console.log('[fallback] Gemini falhou, tentando Workers AI:', erroGeminiDetalhe);
+        // segue para o Workers AI abaixo
       }
     } else {
-      console.log('[fallback] GEMINI_API_KEY não configurada, indo direto para Anthropic.');
+      erroGeminiDetalhe = 'GEMINI_API_KEY não configurada neste Worker.';
+      console.log('[fallback] GEMINI_API_KEY não configurada, indo direto para Workers AI.');
     }
 
-    // ---- 2ª TENTATIVA: ANTHROPIC (paga, fallback) ----
+    // ---- 2ª TENTATIVA: CLOUDFLARE WORKERS AI (grátis, reserva) ----
+    let erroWorkersAIDetalhe = null;
+    try {
+      const dados = await lerComWorkersAI({ env, documento, textoCorrecoes });
+      ctx.waitUntil(registrarUsoIA(accessToken, env));
+      return new Response(JSON.stringify({ ok: true, dados: { ...dados, _provedor: 'workers-ai' } }), { status: 200, headers });
+    } catch (erroWorkersAI) {
+      erroWorkersAIDetalhe = String(erroWorkersAI.message || erroWorkersAI).slice(0, 500);
+      console.log('[fallback] Workers AI falhou, tentando Anthropic:', erroWorkersAIDetalhe);
+    }
+
+    // ---- 3ª TENTATIVA: ANTHROPIC (paga, último recurso) ----
+    const detalhesAnteriores =
+      (erroGeminiDetalhe ? ' | Detalhe do Gemini: ' + erroGeminiDetalhe : '') +
+      (erroWorkersAIDetalhe ? ' | Detalhe do Workers AI: ' + erroWorkersAIDetalhe : '');
+
     if (!env.ANTHROPIC_API_KEY) {
       return new Response(
-        JSON.stringify({ ok: false, erro: 'Nem GEMINI_API_KEY nem ANTHROPIC_API_KEY estão configuradas no Cloudflare.' }),
+        JSON.stringify({ ok: false, erro: 'Gemini e Workers AI falharam, e a ANTHROPIC_API_KEY não está configurada no Cloudflare.' + detalhesAnteriores }),
         { status: 500, headers }
       );
     }
@@ -258,10 +277,37 @@ async function handleFetch(request, env, ctx) {
       return new Response(JSON.stringify({ ok: true, dados: { ...dados, _provedor: 'anthropic' } }), { status: 200, headers });
     } catch (erroAnthropic) {
       return new Response(
-        JSON.stringify({ ok: false, erro: 'Falha ao ler documento (Gemini e Anthropic falharam): ' + erroAnthropic.message }),
+        JSON.stringify({ ok: false, erro: 'Falha ao ler documento (Gemini, Workers AI e Anthropic falharam): ' + erroAnthropic.message + detalhesAnteriores }),
         { status: 502, headers }
       );
     }
+}
+
+// Leitura do documento pelo Workers AI. Imagem vai direto para o modelo;
+// PDF é convertido em texto antes (os modelos não leem PDF); texto e XML
+// já chegam como texto.
+async function lerComWorkersAI({ env, documento, textoCorrecoes }) {
+  const { tipo, conteudo, mimeType, nomeArquivo } = documento;
+  let parteDocumento;
+  if (tipo === 'imagem') {
+    parteDocumento = { tipo: 'imagem', mimeType: mimeType || 'image/jpeg', base64: conteudo };
+  } else if (tipo === 'pdf') {
+    const textoPdf = await pdfParaTextoWorkersAI(env, conteudo, nomeArquivo);
+    parteDocumento = { tipo: 'texto', texto: 'Conteúdo do PDF "' + (nomeArquivo || 'documento.pdf') + '" (convertido em texto):\n\n' + textoPdf };
+  } else {
+    const textoLimitado = String(conteudo).slice(0, 60000);
+    parteDocumento = { tipo: 'texto', texto: 'Conteúdo do arquivo "' + (nomeArquivo || 'documento') + '":\n\n' + textoLimitado };
+  }
+
+  const partes = [];
+  if (textoCorrecoes) partes.push({ tipo: 'texto', texto: textoCorrecoes });
+  partes.push(parteDocumento);
+  if (tipo === 'imagem') partes.push({ tipo: 'texto', texto: TEXTO_INSTRUCAO_ARQUIVO });
+
+  const texto = await executarWorkersAI(env, { sistema: PROMPT_SISTEMA, partes, maxTokens: 4096 });
+  const extraido = extrairJSON(texto);
+  if (!extraido) throw new Error('Não foi possível interpretar o JSON retornado pelo Workers AI.');
+  return extraido;
 }
 
 // Nomes de exibição dos campos rastreados pela memória de correções — devem
@@ -357,6 +403,104 @@ function montarParteConteudo(documento) {
   // texto ou xml: já vem como texto puro (não base64)
   const textoLimitado = String(conteudo).slice(0, 60000); // proteção contra arquivos gigantes
   return { text: 'Conteúdo do arquivo "' + (nomeArquivo || 'documento') + '":\n\n' + textoLimitado };
+}
+
+// ==================== PROVEDOR: CLOUDFLARE WORKERS AI ====================
+// Reserva GRATUITA entre o Gemini e a Anthropic. Roda na própria Cloudflare,
+// sem chave de API: usa o binding "AI" declarado no wrangler.jsonc.
+//
+// Custo: a Cloudflare dá 10.000 "neurons" por dia de graça. No plano
+// gratuito de Workers, quando esse limite acaba, a chamada apenas dá erro
+// (e aí o app segue para a Anthropic) — nunca gera cobrança surpresa.
+//
+// Os modelos abertos são mais fracos que Gemini/Claude para documentos
+// complexos, por isso ficam como reserva, não como provedor principal.
+// Lista em ordem de preferência: se um modelo for aposentado ou falhar,
+// o próximo assume automaticamente.
+const MODELOS_WORKERS_AI_CANDIDATOS = [
+  '@cf/google/gemma-4-26b-a4b-it',           // o mais barato em neurons, lê imagem
+  '@cf/meta/llama-4-scout-17b-16e-instruct', // reserva, também lê imagem
+];
+
+// partes: lista de { tipo: 'texto', texto } ou { tipo: 'imagem', mimeType, base64 }.
+// Devolve o texto bruto da resposta (quem chama faz o parse do JSON).
+async function executarWorkersAI(env, { sistema, partes, maxTokens }) {
+  if (!env.AI || typeof env.AI.run !== 'function') {
+    throw new Error('Binding "AI" (Workers AI) não configurado neste Worker — confira o "ai" no wrangler.jsonc.');
+  }
+
+  const conteudo = partes.map((p) => (
+    p.tipo === 'imagem'
+      ? { type: 'image_url', image_url: { url: `data:${p.mimeType};base64,${p.base64}` } }
+      : { type: 'text', text: p.texto }
+  ));
+
+  let ultimoErro = null;
+  for (const modelo of MODELOS_WORKERS_AI_CANDIDATOS) {
+    try {
+      const entrada = {
+        messages: [
+          { role: 'system', content: sistema },
+          { role: 'user', content: conteudo },
+        ],
+        max_tokens: maxTokens || 4096,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+      };
+      // Gemma 4 é um modelo de "raciocínio": desligar o pensamento economiza
+      // neurons e evita texto extra antes do JSON.
+      if (modelo.includes('gemma')) entrada.chat_template_kwargs = { enable_thinking: false };
+
+      const resposta = await env.AI.run(modelo, entrada);
+      const texto = extrairTextoWorkersAI(resposta);
+      if (!texto) throw new Error('resposta vazia.');
+      console.log(`[workers-ai] Resposta obtida com "${modelo}".`);
+      return texto;
+    } catch (e) {
+      ultimoErro = new Error(`Workers AI (${modelo}): ${String(e && e.message || e).slice(0, 400)}`);
+      console.log('[workers-ai] ' + ultimoErro.message + ' — tentando o próximo candidato.');
+    }
+  }
+  throw ultimoErro || new Error('Nenhum modelo do Workers AI respondeu.');
+}
+
+// Os modelos do Workers AI devolvem em dois formatos diferentes:
+// { response: '...' } (Llama) ou { choices: [{ message: { content } }] } (Gemma).
+function extrairTextoWorkersAI(resposta) {
+  if (!resposta) return '';
+  if (typeof resposta.response === 'string') return resposta.response.trim();
+  if (resposta.response && typeof resposta.response === 'object') return JSON.stringify(resposta.response);
+  const conteudo = resposta?.choices?.[0]?.message?.content;
+  if (typeof conteudo === 'string') return conteudo.trim();
+  if (Array.isArray(conteudo)) return conteudo.map((c) => c.text || '').join('').trim();
+  return '';
+}
+
+// Os modelos do Workers AI não leem PDF diretamente. O toMarkdown() da
+// própria Cloudflare converte o PDF em texto antes. Funciona com PDF
+// "digital" (texto selecionável); PDF escaneado (só imagem) sai sem texto,
+// e nesse caso a leitura falha de propósito para cair na Anthropic.
+async function pdfParaTextoWorkersAI(env, base64, nomeArquivo) {
+  if (!env.AI || typeof env.AI.toMarkdown !== 'function') {
+    throw new Error('Binding "AI" (Workers AI) não configurado neste Worker.');
+  }
+  const binario = atob(base64);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+
+  const resultado = await env.AI.toMarkdown({
+    name: nomeArquivo || 'documento.pdf',
+    blob: new Blob([bytes], { type: 'application/pdf' }),
+  });
+  const item = Array.isArray(resultado) ? resultado[0] : resultado;
+  if (!item || item.format === 'error') {
+    throw new Error('Workers AI não conseguiu converter o PDF: ' + (item && item.error || 'sem retorno'));
+  }
+  const texto = String(item.data || '').trim();
+  if (texto.length < 40) {
+    throw new Error('PDF sem texto legível (provavelmente escaneado) — Workers AI não lê PDF de imagem.');
+  }
+  return texto.slice(0, 60000);
 }
 
 // ==================== PROVEDOR: ANTHROPIC ====================

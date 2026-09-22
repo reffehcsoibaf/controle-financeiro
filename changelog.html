@@ -156,11 +156,125 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
     <div style="display:flex;flex-direction:column;gap:20px;">
 
+      <!-- ══ v1.20.0 ══ -->
+      <section class="versao-bloco atual" aria-labelledby="v1-20-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-20-0"><span aria-hidden="true">🏷️</span> v1.20.0</span>
+          <span class="versao-badge">Versão Atual</span>
+          <span class="versao-data">22/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🤖</span> Nova reserva gratuita de IA: Cloudflare Workers AI</h3>
+          <ul>
+            <li>A leitura de documentos passa a seguir a ordem: Gemini (grátis) → Cloudflare Workers AI (grátis, com limite diário) → Anthropic (paga). A Anthropic só é usada se os dois gratuitos falharem.</li>
+            <li>O Workers AI roda na própria Cloudflare, sem chave de API, com Gemma 4 como modelo principal e Llama 4 Scout como reserva.</li>
+            <li>Foto e texto/XML vão direto para o modelo; PDF é convertido em texto antes. PDF escaneado (só imagem) não é lido por ele e segue para a Anthropic.</li>
+            <li>Quando o limite gratuito diário acaba, a chamada só dá erro e o app segue para a Anthropic — sem cobrança surpresa.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.19.0 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-19-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-19-0"><span aria-hidden="true">🏷️</span> v1.19.0</span>
+          <span class="versao-data">08/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Pagamento de Fatura de Cartão: gatilho por Categoria</h3>
+          <ul>
+            <li>Trocado o gatilho de um checkbox separado para a Categoria "Cartão de crédito" — a mesma já usada por hábito nesse tipo de lançamento.</li>
+            <li>Ao escolher essa categoria, o campo "Cartão a quitar" aparece automaticamente. Com um só cartão de crédito configurado, ele já vem pré-selecionado.</li>
+            <li>Nunca bloqueia o salvamento: se a categoria bater mas nenhum cartão for escolhido, o lançamento é salvo normalmente, sem vínculo.</li>
+            <li>O próprio Banco/Cartão selecionado como principal do lançamento não aparece mais como opção de "Cartão a quitar", evitando vincular um cartão a ele mesmo.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.18.2 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-18-2">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-18-2"><span aria-hidden="true">🏷️</span> v1.18.2</span>
+          <span class="versao-data">08/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Pagamento de Fatura de Cartão</h3>
+          <ul>
+            <li>O lançamento espelho criado automaticamente no cartão agora herda a Data de Vencimento, a Forma de Pagamento e a Categoria do lançamento principal — antes ficavam em branco ou com um valor fixo.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.18.1 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-18-1">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-18-1"><span aria-hidden="true">🏷️</span> v1.18.1</span>
+          <span class="versao-data">08/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">🔊</span> Acessibilidade</h3>
+          <ul>
+            <li>Marcar ou desmarcar "Pagamento de Fatura de Cartão" agora é confirmado por voz, para garantir que a marcação realmente registrou antes de salvar.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.18.0 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-18-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-18-0"><span aria-hidden="true">🏷️</span> v1.18.0</span>
+          <span class="versao-data">07/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📥</span> Importar Lançamentos</h3>
+          <ul>
+            <li>Novo botão "📥 Importar Lançamentos" na seção Itens do Lançamento — consolida vários lançamentos antigos (ex.: pequenas dívidas com uma pessoa) dentro de um novo, cada um virando um item.</li>
+            <li>Credor e Devedor são preenchidos automaticamente no formulário quando todos os lançamentos importados combinam no mesmo valor.</li>
+            <li>Os lançamentos originais são excluídos ao salvar — com confirmação explícita antes — evitando duplicar valores entre o registro antigo e o novo consolidado.</li>
+            <li>Documentos anexados aos lançamentos importados são automaticamente re-vinculados ao novo lançamento, sem perder o arquivo guardado.</li>
+            <li>A data original de cada lançamento importado é preservada junto do item que ele virou — visível no formulário, na tabela (ao expandir os itens) e na exportação em XLSX.</li>
+          </ul>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">💳</span> Pagamento de Fatura de Cartão Vinculado</h3>
+          <ul>
+            <li>Novo checkbox no formulário de lançamento: "Este lançamento é o pagamento de uma fatura de cartão de crédito".</li>
+            <li>Ao marcar e escolher o cartão, o app cria automaticamente um segundo lançamento de entrada naquele cartão, recuperando o limite — sem precisar lançar os dois separadamente como antes.</li>
+            <li>Os dois lançamentos ficam vinculados: um selo 🔗 na tabela leva direto de um para o outro.</li>
+            <li>Excluir um dos dois lançamentos vinculados oferece a opção de excluir os dois juntos, ou só aquele, desfazendo o vínculo.</li>
+            <li>Recurso disponível apenas ao criar um lançamento novo, não ao editar um já existente.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ══ v1.17.0 ══ -->
+      <section class="versao-bloco" aria-labelledby="v1-17-0">
+        <div class="versao-cabecalho">
+          <span class="versao-numero" id="v1-17-0"><span aria-hidden="true">🏷️</span> v1.17.0</span>
+          <span class="versao-data">04/09/2026</span>
+        </div>
+
+        <div class="versao-secao">
+          <h3><span aria-hidden="true">📊</span> Resumo em Tempo Real recolhido por padrão</h3>
+          <ul>
+            <li>O painel fixo no topo (Total Geral, Total Pago, Total Pendente e Registros visíveis) não aparece mais expandido automaticamente ao carregar a página.</li>
+            <li>Um botão "Mostrar resumo", ao lado do título do painel, expande o conteúdo; vira "Ocultar resumo" quando expandido, para recolher de novo.</li>
+            <li>Cada exibição ou ocultação do painel é anunciada por voz para quem usa leitor de tela.</li>
+            <li>O painel volta a ficar recolhido a cada novo carregamento da página.</li>
+          </ul>
+        </div>
+      </section>
+
       <!-- ══ v1.16.2 ══ -->
-      <section class="versao-bloco atual" aria-labelledby="v1-16-2">
+      <section class="versao-bloco" aria-labelledby="v1-16-2">
         <div class="versao-cabecalho">
           <span class="versao-numero" id="v1-16-2"><span aria-hidden="true">🏷️</span> v1.16.2</span>
-          <span class="versao-badge">Versão Atual</span>
           <span class="versao-data">23/08/2026</span>
         </div>
 
