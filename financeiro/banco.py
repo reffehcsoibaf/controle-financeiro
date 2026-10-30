@@ -303,7 +303,9 @@ class Banco:
         saida = []
         with self._con:
             for p in self._con.execute(
-                    "SELECT * FROM pendencias_lancamento WHERE conflito = 0"
+                    "SELECT * FROM pendencias_lancamento WHERE conflito = 0 "
+                    # Na ordem de criação: as parcelas ganham ids em sequência
+                    "ORDER BY lancamento_id < 0, ABS(lancamento_id)"
                     ).fetchall():
                 i = p["lancamento_id"]
                 if p["operacao"] == "excluir" and i < 0:

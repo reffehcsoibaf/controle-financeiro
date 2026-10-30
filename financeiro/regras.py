@@ -186,7 +186,7 @@ def _bate_busca(lanc, termo):
 
 
 def filtrar(lancamentos, f):
-    """Mais recentes primeiro (o site mostra o contrário)."""
+    """Datas mais recentes primeiro (o site mostra o contrário)."""
     termo = sem_acentos(f.busca).strip()
     saida = []
     for l in lancamentos:
@@ -221,7 +221,10 @@ def filtrar(lancamentos, f):
         if termo and not _bate_busca(l, termo):
             continue
         saida.append(l)
-    saida.sort(key=lambda l: (l["data_origem"] or "", l["id"]), reverse=True)
+    # No mesmo dia, na ordem de criação: assim as parcelas ficam 1/3, 2/3, 3/3.
+    # Id negativo é temporário, e cada novo é menor que o anterior.
+    saida.sort(key=lambda l: (l["id"] < 0, abs(l["id"])))
+    saida.sort(key=lambda l: l["data_origem"] or "", reverse=True)
     return saida
 
 
