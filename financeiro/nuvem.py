@@ -13,6 +13,7 @@ import http.server
 import json
 import logging
 import os
+import re
 import secrets
 import socket
 import threading
@@ -27,6 +28,8 @@ from financeiro import config
 log = logging.getLogger("financeiro.nuvem")
 TAMANHO_PAGINA = 1000
 TEMPO_REDE = 30
+TEMPO_ARQUIVO = 120
+TEMPO_IA = 180
 TEMPO_LOGIN = 300
 
 
@@ -47,6 +50,10 @@ class ErroServidor(Exception):
 
 
 class LoginCancelado(Exception):
+    pass
+
+
+class ErroLeituraIA(Exception):
     pass
 
 
@@ -112,6 +119,34 @@ def _pedir(url, corpo=None, cabecalhos=None, abrir=urllib.request.urlopen,
         log.warning("HTTP %s em %s: %s", e.code, url.split("?")[0], texto)
         # Só isto derruba a sessão; outro erro não pode tirar a pessoa da conta.
         if e.code == 401 or (e.code == 400 and "/auth/v1/" in url):
+            raise SessaoExpirada(texto) from e
+        raise ErroServidor("O servidor respondeu %s." % e.code) from e
+    except (urllib.error.URLError, socket.timeout, TimeoutError,
+            ConnectionError) as e:
+        raise SemConexao(str(e)) from e
+
+
+def _pedir_bytes(url, token, metodo="GET", dados=None, tipo=None,
+                 ignorar_404=False, ignorar_duplicado=False):
+    """Para arquivos: a resposta e o corpo não são JSON."""
+    cabecalhos = {"apikey": config.SUPABASE_KEY,
+                  "Authorization": "Bearer " + token}
+    if tipo:
+        cabecalhos["Content-Type"] = tipo
+    pedido = urllib.request.Request(url, data=dados, method=metodo,
+                                    headers=cabecalhos)
+    try:
+        with urllib.request.urlopen(pedido, timeout=TEMPO_ARQUIVO) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        texto = e.read().decode(errors="replace")[:300]
+        log.warning("HTTP %s em arquivo: %s", e.code, texto)
+        if ignorar_404 and ("not_found" in texto or e.code == 404):
+            return b""
+        # Reenvio de um arquivo que já tinha chegado antes de a conexão cair
+        if ignorar_duplicado and ("Duplicate" in texto or "already exists" in texto):
+            return b""
+        if e.code == 401:
             raise SessaoExpirada(texto) from e
         raise ErroServidor("O servidor respondeu %s." % e.code) from e
     except (urllib.error.URLError, socket.timeout, TimeoutError,
@@ -309,13 +344,20 @@ class Nuvem:
                    "p_pagamentos": envio["pagamentos"]},
             cabecalhos=cabecalhos)
 
-    def sincronizar(self, pendencias, resultados, envios=(), resultados_lanc=None):
+    def sincronizar(self, pendencias, resultados, envios=(), resultados_lanc=None,
+                    operacoes=(), feitas=None):
         """Envia as alterações e baixa tudo. Os resultados são anotados à medida
         que acontecem, para valer mesmo se a conexão cair depois. Erro do
-        servidor num lançamento não impede o resto: ele fica na fila."""
+        servidor num lançamento não impede o resto: ele fica na fila.
+
+        A ordem importa: primeiro o que cria ou edita, porque as operações podem
+        apontar para lançamentos novos; por último o que exclui, porque os
+        documentos de um lançamento importado mudam de dono antes de ele sumir."""
         token = self._token_valido()
         self.conferir_acesso(token)
-        for envio in envios:
+        ids_novos = {}
+
+        def enviar(envio):
             try:
                 resposta = self.enviar_lancamento(envio, token)
             except ErroServidor as e:
@@ -323,9 +365,193 @@ class Nuvem:
                             envio["lancamento_id"], e)
                 resposta = {"status": "erro"}
             resultados_lanc.append((envio, resposta))
+            if resposta.get("id") and resposta["id"] != envio["lancamento_id"]:
+                ids_novos[envio["lancamento_id"]] = resposta["id"]
+
+        for envio in envios:
+            if envio["operacao"] != "excluir":
+                enviar(envio)
+        for op in operacoes:
+            try:
+                self.enviar_operacao(op, token, ids_novos)
+            except ErroServidor as e:
+                # A ordem da fila importa: o resto espera a próxima tentativa
+                log.warning("operação %s não enviada: %s", op["tipo"], e)
+                resultados_lanc.append((None, {"status": "erro"}))
+                break
+            feitas.append(op)
+        for envio in envios:
+            if envio["operacao"] == "excluir":
+                enviar(envio)
         for pendencia in pendencias:
             resultados.append((pendencia, self.enviar_pago(pendencia, token)))
         return self.baixar_tudo()
+
+    # ---- operações da fila ----
+    def _rest(self, tabela, filtro, token, corpo=None, metodo="PATCH", prefer=None):
+        q = dict(filtro, user_id="eq." + self.sessao["user_id"])
+        cabecalhos = {"Authorization": "Bearer " + token}
+        if prefer:
+            cabecalhos["Prefer"] = prefer
+        return _pedir("%s/rest/v1/%s?%s" % (
+            config.SUPABASE_URL, tabela, urllib.parse.urlencode(q)),
+            corpo=corpo, cabecalhos=cabecalhos, metodo=metodo)
+
+    def _inserir_ignorando(self, tabela, corpo, token, conflito):
+        return _pedir("%s/rest/v1/%s?on_conflict=%s" % (
+            config.SUPABASE_URL, tabela, conflito),
+            corpo=dict(corpo, user_id=self.sessao["user_id"]),
+            cabecalhos={"Authorization": "Bearer " + token,
+                        "Prefer": "resolution=ignore-duplicates,return=minimal"},
+            metodo="POST")
+
+    def enviar_operacao(self, op, token, ids_novos):
+        """Todas podem ser repetidas sem efeito extra: se a conexão cair logo
+        depois de gravar, o reenvio não duplica nem estraga nada."""
+        d, tipo = op["dados"], op["tipo"]
+        ids = [ids_novos.get(i, i) for i in d.get("ids", ())]
+        if any(i < 0 for i in ids):
+            raise ErroServidor("lançamento ainda não enviado")
+        if tipo == "opcao_add":
+            self._inserir_ignorando(
+                "financeiro_opcoes_listas",
+                {"campo": d["campo"], "valor": d["valor"]}, token,
+                "user_id,campo,valor")
+        elif tipo == "opcao_del":
+            self._rest("financeiro_opcoes_listas",
+                       {"campo": "eq." + d["campo"], "valor": "eq." + d["valor"]},
+                       token, metodo="DELETE")
+            if d["campo"] == "banco":
+                self._rest("financeiro_contas_config",
+                           {"nome_banco": "eq." + d["valor"]}, token, metodo="DELETE")
+        elif tipo == "opcao_renomear":
+            self._renomear(d["campo"], d["antigo"], d["novo"], token)
+        elif tipo == "conta_salvar":
+            _pedir("%s/rest/v1/financeiro_contas_config?on_conflict=user_id,nome_banco"
+                   % config.SUPABASE_URL,
+                   corpo={"user_id": self.sessao["user_id"],
+                          "nome_banco": d["nome"], "tipo": d["tipo"],
+                          "saldo_inicial": d.get("saldo_inicial"),
+                          "limite_total": d.get("limite_total")},
+                   cabecalhos={"Authorization": "Bearer " + token,
+                               "Prefer": "resolution=merge-duplicates,return=minimal"},
+                   metodo="POST")
+        elif tipo == "conta_excluir":
+            self._rest("financeiro_contas_config", {"nome_banco": "eq." + d["nome"]},
+                       token, metodo="DELETE")
+        elif tipo == "vincular":
+            a, b = ids
+            for origem, destino in ((a, b), (b, a)):
+                self._rest("financeiro_lancamentos", {"id": "eq.%d" % origem}, token,
+                           corpo={"lancamento_vinculado_id": destino})
+        elif tipo == "docs_mover":
+            para, *de = ids
+            self._rest("financeiro_documentos_armazenados",
+                       {"lancamento_id": "in.(%s)" % ",".join(str(i) for i in de)},
+                       token, corpo={"lancamento_id": para})
+        elif tipo == "doc_guardar":
+            self._guardar_documento(d, token)
+        elif tipo == "doc_vincular":
+            self._rest("financeiro_documentos_armazenados",
+                       {"id": "eq." + d["doc_id"]}, token,
+                       corpo={"lancamento_id": ids[0] if ids else None})
+        elif tipo == "doc_excluir":
+            _pedir_bytes(self._url_arquivo(d["caminho"]), token, metodo="DELETE",
+                         ignorar_404=True)
+            self._rest("financeiro_documentos_armazenados",
+                       {"id": "eq." + d["doc_id"]}, token, metodo="DELETE")
+        elif tipo == "correcao_add":
+            # Sem restrição única no servidor: confere antes para não repetir
+            achadas = self._rest(
+                "financeiro_correcoes_ia",
+                {"campo": "eq." + d["campo"], "valor_errado": "eq." + d["valor_errado"],
+                 "valor_correto": "eq." + d["valor_correto"], "select": "id"},
+                token, metodo="GET")
+            if not achadas:
+                _pedir("%s/rest/v1/financeiro_correcoes_ia" % config.SUPABASE_URL,
+                       corpo=dict(d, user_id=self.sessao["user_id"]),
+                       cabecalhos={"Authorization": "Bearer " + token,
+                                   "Prefer": "return=minimal"}, metodo="POST")
+        elif tipo == "correcao_editar":
+            self._rest("financeiro_correcoes_ia", {"id": "eq.%d" % d["id"]}, token,
+                       corpo={"valor_errado": d["valor_errado"],
+                              "valor_correto": d["valor_correto"],
+                              "contexto": d["contexto"]})
+        elif tipo == "correcao_excluir":
+            self._rest("financeiro_correcoes_ia", {"id": "eq.%d" % d["id"]}, token,
+                       metodo="DELETE")
+        elif tipo == "correcoes_limpar":
+            self._rest("financeiro_correcoes_ia", {}, token, metodo="DELETE")
+        else:
+            raise ErroServidor("operação desconhecida: " + tipo)
+
+    def _renomear(self, campo, antigo, novo, token):
+        filtro = {"valor": "eq." + antigo, "campo": "eq." + campo}
+        self._rest("financeiro_opcoes_listas", filtro, token, corpo={"valor": novo})
+        self._rest("financeiro_lancamentos", {campo: "eq." + antigo}, token,
+                   corpo={campo: novo})
+        if campo == "categoria":
+            self._rest("financeiro_itens_lancamento", {"categoria": "eq." + antigo},
+                       token, corpo={"categoria": novo})
+        if campo in ("banco", "forma"):
+            self._rest("financeiro_pagamentos_lancamento", {campo: "eq." + antigo},
+                       token, corpo={campo: novo})
+        if campo == "banco":
+            self._rest("financeiro_contas_config", {"nome_banco": "eq." + antigo},
+                       token, corpo={"nome_banco": novo})
+
+    # ---- documentos ----
+    def _url_arquivo(self, caminho):
+        return "%s/storage/v1/object/%s/%s" % (
+            config.SUPABASE_URL, config.BUCKET_DOCUMENTOS,
+            urllib.parse.quote(caminho))
+
+    def caminho_novo_documento(self, nome):
+        seguro = re.sub(r"[^a-zA-Z0-9._-]", "_", nome)
+        return "%s/%d-%s" % (self.sessao["user_id"], int(time.time() * 1000), seguro)
+
+    def _guardar_documento(self, d, token):
+        with open(d["arquivo_local"], "rb") as f:
+            _pedir_bytes(self._url_arquivo(d["caminho"]), token, metodo="POST",
+                         dados=f.read(), tipo=d["mime"] or "application/octet-stream",
+                         ignorar_duplicado=True)
+        self._inserir_ignorando(
+            "financeiro_documentos_armazenados",
+            {"id": d["doc_id"], "nome_arquivo": d["nome"], "caminho": d["caminho"],
+             "mime_type": d["mime"], "tamanho_bytes": d["tamanho"]},
+            token, "id")
+
+    def baixar_documento(self, caminho):
+        return _pedir_bytes(self._url_arquivo(caminho), self._token_valido())
+
+    # ---- leitura por IA ----
+    def ler_documento(self, tipo, conteudo, mime, nome, correcoes):
+        """Devolve os dados lidos. Levanta ErroLeituraIA com a mensagem do Worker."""
+        corpo = json.dumps({
+            "tipo": tipo, "conteudo": conteudo, "mimeType": mime,
+            "nomeArquivo": nome,
+            "correcoesConhecidas": [
+                {"campo": c["campo"], "valorErrado": c["valor_errado"],
+                 "valorCorreto": c["valor_correto"],
+                 "contexto": c["contexto"] or ""} for c in correcoes]}).encode()
+        pedido = urllib.request.Request(
+            config.URL_LEITURA_IA, data=corpo, method="POST",
+            headers={"Content-Type": "application/json",
+                     "Authorization": "Bearer " + self._token_valido()})
+        try:
+            with urllib.request.urlopen(pedido, timeout=TEMPO_IA) as r:
+                resposta = json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            try:
+                resposta = json.loads(e.read().decode())
+            except ValueError:
+                resposta = {"erro": "O servidor respondeu %s." % e.code}
+        except (urllib.error.URLError, socket.timeout, TimeoutError,
+                ConnectionError) as e:
+            raise SemConexao(str(e)) from e
+        if not resposta.get("ok"):
+            raise ErroLeituraIA(resposta.get("erro") or "Falha ao ler o documento.")
+        return resposta.get("dados") or {}
 
     def baixar_tudo(self):
         token = self._token_valido()
@@ -338,6 +564,7 @@ class Nuvem:
             "opcoes": self._tabela("financeiro_opcoes_listas", "id", token),
             "documentos": self._tabela("financeiro_documentos_armazenados",
                                        "id", token),
+            "correcoes_ia": self._tabela("financeiro_correcoes_ia", "id", token),
         })
 
 

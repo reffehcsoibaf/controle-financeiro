@@ -11,7 +11,7 @@ uma mudar lá, precisa mudar aqui também (`financeiro/regras.py`).
 
 ```
 python -m venv venv
-venv\Scripts\pip install wxPython accessible_output2 pytest
+venv\Scripts\pip install -r requirements.txt
 iniciar.bat
 ```
 

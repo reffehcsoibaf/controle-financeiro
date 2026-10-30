@@ -118,6 +118,65 @@ def valor_com_tipo(valor, entrada):
     return abs(valor) if entrada else -abs(valor)
 
 
+def normalizar_texto(texto):
+    return re.sub(r"\s+", " ", sem_acentos(texto).strip())
+
+
+def opcao_equivalente(campo, sugerido, opcoes):
+    """A opção já cadastrada que corresponde ao que a IA leu, como no site:
+    ignora maiúsculas, acentos e espaços; "Next Bradesco" vale "Next"."""
+    alvo = normalizar_texto(sugerido)
+    if not alvo:
+        return None
+    for opcao in opcoes:
+        if normalizar_texto(opcao) == alvo:
+            return opcao
+    if campo == "banco" and re.search(r"\bnext\b", alvo):
+        for opcao in opcoes:
+            if normalizar_texto(opcao) == "next":
+                return opcao
+    return None
+
+
+def correcoes_aprendidas(extracao, dados, usou_itens):
+    """O que a pessoa corrigiu do que a IA sugeriu, como no site. Devolve
+    [{campo, valor_errado, valor_correto, contexto}]."""
+    sugestoes = dict(
+        banco=extracao.get("banco"), estabelecimento=extracao.get("estabelecimento"),
+        forma=extracao.get("forma_pagamento"),
+        categoria=None if usou_itens else extracao.get("categoria_sugerida"),
+        credor=extracao.get("credor"), devedor=extracao.get("devedor"))
+    contexto = (dados.get("estabelecimento") or "").strip() or None
+    saida = []
+    for campo, sugerido in sugestoes.items():
+        salvo = dados.get(campo)
+        if sugerido and salvo and (str(sugerido).strip().lower()
+                                   != str(salvo).strip().lower()):
+            saida.append(dict(campo=campo, valor_errado=sugerido,
+                              valor_correto=salvo, contexto=contexto))
+    return saida
+
+
+def categoria_e_fatura(categoria):
+    return (categoria or "").strip().lower() == "cartão de crédito"
+
+
+def lancamento_espelho_fatura(dados, cartao):
+    """O segundo lançamento do pagamento de fatura: entrada no cartão, para
+    recuperar o limite."""
+    descricao = "Pagamento de fatura"
+    if dados.get("banco"):
+        descricao += " — via " + dados["banco"]
+    if dados.get("descricao"):
+        descricao += " (%s)" % dados["descricao"]
+    return dict(
+        data_origem=dados["data_origem"], data_vencimento=dados["data_vencimento"],
+        valor=abs(dados["valor"]), banco=cartao, estabelecimento=None,
+        forma=dados.get("forma"), parcela=None, descricao=descricao,
+        categoria=dados.get("categoria"), credor=dados.get("credor"),
+        devedor=dados.get("devedor"), pago=dados["pago"])
+
+
 def avancar_meses(iso, meses):
     """Mantém o dia quando possível; senão, o último dia do mês de destino."""
     ano, mes, dia = (int(p) for p in iso[:10].split("-"))

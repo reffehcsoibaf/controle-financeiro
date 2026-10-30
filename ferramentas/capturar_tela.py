@@ -18,7 +18,7 @@ import wx
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FINANCEIRO_DADOS"] = tempfile.mkdtemp()
 
-from financeiro import colunas, config, dialogos, formulario, regras  # noqa: E402
+from financeiro import colunas, config, dialogos, formulario, gerenciar, regras  # noqa: E402
 from financeiro import nuvem as nuvem_mod  # noqa: E402
 from financeiro.banco import Banco  # noqa: E402
 from financeiro.janela import Janela  # noqa: E402
@@ -130,7 +130,7 @@ def exercitar_parcelar(janela, banco):
     form = formulario.Formulario(janela, banco)
     form.valor.SetValue("100")
     form.descricao.SetValue("Televisão")
-    form.banco.SetValue("Cartão Azul")
+    form.campo_banco.SetValue("Cartão Azul")
     form.vencimento.SetValue("31/01/2027")
     dlg = formulario.DialogoParcelar(form, "100", False, "2027-01-31")
     print("sem quantidade:", dlg.resumo.GetValue(), dlg.parcelas)
@@ -168,6 +168,122 @@ def exercitar_parcelar(janela, banco):
     avisos.clear()
     form2._parcelar(None)
     print("com itens:", avisos)
+    wx.MessageBox = original
+
+
+def exercitar_completo(janela, banco):
+    """Formulário e janelas de gerenciamento, sem abrir nada na tela."""
+    avisos = []
+    original = wx.MessageBox
+    wx.MessageBox = lambda *a, **k: (avisos.append(a[0]), wx.YES)[1]
+    falas = []
+    janela.fala.falar = lambda t, i=False: falas.append(t)
+    janela._sincronizar = lambda manual: None
+    janela.nuvem = None
+
+    # Pagamento dividido
+    form = formulario.Formulario(janela, banco, todos=janela.todos)
+    form.EndModal = lambda r: print("  fechou", r)
+    form.valor.SetValue("100")
+    form.dividir.SetValue(True)
+    form._preencher_pagamentos(0)
+    print("banco desligado ao dividir:", not form.campo_banco.IsEnabled())
+    form._salvar(None)
+    print("sem pagamentos:", avisos[-1][:40])
+    form.pagamentos = [dict(banco="Banco Alfa", forma="PIX", valor=60.0),
+                       dict(banco="Cartão Azul", forma=None, valor=30.0)]
+    form._preencher_pagamentos(0)
+    form._salvar(None)
+    print("soma errada:", avisos[-1][:60])
+    form.pagamentos[1]["valor"] = 40.0
+    form._salvar(None)
+    print("dividido:", form.resultado["banco"], form.resultado["valor"],
+          [lista_texto(form.lista_pag, n) for n in range(form.lista_pag.GetItemCount())])
+    janela._gravar_formulario(form, None)
+    salvo = banco.lancamentos()
+    print("gravou:", [l["pagamentos"] for l in salvo if l["pagamentos"]][0][0]["banco"])
+
+    # Fatura vinculada
+    form = formulario.Formulario(janela, banco, todos=janela.todos)
+    form.EndModal = lambda r: None
+    print("cartão desligado sem categoria:", not form.cartao.IsEnabled())
+    form.campo_banco.SetValue("Banco Alfa")
+    form.categoria.SetValue("Cartão de crédito")
+    print("cartão pré-escolhido:", form.cartao_escolhido())
+    form.valor.SetValue("50")
+    form._salvar(None)
+    falas.clear()
+    janela._gravar_formulario(form, None)
+    print("fatura:", falas, [op["tipo"] for op in banco.operacoes()])
+
+    # Importar lançamentos como itens
+    form = formulario.Formulario(janela, banco, todos=janela.todos)
+    form.EndModal = lambda r: None
+    dlg = formulario.ImportarLancamentos(form, janela.todos, set())
+    print("pendentes para importar:", dlg.lista.GetItemCount())
+    dlg.busca.SetValue("luz")
+    print("busca luz:", [lista_texto(dlg.lista, n)[0]
+                         for n in range(dlg.lista.GetItemCount())])
+    dlg._alternar()
+    print("selecionados:", dlg.total.GetValue())
+    dlg.EndModal = lambda r: None
+    dlg._importar(None)
+    form.receber_importados(dlg.selecionados)
+    dlg.Destroy()
+    print("itens importados:", [(i["valor"], i["descricao"]) for i in form.itens],
+          "ids:", form.ids_importados(), "valor:", form.valor.GetValue())
+    form._salvar(None)
+    janela._gravar_formulario(form, None)
+    print("origem excluída:", 3 not in {l["id"] for l in banco.lancamentos()},
+          "fila:", [e["operacao"] for e in banco.envios()])
+
+    # IA, sem rede
+    form = formulario.Formulario(janela, banco, todos=janela.todos)
+    form.aplicar_ia(dict(data="2026-10-20", tipo_transacao="credito", valor=33.5,
+                         banco="BANCO ALFA", credor="Pessoa Nova", descricao="Nota",
+                         categoria_sugerida="Xpto"))
+    print("IA:", form.tipo.GetStringSelection(), form.valor.GetValue(),
+          form.campo_banco.GetValue(), form.data_origem.GetValue(),
+          form.descricao.GetValue(), "| credor:", form.credor.GetValue())
+    print("mensagens da IA:", [a[:60] for a in avisos[-3:]])
+    form2 = formulario.Formulario(janela, banco, todos=janela.todos)
+    form2.aplicar_ia(dict(valor=30, itens=[dict(valor=10, descricao="a"),
+                                           dict(valor=20, descricao="b")],
+                          pagamentos=[dict(valor=10, banco="Banco Alfa"),
+                                      dict(valor=20, banco="Cartão Azul")]))
+    print("IA itens:", form2._soma_itens(), form2.dividir.GetValue(),
+          form2.valor_documento)
+    # Janelas de gerenciamento
+    listas = gerenciar.Listas(janela, banco)
+    print("listas:", listas.lista.GetItemCount(), listas.campo.GetStringSelection())
+    listas.Destroy()
+    contas = dialogos.Contas(janela, janela._situacoes(), janela._configurar_conta,
+                             janela._remover_conta)
+    print("contas:", [lista_texto(contas.lista, n)[:2]
+                      for n in range(contas.lista.GetItemCount())])
+    contas.Destroy()
+    banco.registrar_operacao("doc_guardar", doc_id="d", nome="n.pdf", mime=None,
+                             tamanho=2048, caminho="c", arquivo_local="x",
+                             criado_em="2026-10-30T00:00:00+00:00")
+    docs = gerenciar.Documentos(janela, banco, None, janela.todos)
+    print("documentos:", lista_texto(docs.lista, 0))
+    docs.Destroy()
+    banco.registrar_operacao("correcao_add", campo="banco", valor_errado="a",
+                             valor_correto="b", contexto=None)
+    corr = gerenciar.Correcoes(janela, banco)
+    print("correções:", lista_texto(corr.lista, 0))
+    corr.Destroy()
+    pend = gerenciar.Pendencias(janela, banco)
+    print("pendências:", [lista_texto(pend.lista, n)[0]
+                          for n in range(pend.lista.GetItemCount())][:9])
+    pend.Destroy()
+    # Download não desfaz o que está na fila
+    antes = {o["tipo"] for o in banco.operacoes()}
+    banco.substituir_tudo(dados_ficticios(), "t")
+    print("depois do download:", len(banco.lancamentos()), "lançamentos,",
+          "documento:", [d["nome_arquivo"] for d in banco.documentos()],
+          "fila igual:", antes == {o["tipo"] for o in banco.operacoes()})
+    print("erros:", [a for a in avisos if "erro" in a.lower()])
     wx.MessageBox = original
 
 
@@ -233,6 +349,8 @@ def main():
                 exercitar_hora(janela, banco)
             if modo == "parcelar":
                 exercitar_parcelar(janela, banco)
+            if modo == "completo":
+                exercitar_completo(janela, banco)
             if modo == "formulario":
                 # Lançamento de 3 itens: valor calculado, campos desligados
                 print("form valor:", alvo.valor.GetValue(),
@@ -249,7 +367,7 @@ def main():
                 alvo._salvar(None)
                 alvo.valor.SetValue("12,50")
                 alvo.descricao.SetValue("Teste")
-                alvo.banco.SetValue("Texto avulso")
+                alvo.campo_banco.SetValue("Texto avulso")
                 alvo._salvar(None)
                 print("novo resultado:", alvo.resultado)
                 novo = banco.salvar_lancamento(alvo.resultado, alvo.itens)

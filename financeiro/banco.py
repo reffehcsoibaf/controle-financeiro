@@ -45,7 +45,16 @@ CREATE TABLE IF NOT EXISTS pendencias_lancamento (
     lancamento_id INTEGER PRIMARY KEY, operacao TEXT NOT NULL,
     client_uuid TEXT, base_updated_at TEXT, versao INTEGER NOT NULL,
     conflito INTEGER NOT NULL DEFAULT 0, servidor TEXT, editado_em TEXT);
+CREATE TABLE IF NOT EXISTS correcoes_ia (
+    id INTEGER PRIMARY KEY, campo TEXT, valor_errado TEXT, valor_correto TEXT,
+    contexto TEXT, criado_em TEXT);
+CREATE TABLE IF NOT EXISTS fila_operacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, dados TEXT NOT NULL);
 """
+
+# Colunas em que uma opção renomeada precisa ser trocada
+CAMPOS_DE_LISTA = ("banco", "forma", "estabelecimento", "categoria", "credor",
+                   "devedor")
 
 _COLUNAS = {
     "lancamentos": ("id", "data_origem", "data_vencimento", "valor", "banco",
@@ -59,6 +68,8 @@ _COLUNAS = {
     "opcoes": ("id", "campo", "valor"),
     "documentos": ("id", "lancamento_id", "nome_arquivo", "mime_type",
                    "tamanho_bytes", "caminho", "criado_em"),
+    "correcoes_ia": ("id", "campo", "valor_errado", "valor_correto", "contexto",
+                     "criado_em"),
 }
 CAMPOS_FORMULARIO = ("data_origem", "data_vencimento", "valor", "banco",
                      "estabelecimento", "forma", "descricao", "categoria",
@@ -104,6 +115,8 @@ class Banco:
                 "INSERT OR REPLACE INTO meta VALUES ('ultima_sincronizacao', ?)",
                 (quando,))
             self._reaplicar(guardados)
+            for op in self.operacoes():
+                self._aplicar_operacao(op["tipo"], op["dados"])
 
     def _copia_das_pendencias(self):
         copia = {}
@@ -143,6 +156,7 @@ class Banco:
             self._con.execute("DELETE FROM meta")
             self._con.execute("DELETE FROM pendencias_pago")
             self._con.execute("DELETE FROM pendencias_lancamento")
+            self._con.execute("DELETE FROM fila_operacoes")
 
     def ultima_sincronizacao(self):
         linha = self._con.execute(
@@ -186,6 +200,121 @@ class Banco:
         return [l["valor"] for l in self._con.execute(
             "SELECT valor FROM opcoes WHERE campo=? ORDER BY valor", (campo,))]
 
+    def documentos(self):
+        return [dict(l) for l in self._con.execute(
+            "SELECT * FROM documentos ORDER BY criado_em DESC")]
+
+    def correcoes(self):
+        return [dict(l) for l in self._con.execute(
+            "SELECT * FROM correcoes_ia ORDER BY criado_em DESC, id DESC")]
+
+    # ---- fila de operações: listas, contas, vínculos, documentos, correções ----
+    def operacoes(self):
+        return [dict(id=l["id"], tipo=l["tipo"], dados=json.loads(l["dados"]))
+                for l in self._con.execute(
+                    "SELECT * FROM fila_operacoes ORDER BY id").fetchall()]
+
+    def registrar_operacao(self, tipo, /, **dados):
+        """Vale aqui na hora e fica na fila até chegar ao servidor."""
+        with self._con:
+            self._con.execute(
+                "INSERT INTO fila_operacoes (tipo, dados) VALUES (?, ?)",
+                (tipo, json.dumps(dados, ensure_ascii=False)))
+            self._aplicar_operacao(tipo, dados)
+
+    def concluir_operacoes(self, ids):
+        with self._con:
+            self._con.executemany("DELETE FROM fila_operacoes WHERE id = ?",
+                                  [(i,) for i in ids])
+
+    def _aplicar_operacao(self, tipo, d):
+        """Efeito local. Roda ao registrar e de novo depois de cada download,
+        enquanto a operação não subiu; por isso repetir não pode mudar nada."""
+        con = self._con
+        if tipo == "opcao_add":
+            if not con.execute("SELECT 1 FROM opcoes WHERE campo=? AND valor=?",
+                               (d["campo"], d["valor"])).fetchone():
+                con.execute("INSERT INTO opcoes VALUES (?, ?, ?)",
+                            (self._novo_id("opcoes"), d["campo"], d["valor"]))
+        elif tipo == "opcao_del":
+            con.execute("DELETE FROM opcoes WHERE campo=? AND valor=?",
+                        (d["campo"], d["valor"]))
+            if d["campo"] == "banco":
+                con.execute("DELETE FROM contas WHERE nome_banco=?", (d["valor"],))
+        elif tipo == "opcao_renomear":
+            self._aplicar_renomear(d["campo"], d["antigo"], d["novo"])
+        elif tipo == "conta_salvar":
+            con.execute("DELETE FROM contas WHERE nome_banco=?", (d["nome"],))
+            con.execute("INSERT INTO contas VALUES (?, ?, ?, ?, ?)",
+                        ("local-" + d["nome"], d["nome"], d["tipo"],
+                         d.get("saldo_inicial"), d.get("limite_total")))
+        elif tipo == "conta_excluir":
+            con.execute("DELETE FROM contas WHERE nome_banco=?", (d["nome"],))
+        elif tipo == "vincular":
+            a, b = d["ids"]
+            for origem, destino in ((a, b), (b, a)):
+                con.execute("UPDATE lancamentos SET lancamento_vinculado_id = ? "
+                            "WHERE id = ?", (destino, origem))
+        elif tipo == "docs_mover":
+            para, *de = d["ids"]
+            con.executemany("UPDATE documentos SET lancamento_id = ? "
+                            "WHERE lancamento_id = ?", [(para, i) for i in de])
+        elif tipo == "doc_guardar":
+            if not con.execute("SELECT 1 FROM documentos WHERE id=?",
+                               (d["doc_id"],)).fetchone():
+                _inserir(con, "documentos", [dict(
+                    id=d["doc_id"], nome_arquivo=d["nome"], mime_type=d["mime"],
+                    tamanho_bytes=d["tamanho"], caminho=d["caminho"],
+                    criado_em=d["criado_em"])])
+        elif tipo == "doc_vincular":
+            ids = d["ids"]
+            con.execute("UPDATE documentos SET lancamento_id = ? WHERE id = ?",
+                        (ids[0] if ids else None, d["doc_id"]))
+        elif tipo == "doc_excluir":
+            con.execute("DELETE FROM documentos WHERE id=?", (d["doc_id"],))
+        elif tipo == "correcao_add":
+            if not con.execute(
+                    "SELECT 1 FROM correcoes_ia WHERE campo=? AND valor_errado=? "
+                    "AND valor_correto=?",
+                    (d["campo"], d["valor_errado"], d["valor_correto"])).fetchone():
+                _inserir(con, "correcoes_ia", [dict(
+                    d, id=self._novo_id("correcoes_ia"), criado_em=agora_iso())])
+        elif tipo == "correcao_editar":
+            con.execute("UPDATE correcoes_ia SET valor_errado=?, valor_correto=?, "
+                        "contexto=? WHERE id=?",
+                        (d["valor_errado"], d["valor_correto"], d["contexto"], d["id"]))
+        elif tipo == "correcao_excluir":
+            con.execute("DELETE FROM correcoes_ia WHERE id=?", (d["id"],))
+        elif tipo == "correcoes_limpar":
+            con.execute("DELETE FROM correcoes_ia")
+
+    def _aplicar_renomear(self, campo, antigo, novo):
+        if campo not in CAMPOS_DE_LISTA:
+            raise ValueError(campo)
+        con = self._con
+        con.execute("UPDATE opcoes SET valor=? WHERE campo=? AND valor=?",
+                    (novo, campo, antigo))
+        con.execute("UPDATE lancamentos SET %s=? WHERE %s=?" % (campo, campo),
+                    (novo, antigo))
+        if campo == "categoria":
+            con.execute("UPDATE itens SET categoria=? WHERE categoria=?",
+                        (novo, antigo))
+        if campo in ("banco", "forma"):
+            con.execute("UPDATE pagamentos SET %s=? WHERE %s=?" % (campo, campo),
+                        (novo, antigo))
+        if campo == "banco":
+            con.execute("UPDATE contas SET nome_banco=? WHERE nome_banco=?",
+                        (novo, antigo))
+
+    def _trocar_id_nas_operacoes(self, velho, novo):
+        for op in self.operacoes():
+            if velho in op["dados"].get("ids", ()):
+                op["dados"]["ids"] = [novo if i == velho else i
+                                      for i in op["dados"]["ids"]]
+                self._con.execute(
+                    "UPDATE fila_operacoes SET dados = ? WHERE id = ?",
+                    (json.dumps(op["dados"], ensure_ascii=False), op["id"]))
+
     # ---- alterações locais ----
     def _novo_id(self, tabela):
         menor = self._con.execute(
@@ -222,9 +351,9 @@ class Banco:
             (i, operacao, str(uuid.uuid4()) if i < 0 else None, base,
              agora_iso()))
 
-    def salvar_lancamento(self, dados, itens, lancamento_id=None):
-        """Cria (sem id) ou atualiza. Pagamentos, parcela e vínculo não mudam
-        aqui. Devolve o id, temporário se for novo."""
+    def salvar_lancamento(self, dados, itens, lancamento_id=None, pagamentos=None):
+        """Cria (sem id) ou atualiza. Parcela e vínculo não mudam aqui, nem os
+        pagamentos, se vierem como None. Devolve o id, temporário se for novo."""
         with self._con:
             campos = {c: dados.get(c) for c in CAMPOS_FORMULARIO}
             campos["pago"] = int(bool(campos["pago"]))
@@ -243,8 +372,34 @@ class Banco:
             _inserir(self._con, "itens", [
                 dict(item, id=proximo - n, lancamento_id=lancamento_id, ordem=n)
                 for n, item in enumerate(itens)])
+            if pagamentos is not None:
+                self._con.execute(
+                    "DELETE FROM pagamentos WHERE lancamento_id = ?",
+                    (lancamento_id,))
+                proximo = self._novo_id("pagamentos")
+                _inserir(self._con, "pagamentos", [
+                    dict(p, id=proximo - n, lancamento_id=lancamento_id, ordem=n)
+                    for n, p in enumerate(pagamentos)])
             self._registrar(lancamento_id, "salvar")
         return lancamento_id
+
+    def salvar_importados(self, lancamentos):
+        """Vários lançamentos completos, vindos da planilha. Tudo ou nada aqui;
+        cada um sobe por conta própria."""
+        with self._con:
+            for l in lancamentos:
+                i = self._novo_id("lancamentos")
+                _inserir(self._con, "lancamentos", [dict(
+                    l, id=i, pago=int(bool(l.get("pago"))))])
+                proximo = self._novo_id("itens")
+                _inserir(self._con, "itens", [
+                    dict(x, id=proximo - n, lancamento_id=i, ordem=n)
+                    for n, x in enumerate(l["itens"])])
+                proximo = self._novo_id("pagamentos")
+                _inserir(self._con, "pagamentos", [
+                    dict(x, id=proximo - n, lancamento_id=i, ordem=n)
+                    for n, x in enumerate(l["pagamentos"])])
+                self._registrar(i, "salvar")
 
     def salvar_parcelas(self, parcelas):
         """Cria um lançamento por parcela, tudo ou nada aqui; cada um sobe por
@@ -292,7 +447,7 @@ class Banco:
     def qtd_pendentes(self):
         return sum(self._con.execute(
             "SELECT COUNT(*) AS n FROM %s" % t).fetchone()["n"]
-            for t in ("pendencias_pago", "pendencias_lancamento"))
+            for t in ("pendencias_pago", "pendencias_lancamento", "fila_operacoes"))
 
     def pendencias(self):
         return [dict(l) for l in self._con.execute(
@@ -365,6 +520,7 @@ class Banco:
         self._con.execute(
             "UPDATE pendencias_lancamento SET lancamento_id = ?, "
             "client_uuid = NULL WHERE lancamento_id = ?", (novo, velho))
+        self._trocar_id_nas_operacoes(velho, novo)
 
     def confirmar_lancamento(self, envio, novo_id, updated_at):
         """O servidor gravou. Se houve outra alteração durante o envio, ela

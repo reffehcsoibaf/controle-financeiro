@@ -5,6 +5,9 @@ import os
 SUPABASE_URL = "https://zlclakzjktpsbpfkltxa.supabase.co"
 SUPABASE_KEY = "sb_publishable_o5Rn3Qp_C3boiYCRqQ5Ykw_2sNd3KiQ"
 MODULO = "financeiro"
+URL_LEITURA_IA = ("https://controle-financeiro.fabioscheffer.workers.dev"
+                  "/api/ler-documento")
+BUCKET_DOCUMENTOS = "documentos"
 
 # Porta fixa porque o endereço de retorno do login precisa estar autorizado no
 # Supabase exatamente como é.
@@ -23,6 +26,13 @@ def pasta_dados():
 
 def caminho_banco():
     return os.path.join(pasta_dados(), "financeiro.db")
+
+
+def pasta_documentos():
+    """Cópias locais: as que esperam envio e as já abertas neste computador."""
+    pasta = os.path.join(pasta_dados(), "documentos")
+    os.makedirs(pasta, exist_ok=True)
+    return pasta
 
 
 def caminho_sessao():

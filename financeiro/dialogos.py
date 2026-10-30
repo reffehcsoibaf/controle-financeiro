@@ -390,41 +390,33 @@ class Contas(wx.Dialog):
     """Saldos e limites. Enter mostra os lançamentos da conta na lista
     principal: é o mesmo conjunto usado no cálculo."""
 
-    def __init__(self, pai, situacoes):
+    def __init__(self, pai, situacoes, ao_configurar=None, ao_remover=None):
         super().__init__(pai, title="Contas e cartões", size=(720, 380),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.situacoes = situacoes
         self.escolhida = None
+        self.ao_configurar, self.ao_remover = ao_configurar, ao_remover
         caixa = wx.BoxSizer(wx.VERTICAL)
         caixa.Add(wx.StaticText(self, label="Contas e cartões"), 0,
                   wx.LEFT | wx.TOP, 8)
         self.lista = wx.ListCtrl(self, name="Contas e cartões",
                                  style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-        self.imagens, indices = icones.lista_de_imagens()
+        self.imagens, self.indices = icones.lista_de_imagens()
         self.lista.SetImageList(self.imagens, wx.IMAGE_LIST_SMALL)
         for col, (titulo, largura) in enumerate((
                 ("Conta", 180), ("Tipo", 140), ("Situação", 370))):
             self.lista.InsertColumn(col, titulo, width=largura)
-        contraste = icones.alto_contraste()
-        for n, s in enumerate(situacoes):
-            if s.tipo == "cartao_credito":
-                tipo, img = "Cartão de crédito", indices[regras.CARTAO_CREDITO]
-            elif s.tipo == "conta_corrente":
-                tipo, img = "Conta corrente", indices["conta"]
-            else:
-                tipo, img = "Não configurada", indices[regras.SEM_FORMA]
-            self.lista.InsertItem(n, s.nome, img)
-            self.lista.SetItem(n, 1, tipo)
-            self.lista.SetItem(n, 2, s.detalhe or "—")
-            if s.alerta and not contraste:
-                self.lista.SetItemTextColour(n, icones.COR_SAIDA)
         self.navegacao = NavegacaoDeColunas(self.lista, pai.fala,
                                             ao_ativar=self._ver)
+        self._preencher(situacoes)
         caixa.Add(self.lista, 1, wx.EXPAND | wx.ALL, 8)
         botoes = wx.BoxSizer(wx.HORIZONTAL)
-        ver = wx.Button(self, label="Ver lançamentos desta conta")
-        ver.Bind(wx.EVT_BUTTON, lambda e: self._ver())
-        botoes.Add(ver, 0, wx.RIGHT, 8)
+        for rotulo, acao in (("Ver lançamentos desta conta", self._ver),
+                             ("Configurar", self._configurar),
+                             ("Remover configuração", self._remover)):
+            botao = wx.Button(self, label=rotulo)
+            botao.Bind(wx.EVT_BUTTON, lambda e, a=acao: a())
+            botoes.Add(botao, 0, wx.RIGHT, 8)
         botoes.Add(wx.Button(self, wx.ID_CANCEL, "Fechar"))
         caixa.Add(botoes, 0, wx.ALL | wx.ALIGN_RIGHT, 8)
         self.SetSizer(caixa)
@@ -434,6 +426,39 @@ class Contas(wx.Dialog):
         if situacoes:
             self.lista.Select(0)
             self.lista.Focus(0)
+
+    def _preencher(self, situacoes, selecionar=0):
+        self.situacoes = situacoes
+        self.lista.DeleteAllItems()
+        contraste = icones.alto_contraste()
+        for n, s in enumerate(situacoes):
+            if s.tipo == "cartao_credito":
+                tipo, img = "Cartão de crédito", self.indices[regras.CARTAO_CREDITO]
+            elif s.tipo == "conta_corrente":
+                tipo, img = "Conta corrente", self.indices["conta"]
+            else:
+                tipo, img = "Não configurada", self.indices[regras.SEM_FORMA]
+            self.lista.InsertItem(n, s.nome, img)
+            self.lista.SetItem(n, 1, tipo)
+            self.lista.SetItem(n, 2, s.detalhe or "—")
+            if s.alerta and not contraste:
+                self.lista.SetItemTextColour(n, icones.COR_SAIDA)
+        self.navegacao.definir_linha(-1)
+        if situacoes:
+            n = min(selecionar, len(situacoes) - 1)
+            self.lista.Select(n)
+            self.lista.Focus(n)
+            self.navegacao.definir_linha(n)
+
+    def _configurar(self):
+        n = self.navegacao.atual()
+        if n >= 0 and self.ao_configurar:
+            self._preencher(self.ao_configurar(self, self.situacoes[n].nome), n)
+
+    def _remover(self):
+        n = self.navegacao.atual()
+        if n >= 0 and self.ao_remover:
+            self._preencher(self.ao_remover(self, self.situacoes[n]), n)
 
     def _ver(self):
         n = self.navegacao.atual()

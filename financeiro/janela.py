@@ -6,12 +6,15 @@ ferramentas é para quem usa mouse: não entra na ordem do Tab.
 import datetime
 import functools
 import logging
+import os
 import threading
+import uuid
 
 import wx
 
-from financeiro import (__version__, colunas, dialogos, formulario, icones,
-                        nuvem as nuvem_mod, preferencias, regras, sincro)
+from financeiro import (__version__, banco as banco_mod, colunas, dialogos,
+                        documentos, formulario, gerenciar, icones,
+                        nuvem as nuvem_mod, planilha, preferencias, regras, sincro)
 from financeiro.fala import Fala
 from financeiro.navegacao import NavegacaoDeColunas
 
@@ -92,10 +95,14 @@ class Janela(wx.Frame):
         contas = wx.Menu()
         self._item(contas, "Saldos e limites\tCtrl+B", self._contas)
         principal.AppendSubMenu(contas, "Contas e cartões")
+        docs = wx.Menu()
+        self._item(docs, "Documentos guardados\tCtrl+Shift+D", self._documentos)
+        principal.AppendSubMenu(docs, "Documentos")
         sinc = wx.Menu()
         self._item(sinc, "Sincronizar agora\tF5", self._sincronizar_agora)
         self._item(sinc, "Última sincronização", self._falar_ultima)
         self._item(sinc, "Resolver conflitos", self._resolver_conflitos)
+        self._item(sinc, "Operações pendentes", self._pendencias)
         principal.AppendSubMenu(sinc, "Sincronização")
         conta = wx.Menu()
         self._item(conta, "Sair da conta e apagar a cópia local",
@@ -103,6 +110,12 @@ class Janela(wx.Frame):
         principal.AppendSubMenu(conta, "Minha conta")
         ferramentas = wx.Menu()
         self._item(ferramentas, "Configurações\tCtrl+,", self._configuracoes)
+        self._item(ferramentas, "Gerenciar listas\tCtrl+Shift+L", self._listas)
+        self._item(ferramentas, "Correções aprendidas pela IA", self._correcoes)
+        self._item(ferramentas, "Exportar para Excel\tCtrl+Shift+E", self._exportar)
+        self._item(ferramentas, "Importar do Excel\tCtrl+Shift+I", self._importar_excel)
+        self._item(ferramentas, "Limpar lançamentos duplicados",
+                   self._limpar_duplicatas)
         principal.AppendSubMenu(ferramentas, "Ferramentas")
         ajuda = wx.Menu()
         self._item(ajuda, "Sobre", self._sobre)
@@ -397,7 +410,14 @@ class Janela(wx.Frame):
 
     @seguro
     def _novo(self, _evt):
-        dlg = formulario.Formulario(self, self.banco)
+        self._abrir_formulario_novo()
+
+    def _abrir_formulario_novo(self, documento=None):
+        dlg = formulario.Formulario(self, self.banco, nuvem=self.nuvem,
+                                    todos=self.todos)
+        if documento:
+            d, caminho = documento
+            wx.CallAfter(dlg.ler_caminho, caminho, False, d["id"])
         if dlg.ShowModal() == wx.ID_OK:
             if dlg.parcelas:
                 self._gravar_parcelas(dlg.parcelas)
@@ -405,6 +425,25 @@ class Janela(wx.Frame):
                 self._gravar_formulario(dlg, None)
         dlg.Destroy()
         self.lista.SetFocus()
+
+    def lancamento_atual(self):
+        n = self.navegacao.atual()
+        return self.visiveis[n] if 0 <= n < len(self.visiveis) else None
+
+    def guardar_documento(self, caminho):
+        """Fica na fila com uma cópia local, para subir mesmo sem internet agora.
+        Devolve o id do documento."""
+        doc_id = str(uuid.uuid4())
+        nome = os.path.basename(caminho)
+        local = documentos.guardar_copia(caminho, doc_id, nome)
+        self.banco.registrar_operacao(
+            "doc_guardar", doc_id=doc_id, nome=nome, arquivo_local=local,
+            mime=documentos.tipo_do_arquivo(caminho) or None,
+            tamanho=os.path.getsize(caminho),
+            caminho=self.nuvem.caminho_novo_documento(nome),
+            criado_em=banco_mod.agora_iso())
+        self._sincronizar(manual=False)
+        return doc_id
 
     def _gravar_parcelas(self, parcelas):
         ids = self.banco.salvar_parcelas(parcelas)
@@ -423,19 +462,43 @@ class Janela(wx.Frame):
         l = self._selecionado()
         if not l:
             return
-        dlg = formulario.Formulario(self, self.banco, l)
+        dlg = formulario.Formulario(self, self.banco, l, nuvem=self.nuvem,
+                                    todos=self.todos)
         if dlg.ShowModal() == wx.ID_OK:
             self._gravar_formulario(dlg, l["id"])
         dlg.Destroy()
         self.lista.SetFocus()
 
     def _gravar_formulario(self, dlg, lancamento_id):
-        novo = self.banco.salvar_lancamento(dlg.resultado, dlg.itens,
-                                            lancamento_id)
+        dados = dlg.resultado
+        novo = self.banco.salvar_lancamento(dados, dlg.itens, lancamento_id,
+                                            dlg.pagamentos)
+        texto = "Lançamento salvo: %s." % regras.fmt_valor_com_sinal(dados["valor"])
+        cartao = dlg.cartao_escolhido()
+        if cartao:
+            espelho = self.banco.salvar_parcelas(
+                [regras.lancamento_espelho_fatura(dados, cartao)])[0]
+            self.banco.registrar_operacao("vincular", ids=[novo, espelho])
+            texto += " Entrada criada no cartão %s para recuperar o limite." % cartao
+        importados = dlg.ids_importados()
+        if importados:
+            # Os documentos mudam de dono antes de os originais sumirem
+            self.banco.registrar_operacao("docs_mover", ids=[novo] + importados)
+            for i in importados:
+                self.banco.excluir_lancamento(i)
+            texto += " %d lançamento%s antigo%s consolidado%s." % (
+                (len(importados),) + (("", "", "") if len(importados) == 1
+                                      else ("s", "s", "s")))
+        if dlg.documento_id:
+            self.banco.registrar_operacao("doc_vincular", doc_id=dlg.documento_id,
+                                          ids=[novo])
+            texto += " Documento vinculado."
+        if dlg.extracao_ia:
+            for correcao in regras.correcoes_aprendidas(
+                    dlg.extracao_ia, dados, bool(dlg.itens)):
+                self.banco.registrar_operacao("correcao_add", **correcao)
         self.recarregar()
         visivel = self._selecionar_id(novo)
-        texto = "Lançamento salvo: %s." % regras.fmt_valor_com_sinal(
-            dlg.resultado["valor"])
         if not visivel:
             texto += " Ele não aparece com os filtros atuais."
         self.avisar(texto, True)
@@ -473,6 +536,147 @@ class Janela(wx.Frame):
         self.recarregar()
         self.avisar("Excluídos os dois lançamentos." if len(ids) > 1
                     else "Lançamento excluído.", True)
+        self._sincronizar(manual=False)
+
+    # ---- gerenciamento ----
+    @seguro
+    def _listas(self, _evt):
+        dlg = gerenciar.Listas(self, self.banco)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.recarregar()
+        self.lista.SetFocus()
+        self._sincronizar(manual=False)
+
+    @seguro
+    def _correcoes(self, _evt):
+        dlg = gerenciar.Correcoes(self, self.banco)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.lista.SetFocus()
+        self._sincronizar(manual=False)
+
+    @seguro
+    def _pendencias(self, _evt):
+        dlg = gerenciar.Pendencias(self, self.banco)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.lista.SetFocus()
+        self._sincronizar(manual=False)
+
+    @seguro
+    def _documentos(self, _evt):
+        dlg = gerenciar.Documentos(self, self.banco, self.nuvem, self.todos)
+        dlg.ShowModal()
+        documento = dlg.analisar_doc
+        dlg.Destroy()
+        self.recarregar()
+        self._sincronizar(manual=False)
+        if documento:
+            self._abrir_formulario_novo(documento)
+        self.lista.SetFocus()
+
+    def _situacoes(self):
+        return regras.situacao_contas(self.banco.contas(), self.todos,
+                                      self.banco.opcoes("banco"))
+
+    def _configurar_conta(self, pai, nome):
+        atual = next((c for c in self.banco.contas() if c["nome_banco"] == nome), None)
+        dlg = gerenciar.ConfigurarConta(pai, nome, atual)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.banco.registrar_operacao("conta_salvar", nome=nome, **dlg.resultado)
+            self.fala.falar("%s configurada." % nome, True)
+            self._sincronizar(manual=False)
+        dlg.Destroy()
+        return self._situacoes()
+
+    def _remover_conta(self, pai, situacao):
+        if not situacao.tipo:
+            self.fala.falar("Esta conta não tem configuração.", True)
+        elif wx.MessageBox(
+                "Remover a configuração de %s? O nome continua nas listas, só deixa "
+                "de ter saldo ou limite calculado." % situacao.nome,
+                "Remover configuração", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+                pai) == wx.YES:
+            self.banco.registrar_operacao("conta_excluir", nome=situacao.nome)
+            self.fala.falar("Configuração removida.", True)
+            self._sincronizar(manual=False)
+        return self._situacoes()
+
+    @seguro
+    def _exportar(self, _evt):
+        if not self.visiveis:
+            self.avisar("Não há dados para exportar.", True)
+            return
+        nome = "controle_financeiro_%s.xlsx" % datetime.datetime.now().strftime(
+            "%Y%m%d_%H%M%S")
+        with wx.FileDialog(self, "Exportar para Excel", defaultFile=nome,
+                           wildcard="Planilha do Excel (*.xlsx)|*.xlsx",
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as dlg:
+            if dlg.ShowModal() != wx.ID_OK:
+                return
+            caminho = dlg.GetPath()
+        planilha.exportar(self.visiveis, caminho)
+        self.avisar("Planilha exportada com %d lançamentos." % len(self.visiveis), True)
+
+    @seguro
+    def _importar_excel(self, _evt):
+        with wx.FileDialog(self, "Importar do Excel",
+                           wildcard="Planilha do Excel (*.xlsx)|*.xlsx",
+                           style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
+            if dlg.ShowModal() != wx.ID_OK:
+                return
+            caminho = dlg.GetPath()
+        try:
+            lidos = planilha.ler(caminho)
+        except Exception as e:
+            log.warning("planilha: %r", e)
+            wx.MessageBox("Não consegui ler a planilha. %s" % (
+                e if isinstance(e, ValueError) else ""), "Importar",
+                wx.OK | wx.ICON_ERROR, self)
+            return
+        novos, repetidos = planilha.novos_e_repetidos(lidos, self.todos)
+        if not novos:
+            self.avisar("Nenhum lançamento novo: os %d já existiam." % len(lidos), True)
+            return
+        if wx.MessageBox(
+                "Importar %d lançamento%s novo%s? %d já existia%s e será ignorado." % (
+                    len(novos), "" if len(novos) == 1 else "s",
+                    "" if len(novos) == 1 else "s", repetidos,
+                    "" if repetidos == 1 else "m"),
+                "Importar", wx.YES_NO | wx.ICON_QUESTION, self) != wx.YES:
+            return
+        self.banco.salvar_importados(novos)
+        for campo, valores in planilha.opcoes_de(novos).items():
+            cadastradas = set(self.banco.opcoes(campo))
+            for valor in sorted(valores - cadastradas):
+                self.banco.registrar_operacao("opcao_add", campo=campo, valor=valor)
+        self.recarregar()
+        self.avisar("%d importado%s, %d já existia%s." % (
+            len(novos), "" if len(novos) == 1 else "s", repetidos,
+            "" if repetidos == 1 else "m"), True)
+        self._sincronizar(manual=False)
+
+    @seguro
+    def _limpar_duplicatas(self, _evt):
+        repetidos = planilha.ids_duplicados(self.todos)
+        if not repetidos:
+            self.avisar("Nenhum lançamento duplicado encontrado.", True)
+            return
+        if wx.MessageBox(
+                "Encontrei %d lançamento%s duplicado%s. Excluir as cópias, mantendo o "
+                "mais antigo de cada um?" % (
+                    len(repetidos), "" if len(repetidos) == 1 else "s",
+                    "" if len(repetidos) == 1 else "s"),
+                "Limpar duplicados", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+                self) != wx.YES:
+            return
+        for i in repetidos:
+            self.banco.excluir_lancamento(i)
+        self.recarregar()
+        self.avisar("%d duplicata%s removida%s." % (
+            len(repetidos), "" if len(repetidos) == 1 else "s",
+            "" if len(repetidos) == 1 else "s"), True)
         self._sincronizar(manual=False)
 
     @seguro
@@ -606,9 +810,8 @@ class Janela(wx.Frame):
 
     @seguro
     def _contas(self, _evt):
-        situacoes = regras.situacao_contas(self.banco.contas(), self.todos,
-                                           self.banco.opcoes("banco"))
-        dlg = dialogos.Contas(self, situacoes)
+        dlg = dialogos.Contas(self, self._situacoes(), self._configurar_conta,
+                              self._remover_conta)
         if dlg.ShowModal() == wx.ID_OK and dlg.escolhida:
             self.filtros = regras.Filtros(banco=dlg.escolhida)
             self.campo_busca.ChangeValue("")
@@ -701,18 +904,20 @@ class Janela(wx.Frame):
         self._sincronizando = True
         pendencias = self.banco.pendencias()
         envios = self.banco.envios()
-        resultados, resultados_lanc = [], []
+        operacoes = self.banco.operacoes()
+        resultados, resultados_lanc, feitas = [], [], []
 
         def trabalhar():
             try:
                 dados, erro = self.nuvem.sincronizar(
-                    pendencias, resultados, envios, resultados_lanc), None
+                    pendencias, resultados, envios, resultados_lanc,
+                    operacoes, feitas), None
             except Exception as e:
                 dados, erro = None, e
                 if not isinstance(e, nuvem_mod.SemConexao):
                     log.warning("sincronização: %r", e)
             wx.CallAfter(self._sincronizado, dados, erro, manual, resultados,
-                         resultados_lanc)
+                         resultados_lanc, feitas)
 
         threading.Thread(target=trabalhar, daemon=True).start()
 
@@ -741,11 +946,12 @@ class Janela(wx.Frame):
         em mãos: sem ele, o envio fica na fila e é tentado de novo."""
         conflitos, falhas, trocas, frases = 0, 0, {}, []
         for envio, resposta in resultados:
-            i = envio["lancamento_id"]
             situacao = resposta.get("status")
             if situacao == "erro":
                 falhas += 1
-            elif situacao == "ok" and envio["operacao"] == "excluir":
+                continue
+            i = envio["lancamento_id"]
+            if situacao == "ok" and envio["operacao"] == "excluir":
                 self.banco.confirmar_exclusao(envio)
             elif situacao == "ok":
                 self.banco.confirmar_lancamento(envio, resposta["id"],
@@ -811,12 +1017,13 @@ class Janela(wx.Frame):
 
     @seguro
     def _sincronizado(self, dados, erro, manual, resultados=(),
-                      resultados_lanc=()):
+                      resultados_lanc=(), feitas=()):
         self._sincronizando = False
         frases = self._aplicar_envios(resultados, dados)
         conflitos, falhas, trocas, frases_lanc = \
             self._aplicar_envios_de_lancamentos(resultados_lanc, dados)
         frases += frases_lanc
+        self.banco.concluir_operacoes([op["id"] for op in feitas])
         self._ids_desenhados = [trocas.get(i, i) for i in self._ids_desenhados]
         if trocas:
             # O id temporário mudou: a cópia em memória precisa acompanhar
@@ -837,6 +1044,7 @@ class Janela(wx.Frame):
             return
         if isinstance(erro, nuvem_mod.AcessoNegado):
             self.banco.apagar_tudo()
+            documentos.apagar_copias()
             self.nuvem.sair()
             self.recarregar()
             wx.MessageBox("Seu acesso a este módulo está desativado. Fale com "
@@ -883,7 +1091,8 @@ class Janela(wx.Frame):
             return
         if falhas:
             self.avisar("O servidor recusou %d alteração%s. Ela%s segue%s "
-                        "guardada%s neste computador." % (
+                        "guardada%s neste computador. Veja em Menu, Sincronização, "
+                        "Operações pendentes." % (
                             falhas, "" if falhas == 1 else "ões",
                             "" if falhas == 1 else "s",
                             "" if falhas == 1 else "m",
@@ -910,6 +1119,7 @@ class Janela(wx.Frame):
             return
         self._relogio.Stop()
         self.banco.apagar_tudo()
+        documentos.apagar_copias()
         self.nuvem.sair()
         self.recarregar()
         self._pedir_login()
