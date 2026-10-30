@@ -1533,7 +1533,7 @@ select option{background:#1e2436;}
 
 <!-- ══ RODAPÉ: VERSÃO DO APP ══ -->
 <footer class="app-footer">
-  Controle Financeiro · v1.20.0 · 22/09/2026
+  Controle Financeiro · v1.20.1 · 30/10/2026
 </footer>
 
 </div><!-- /app-principal -->
@@ -5125,7 +5125,7 @@ function editarLancamento(id) {
   if(l.itens && l.itens.length>0) {
     definirTipoValor(l.valor < 0 ? 'saida' : 'entrada');
     l.itens.forEach(item=>{
-      itensFormulario.push({id:proximoItemId++, valor:item.valor, categoria:item.categoria, descricao:item.descricao});
+      itensFormulario.push({id:proximoItemId++, valor:item.valor, categoria:item.categoria, descricao:item.descricao, dataOriginal:item.dataOriginal});
       adicionarItem(itensFormulario[itensFormulario.length-1]);
     });
     atualizarNotaValor();

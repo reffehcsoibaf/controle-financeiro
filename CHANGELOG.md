@@ -4,6 +4,13 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.20.1 — 30/10/2026
+
+- **Correção: a data original dos itens se perdia ao editar.** Itens vindos de "Importar
+  Lançamentos" guardam a data do lançamento de origem, mas editar e salvar o lançamento apagava
+  essa data de todos os itens. Agora ela é preservada. Datas já perdidas em edições anteriores não
+  voltam sozinhas.
+
 ## v1.20.0 — 22/09/2026
 
 - **Nova reserva gratuita de IA na leitura de documentos: Cloudflare Workers AI.** A ordem passa
