@@ -287,6 +287,51 @@ def exercitar_completo(janela, banco):
     wx.MessageBox = original
 
 
+def exercitar_permissoes(janela, banco):
+    class NuvemFalsa:
+        permissoes = None
+
+    def rotulos(janela_alvo):
+        return [f.GetLabel() for f in _descendentes(janela_alvo)
+                if isinstance(f, (wx.Button, wx.CheckBox))]
+
+    falas = []
+    janela.fala.falar = lambda t, i=False: falas.append(t)
+    janela._sincronizar = lambda manual: None
+    janela.nuvem = NuvemFalsa()
+    for ia, docs in ((True, True), (False, True), (True, False), (False, False)):
+        banco.salvar_permissoes(dict(ia=ia, documentos=docs))
+        form = formulario.Formulario(janela, banco, nuvem=janela.nuvem,
+                                     todos=janela.todos)
+        docs_dlg = gerenciar.Documentos(janela, banco, janela.nuvem, janela.todos)
+        print("ia", ia, "docs", docs,
+              "| form:", [r for r in rotulos(form) if "IA" in r or "Guardar" in r],
+              "| docs:", [r for r in rotulos(docs_dlg)
+                          if "IA" in r or "Guardar" in r])
+        form.Destroy()
+        docs_dlg.Destroy()
+    banco.salvar_permissoes(dict(ia=True, documentos=True))
+    janela.nuvem.permissoes = dict(ia=False, documentos=False)
+    banco.registrar_operacao("doc_guardar", doc_id="d", nome="n.pdf", mime=None,
+                             tamanho=1, caminho="c", arquivo_local="x",
+                             criado_em="2026-10-30T00:00:00+00:00")
+    recusadas = banco.operacoes()
+    falas.clear()
+    janela._sincronizado(dados_ficticios(), None, False, [], [], [], recusadas)
+    print("mudança:", falas)
+    print("fila:", banco.qtd_pendentes(), "documentos:", len(banco.documentos()),
+          "guardadas:", banco.permissoes())
+    falas.clear()
+    janela._sincronizado(dados_ficticios(), None, False)
+    print("sem mudança:", falas)
+
+
+def _descendentes(janela):
+    for filho in janela.GetChildren():
+        yield filho
+        yield from _descendentes(filho)
+
+
 def lista_texto(lista, linha):
     return [lista.GetItemText(linha, c) for c in range(lista.GetColumnCount())]
 
@@ -351,6 +396,8 @@ def main():
                 exercitar_parcelar(janela, banco)
             if modo == "completo":
                 exercitar_completo(janela, banco)
+            if modo == "permissoes":
+                exercitar_permissoes(janela, banco)
             if modo == "formulario":
                 # Lançamento de 3 itens: valor calculado, campos desligados
                 print("form valor:", alvo.valor.GetValue(),

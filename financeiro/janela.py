@@ -12,7 +12,7 @@ import uuid
 
 import wx
 
-from financeiro import (__version__, banco as banco_mod, colunas, dialogos,
+from financeiro import (__version__, banco as banco_mod, colunas, config, dialogos,
                         documentos, formulario, gerenciar, icones,
                         nuvem as nuvem_mod, planilha, preferencias, regras, sincro)
 from financeiro.fala import Fala
@@ -905,19 +905,19 @@ class Janela(wx.Frame):
         pendencias = self.banco.pendencias()
         envios = self.banco.envios()
         operacoes = self.banco.operacoes()
-        resultados, resultados_lanc, feitas = [], [], []
+        resultados, resultados_lanc, feitas, recusadas = [], [], [], []
 
         def trabalhar():
             try:
                 dados, erro = self.nuvem.sincronizar(
                     pendencias, resultados, envios, resultados_lanc,
-                    operacoes, feitas), None
+                    operacoes, feitas, recusadas), None
             except Exception as e:
                 dados, erro = None, e
                 if not isinstance(e, nuvem_mod.SemConexao):
                     log.warning("sincronização: %r", e)
             wx.CallAfter(self._sincronizado, dados, erro, manual, resultados,
-                         resultados_lanc, feitas)
+                         resultados_lanc, feitas, recusadas)
 
         threading.Thread(target=trabalhar, daemon=True).start()
 
@@ -1016,14 +1016,40 @@ class Janela(wx.Frame):
         return frases
 
     @seguro
+    def _atualizar_permissoes(self):
+        """Guarda o que veio do painel e diz o que mudou."""
+        novas = self.nuvem.permissoes if self.nuvem else None
+        if not novas:
+            return []
+        antes = self.banco.permissoes()
+        self.banco.salvar_permissoes(novas)
+        frases = []
+        for chave, nome in (("ia", "A leitura por IA"),
+                            ("documentos", "O envio de documentos")):
+            if antes.get(chave, True) != novas[chave]:
+                frases.append("%s foi %s para a sua conta." % (
+                    nome, "ativada" if novas[chave] and chave == "ia"
+                    else "ativado" if novas[chave]
+                    else "desativada" if chave == "ia" else "desativado"))
+        return frases
+
     def _sincronizado(self, dados, erro, manual, resultados=(),
-                      resultados_lanc=(), feitas=()):
+                      resultados_lanc=(), feitas=(), recusadas=()):
         self._sincronizando = False
         frases = self._aplicar_envios(resultados, dados)
         conflitos, falhas, trocas, frases_lanc = \
             self._aplicar_envios_de_lancamentos(resultados_lanc, dados)
         frases += frases_lanc
+        frases[:0] = self._atualizar_permissoes()
         self.banco.concluir_operacoes([op["id"] for op in feitas])
+        if recusadas:
+            self.banco.concluir_operacoes([op["id"] for op in recusadas])
+            n = len(recusadas)
+            frases.append(
+                "%d arquivo%s não enviado%s: o envio de documentos está desativado "
+                "para a sua conta. A cópia continua na pasta %s." % (
+                    n, "" if n == 1 else "s", "" if n == 1 else "s",
+                    config.pasta_documentos()))
         self._ids_desenhados = [trocas.get(i, i) for i in self._ids_desenhados]
         if trocas:
             # O id temporário mudou: a cópia em memória precisa acompanhar

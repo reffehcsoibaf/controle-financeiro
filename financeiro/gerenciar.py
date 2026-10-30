@@ -1,5 +1,6 @@
 """Janelas de gerenciamento: listas, contas, documentos, correções e pendências."""
 import datetime
+import logging
 import os
 import shutil
 
@@ -10,6 +11,7 @@ from financeiro.formulario import (_botoes_ok, _grade, _texto, executar_com_espe
                                    mensagem_de_erro)
 from financeiro.navegacao import NavegacaoDeColunas
 
+log = logging.getLogger("financeiro.gerenciar")
 CAMPOS = (("banco", "Banco ou cartão"), ("forma", "Forma de pagamento"),
           ("estabelecimento", "Estabelecimento"), ("categoria", "Categoria"),
           ("credor", "Credor"), ("devedor", "Devedor"))
@@ -203,12 +205,17 @@ class Documentos(wx.Dialog):
                                             ao_excluir=self.excluir)
         self.lista.Bind(wx.EVT_LIST_ITEM_ACTIVATED, lambda e: self.abrir())
         botoes = wx.BoxSizer(wx.HORIZONTAL)
-        for rotulo, acao in (("Guardar arquivo", self.guardar), ("Abrir", self.abrir),
-                             ("Salvar cópia", self.salvar_copia),
-                             ("Analisar com IA", self.analisar),
-                             ("Vincular ao lançamento atual", self.vincular),
-                             ("Desvincular", self.desvincular),
-                             ("Excluir", self.excluir)):
+        permissoes = banco.permissoes()
+        for rotulo, acao, liberado in (
+                ("Guardar arquivo", self.guardar, permissoes["documentos"]),
+                ("Abrir", self.abrir, True),
+                ("Salvar cópia", self.salvar_copia, True),
+                ("Analisar com IA", self.analisar, permissoes["ia"]),
+                ("Vincular ao lançamento atual", self.vincular, True),
+                ("Desvincular", self.desvincular, True),
+                ("Excluir", self.excluir, True)):
+            if not liberado:
+                continue
             botao = wx.Button(self, label=rotulo)
             botao.Bind(wx.EVT_BUTTON, lambda e, a=acao: a())
             botoes.Add(botao, 0, wx.RIGHT, 6)
@@ -284,6 +291,7 @@ class Documentos(wx.Dialog):
             self, "Baixando o documento, aguarde",
             lambda: self.nuvem.baixar_documento(d["caminho"]))
         if erro:
+            log.warning("baixar documento: %r", erro)
             wx.MessageBox(mensagem_de_erro(erro), "Documentos",
                           wx.OK | wx.ICON_ERROR, self)
             return None

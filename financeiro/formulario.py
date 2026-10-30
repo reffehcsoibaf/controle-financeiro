@@ -1,6 +1,7 @@
 """Formulário de lançamento, em abas. O rótulo nasce antes do controle, porque o
 leitor de tela usa o texto que vem logo antes na ordem de criação."""
 import datetime
+import logging
 import re
 import threading
 
@@ -8,6 +9,8 @@ import wx
 
 from financeiro import documentos, nuvem as nuvem_mod, regras
 from financeiro.navegacao import NavegacaoDeColunas
+
+log = logging.getLogger("financeiro.formulario")
 
 TIPOS = ("Saída", "Entrada")
 SEM_DATA = "—"
@@ -570,16 +573,20 @@ class Formulario(wx.Dialog):
         self.pago.SetValue(bool(l.get("pago")))
         grade.Add(self.pago)
         linha = wx.BoxSizer(wx.HORIZONTAL)
-        if self.nuvem:
+        permissoes = banco.permissoes()
+        self.guardar_arquivo = None
+        if self.nuvem and permissoes["ia"]:
             ler = wx.Button(p, label="Ler documento com IA")
             ler.Bind(wx.EVT_BUTTON, self._ler_arquivo)
             linha.Add(ler, 0, wx.RIGHT, 8)
             ler_texto = wx.Button(p, label="Ler texto com IA")
             ler_texto.Bind(wx.EVT_BUTTON, self._ler_texto)
             linha.Add(ler_texto, 0, wx.RIGHT, 8)
-            self.guardar_arquivo = wx.CheckBox(p, label="Guardar também o arquivo lido")
-            self.guardar_arquivo.SetValue(True)
-            linha.Add(self.guardar_arquivo, 0, wx.ALIGN_CENTER_VERTICAL)
+            if permissoes["documentos"]:
+                self.guardar_arquivo = wx.CheckBox(
+                    p, label="Guardar também o arquivo lido")
+                self.guardar_arquivo.SetValue(True)
+                linha.Add(self.guardar_arquivo, 0, wx.ALIGN_CENTER_VERTICAL)
         caixa = wx.BoxSizer(wx.VERTICAL)
         caixa.Add(grade, 0, wx.EXPAND | wx.ALL, 12)
         caixa.Add(linha, 0, wx.LEFT | wx.BOTTOM, 12)
@@ -852,7 +859,8 @@ class Formulario(wx.Dialog):
             if dlg.ShowModal() != wx.ID_OK:
                 return
             caminho = dlg.GetPath()
-        self.ler_caminho(caminho, guardar=self.guardar_arquivo.GetValue())
+        self.ler_caminho(caminho, guardar=bool(
+            self.guardar_arquivo and self.guardar_arquivo.GetValue()))
 
     def ler_caminho(self, caminho, guardar=False, documento_id=None):
         try:
@@ -884,6 +892,7 @@ class Formulario(wx.Dialog):
             self, "Lendo com IA, aguarde",
             lambda: self.nuvem.ler_documento(tipo, conteudo, mime, nome, correcoes))
         if erro:
+            log.warning("leitura por IA: %r", erro)
             wx.MessageBox(mensagem_de_erro(erro), "Ler com IA",
                           wx.OK | wx.ICON_ERROR, self)
             return None

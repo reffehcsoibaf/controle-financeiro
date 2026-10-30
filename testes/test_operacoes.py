@@ -174,6 +174,75 @@ def test_operacao_recusada_para_a_fila_e_nao_perde_nada(conectado, monkeypatch):
     assert feitas == [] and len(resultados) == 1
 
 
+def test_permissoes_comecam_liberadas_e_ficam_guardadas(banco):
+    assert banco.permissoes() == dict(ia=True, documentos=True)
+    banco.salvar_permissoes(dict(ia=False, documentos=True))
+    banco.substituir_tudo(servidor(), "t")
+    assert banco.permissoes() == dict(ia=False, documentos=True)
+    banco.apagar_tudo()
+    assert banco.permissoes() == dict(ia=True, documentos=True)
+
+
+@pytest.mark.parametrize("linha,esperado", [
+    (dict(habilitado=True, ai_enabled=False, documents_enabled=True),
+     dict(ia=False, documentos=True)),
+    (dict(habilitado=True, ai_enabled=True, documents_enabled=False),
+     dict(ia=True, documentos=False)),
+    # Como no site, só "false" desliga
+    (dict(habilitado=True, ai_enabled=None, documents_enabled=None),
+     dict(ia=True, documentos=True))])
+def test_permissoes_vem_do_painel(conectado, monkeypatch, linha, esperado):
+    n, _ = conectado
+    monkeypatch.setattr(nuvem, "_pedir", lambda *a, **k: [linha])
+    n.conferir_acesso("t")
+    assert n.permissoes == esperado
+
+
+def test_arquivo_sem_permissao_sai_da_fila_sem_travar_o_resto(conectado, monkeypatch):
+    n, _ = conectado
+    monkeypatch.setattr(n, "conferir_acesso", lambda t: None)
+    monkeypatch.setattr(n, "baixar_tudo", lambda: "ok")
+    n.permissoes = dict(ia=True, documentos=False)
+    enviadas = []
+    monkeypatch.setattr(n, "enviar_operacao",
+                        lambda op, t, m: enviadas.append(op["tipo"]))
+    guardar = dict(tipo="doc_guardar", dados={})
+    outra = dict(tipo="opcao_add", dados={})
+    feitas, recusadas = [], []
+    n.sincronizar([], [], [], [], [guardar, outra], feitas, recusadas)
+    assert recusadas == [guardar] and feitas == [outra] and enviadas == ["opcao_add"]
+
+
+def test_chamadas_nao_se_identificam_como_python(monkeypatch):
+    """A Cloudflare recusa o nome padrão do urllib com o erro 1010."""
+    vistos = []
+
+    class Resposta:
+        headers = {}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            pass
+
+        def read(self):
+            return b'{"ok": true, "dados": {}}'
+
+    def abrir(pedido, timeout=None):
+        vistos.append(pedido.get_header("User-agent"))
+        return Resposta()
+
+    monkeypatch.setattr(nuvem.urllib.request, "urlopen", abrir)
+    nuvem._pedir("http://exemplo/x", abrir=abrir)
+    nuvem._pedir_bytes("http://exemplo/x", "t")
+    n = nuvem.Nuvem.__new__(nuvem.Nuvem)
+    n.sessao = dict(expires_at=nuvem.time.time() + 999, access_token="t")
+    n.ler_documento("texto", "x", "text/plain", "n", [])
+    assert len(vistos) == 3
+    assert all(v.startswith("ControleFinanceiroWindows/") for v in vistos)
+
+
 def test_reenvio_de_arquivo_que_ja_chegou_nao_e_erro(monkeypatch):
     def abrir(*a, **k):
         import io

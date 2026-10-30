@@ -164,6 +164,19 @@ class Banco:
         ).fetchone()
         return linha["valor"] if linha else ""
 
+    # ---- permissões do painel ----
+    def permissoes(self):
+        """A última resposta do servidor. Sem nenhuma ainda, mostra as funções,
+        como o site; quem bloqueia de verdade é o servidor."""
+        linha = self._con.execute(
+            "SELECT valor FROM meta WHERE chave='permissoes'").fetchone()
+        return json.loads(linha["valor"]) if linha else dict(ia=True, documentos=True)
+
+    def salvar_permissoes(self, permissoes):
+        with self._con:
+            self._con.execute("INSERT OR REPLACE INTO meta VALUES ('permissoes', ?)",
+                              (json.dumps(permissoes),))
+
     # ---- leitura ----
     def lancamentos(self):
         """Lançamentos com itens, pagamentos e documentos dentro de cada um."""

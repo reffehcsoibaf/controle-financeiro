@@ -23,10 +23,12 @@ import urllib.parse
 import urllib.request
 import webbrowser
 
-from financeiro import config
+from financeiro import __version__, config
 
-log = logging.getLogger("financeiro.nuvem")
+log =logging.getLogger("financeiro.nuvem")
 TAMANHO_PAGINA = 1000
+# A Cloudflare recusa (erro 1010) o nome padrão do urllib, "Python-urllib"
+IDENTIFICACAO = "ControleFinanceiroWindows/" + __version__
 TEMPO_REDE = 30
 TEMPO_ARQUIVO = 120
 TEMPO_IA = 180
@@ -109,7 +111,7 @@ def _pedir(url, corpo=None, cabecalhos=None, abrir=urllib.request.urlopen,
     dados = json.dumps(corpo).encode() if corpo is not None else None
     pedido = urllib.request.Request(url, data=dados, method=metodo, headers={
         "apikey": config.SUPABASE_KEY, "Content-Type": "application/json",
-        **(cabecalhos or {})})
+        "User-Agent": IDENTIFICACAO, **(cabecalhos or {})})
     try:
         with abrir(pedido, timeout=TEMPO_REDE) as r:
             _anotar_relogio(r.headers.get("Date"))
@@ -129,7 +131,7 @@ def _pedir(url, corpo=None, cabecalhos=None, abrir=urllib.request.urlopen,
 def _pedir_bytes(url, token, metodo="GET", dados=None, tipo=None,
                  ignorar_404=False, ignorar_duplicado=False):
     """Para arquivos: a resposta e o corpo não são JSON."""
-    cabecalhos = {"apikey": config.SUPABASE_KEY,
+    cabecalhos = {"apikey": config.SUPABASE_KEY, "User-Agent": IDENTIFICACAO,
                   "Authorization": "Bearer " + token}
     if tipo:
         cabecalhos["Content-Type"] = tipo
@@ -194,6 +196,7 @@ class _Retorno(http.server.BaseHTTPRequestHandler):
 class Nuvem:
     def __init__(self):
         self.sessao = self._ler_sessao()
+        self.permissoes = None
         self._cancelar = threading.Event()
 
     # ---- sessão ----
@@ -292,13 +295,17 @@ class Nuvem:
 
     def conferir_acesso(self, token):
         q = urllib.parse.urlencode({
-            "select": "habilitado", "user_id": "eq." + self.sessao["user_id"],
+            "select": "habilitado,ai_enabled,documents_enabled",
+            "user_id": "eq." + self.sessao["user_id"],
             "modulo": "eq." + config.MODULO})
         linhas = _pedir("%s/rest/v1/profiles_modulos?%s"
                         % (config.SUPABASE_URL, q),
                         cabecalhos={"Authorization": "Bearer " + token})
         if not linhas or linhas[0].get("habilitado") is not True:
             raise AcessoNegado()
+        # Como no site: só "false" desliga
+        self.permissoes = dict(ia=linhas[0].get("ai_enabled") is not False,
+                               documentos=linhas[0].get("documents_enabled") is not False)
 
     def enviar_pago(self, pendencia, token, pedir=_pedir):
         """Devolve o novo updated_at, ou None se o lançamento mudou ou sumiu no
@@ -345,7 +352,7 @@ class Nuvem:
             cabecalhos=cabecalhos)
 
     def sincronizar(self, pendencias, resultados, envios=(), resultados_lanc=None,
-                    operacoes=(), feitas=None):
+                    operacoes=(), feitas=None, recusadas=None):
         """Envia as alterações e baixa tudo. Os resultados são anotados à medida
         que acontecem, para valer mesmo se a conexão cair depois. Erro do
         servidor num lançamento não impede o resto: ele fica na fila.
@@ -371,7 +378,12 @@ class Nuvem:
         for envio in envios:
             if envio["operacao"] != "excluir":
                 enviar(envio)
+        guarda_arquivos = (self.permissoes or {}).get("documentos", True)
         for op in operacoes:
+            if op["tipo"] == "doc_guardar" and not guarda_arquivos:
+                # Seria recusado sempre e travaria o resto da fila
+                recusadas.append(op)
+                continue
             try:
                 self.enviar_operacao(op, token, ids_novos)
             except ErroServidor as e:
@@ -536,14 +548,16 @@ class Nuvem:
                  "contexto": c["contexto"] or ""} for c in correcoes]}).encode()
         pedido = urllib.request.Request(
             config.URL_LEITURA_IA, data=corpo, method="POST",
-            headers={"Content-Type": "application/json",
+            headers={"Content-Type": "application/json", "User-Agent": IDENTIFICACAO,
                      "Authorization": "Bearer " + self._token_valido()})
         try:
             with urllib.request.urlopen(pedido, timeout=TEMPO_IA) as r:
                 resposta = json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
+            corpo = e.read().decode(errors="replace")
+            log.warning("leitura por IA: HTTP %s: %s", e.code, corpo[:300])
             try:
-                resposta = json.loads(e.read().decode())
+                resposta = json.loads(corpo)
             except ValueError:
                 resposta = {"erro": "O servidor respondeu %s." % e.code}
         except (urllib.error.URLError, socket.timeout, TimeoutError,
