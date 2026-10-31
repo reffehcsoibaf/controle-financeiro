@@ -4,6 +4,11 @@ Todas as mudanças relevantes do app ficam registradas aqui, da mais recente par
 O número de versão aparece no rodapé do próprio app, então é sempre possível conferir qual versão
 está publicada e comparar com o que está descrito aqui.
 
+## v1.20.2 — 31/10/2026
+
+- **Link para baixar o programa para Windows.** A tela de login e o cabeçalho do app agora têm um
+  link que baixa sempre a versão mais recente do Controle Financeiro para Windows.
+
 ## v1.20.1 — 30/10/2026
 
 - **Correção: a data original dos itens se perdia ao editar.** Itens vindos de "Importar
