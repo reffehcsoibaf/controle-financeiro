@@ -22,10 +22,10 @@ from financeiro.navegacao import NavegacaoDeColunas
 log = logging.getLogger("financeiro.janela")
 
 INTERVALO_SYNC_MS = 5 * 60 * 1000
-ATRASO_BUSCA_MS = 300
 ESPERA_MENU_MS = 600
 JANELA_MENU_S = 1.0
-TODAS_CONTAS = "Todas as contas"
+ORDENS = (("recentes", "Recentes primeiro"), ("antigos", "Antigos primeiro"))
+TIPOS = (("", "Entradas e saídas"), ("entrada", "Entradas"), ("saida", "Saídas"))
 SITUACOES = (("", "Todos"), ("pendente", "Pendentes"), ("pago", "Pagos"))
 
 
@@ -42,8 +42,9 @@ def seguro(funcao):
 
 
 def texto_resumo(r):
-    return "%d lançamentos. Entradas %s. Saídas %s. Saldo %s. Pendente %s." % (
-        r.quantidade, regras.fmt_valor(r.entradas), regras.fmt_valor(r.saidas),
+    return "%d lançamento%s. Entradas %s. Saídas %s. Saldo %s. Pendente %s." % (
+        r.quantidade, "" if r.quantidade == 1 else "s",
+        regras.fmt_valor(r.entradas), regras.fmt_valor(r.saidas),
         regras.fmt_valor(r.total), regras.fmt_valor(r.pendente))
 
 
@@ -52,7 +53,7 @@ class Janela(wx.Frame):
         super().__init__(None, title="Controle Financeiro", size=(1120, 680))
         self.banco, self.nuvem = banco, nuvem
         self.fala = Fala()
-        self.filtros = regras.Filtros()
+        self.filtros = regras.Filtros(ordem=preferencias.ler_ordem())
         self.todos, self.visiveis, self._linhas = [], [], None
         self._sincronizando = False
         self._sincronizar_de_novo = False
@@ -69,8 +70,6 @@ class Janela(wx.Frame):
         self.CreateStatusBar()
         self._relogio = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self._ao_relogio, self._relogio)
-        self._atraso_busca = wx.CallLater(ATRASO_BUSCA_MS, self._busca_pronta)
-        self._atraso_busca.Stop()
         self.Bind(wx.EVT_CLOSE, self._ao_fechar)
         self.Bind(wx.EVT_MENU_OPEN, self._ao_abrir_menu)
         self.Bind(wx.EVT_MENU_CLOSE, self._ao_fechar_menu)
@@ -98,8 +97,7 @@ class Janela(wx.Frame):
                    self._ir_vinculado)
         self._item(lanc, "Ver documento vinculado\tCtrl+Shift+O",
                    self._ver_documento_vinculado)
-        self._item(lanc, "Buscar\tCtrl+F", self._focar_busca)
-        self._item(lanc, "Busca por critérios\tCtrl+Shift+F", self._criterios)
+        self._item(lanc, "Filtrar\tCtrl+F", self._abrir_filtrar)
         self._item(lanc, "Limpar filtros\tCtrl+L", self._limpar_filtros)
         self._item(lanc, "Ver resumo\tCtrl+T", self._ver_resumo)
         principal.AppendSubMenu(lanc, "Lançamentos")
@@ -139,7 +137,7 @@ class Janela(wx.Frame):
                 ("Novo", wx.ART_NEW, self._novo),
                 ("Editar", wx.ART_EDIT, self._editar),
                 ("Sincronizar", wx.ART_REFRESH, self._sincronizar_agora),
-                ("Busca por critérios", wx.ART_FIND, self._criterios),
+                ("Filtrar", wx.ART_FIND, self._abrir_filtrar),
                 ("Limpar filtros", wx.ART_DELETE, self._limpar_filtros),
                 ("Contas e cartões", wx.ART_LIST_VIEW, self._contas),
                 ("Detalhes", wx.ART_INFORMATION, self._ver_detalhes)):
@@ -163,19 +161,22 @@ class Janela(wx.Frame):
             filtros.Add(controle, prop, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 4)
             return controle
 
-        self.cx_conta = rotulado(
-            "Conta ou cartão", lambda: wx.Choice(p, name="Conta ou cartão"))
-        self.cx_situacao = rotulado(
-            "Situação", lambda: wx.Choice(p, name="Situação",
-                                          choices=[r for _, r in SITUACOES]))
+        def caixa_de_escolha(rotulo, opcoes):
+            return rotulado(rotulo, lambda: wx.Choice(
+                p, name=rotulo, choices=[r for _, r in opcoes]))
+
+        self.cx_ordem = caixa_de_escolha("Ordem", ORDENS)
+        self.cx_ordem.SetSelection(
+            [k for k, _ in ORDENS].index(self.filtros.ordem))
+        self.cx_tipo = caixa_de_escolha("Tipo", TIPOS)
+        self.cx_tipo.SetSelection(0)
+        self.cx_situacao = caixa_de_escolha("Situação", SITUACOES)
         self.cx_situacao.SetSelection(0)
-        self.campo_busca = rotulado(
-            "Buscar", lambda: wx.TextCtrl(p, name="Buscar",
-                                          style=wx.TE_PROCESS_ENTER), 1)
-        self.botao_criterios = wx.Button(p, label="Busca por critérios")
-        filtros.Add(self.botao_criterios, 0, wx.LEFT, 8)
-        self.botao_sair = wx.Button(p, label="Sair")
-        filtros.Add(self.botao_sair, 0, wx.LEFT | wx.RIGHT, 8)
+        filtros.AddStretchSpacer()
+        self.botao_filtrar = wx.Button(p, label="Filtrar")
+        filtros.Add(self.botao_filtrar, 0, wx.LEFT, 8)
+        self.botao_fechar = wx.Button(p, label="Fechar")
+        filtros.Add(self.botao_fechar, 0, wx.LEFT | wx.RIGHT, 8)
 
         self.resumo = wx.StaticText(p, label="")
         fonte = self.resumo.GetFont()
@@ -197,12 +198,11 @@ class Janela(wx.Frame):
         caixa.Add(self.lista, 1, wx.EXPAND | wx.ALL, 8)
         p.SetSizer(caixa)
 
-        self.cx_conta.Bind(wx.EVT_CHOICE, self._ao_filtro)
+        self.cx_ordem.Bind(wx.EVT_CHOICE, self._ao_mudar_ordem)
+        self.cx_tipo.Bind(wx.EVT_CHOICE, self._ao_filtro)
         self.cx_situacao.Bind(wx.EVT_CHOICE, self._ao_filtro)
-        self.campo_busca.Bind(wx.EVT_TEXT, self._ao_digitar)
-        self.campo_busca.Bind(wx.EVT_TEXT_ENTER, self._busca_enter)
-        self.botao_criterios.Bind(wx.EVT_BUTTON, self._criterios)
-        self.botao_sair.Bind(wx.EVT_BUTTON, lambda e: self.Close())
+        self.botao_filtrar.Bind(wx.EVT_BUTTON, self._abrir_filtrar)
+        self.botao_fechar.Bind(wx.EVT_BUTTON, lambda e: self.Close())
         self.navegacao = NavegacaoDeColunas(
             self.lista, self.fala, ao_ativar=lambda: self._abrir(None),
             ao_espaco=lambda: self._alternar_pago(None),
@@ -274,23 +274,15 @@ class Janela(wx.Frame):
         """Lê a cópia local e redesenha só se algo mudou, para não tirar a
         posição de quem está percorrendo a lista."""
         self.todos = self.banco.lancamentos()
-        self._preencher_contas()
         self.aplicar_filtros()
-
-    def _preencher_contas(self):
-        atual = self.filtros.banco
-        nomes = sorted({c["nome_banco"] for c in self.banco.contas()}
-                       | set(self.banco.opcoes("banco")))
-        if atual and atual not in nomes:
-            nomes.append(atual)
-        escolhas = [TODAS_CONTAS] + nomes
-        if escolhas != list(self.cx_conta.GetItems()):
-            self.cx_conta.Set(escolhas)
-        self.cx_conta.SetStringSelection(atual or TODAS_CONTAS)
 
     def aplicar_filtros(self):
         self.visiveis = regras.filtrar(self.todos, self.filtros)
         resumo = texto_resumo(regras.resumir(self.visiveis))
+        # Os filtros da janela não aparecem na tela inicial: sem isto, lançamentos
+        # poderiam parecer sumidos
+        if regras.tem_filtro_da_janela(self.filtros):
+            resumo = "Com filtros. " + resumo
         self.resumo.SetLabel(resumo)
         linhas = [colunas.linha(l, self.colunas) for l in self.visiveis]
         if linhas != self._linhas:
@@ -350,8 +342,7 @@ class Janela(wx.Frame):
     # ---- filtros ----
     @seguro
     def _ao_filtro(self, _evt):
-        conta = self.cx_conta.GetStringSelection()
-        self.filtros.banco = "" if conta == TODAS_CONTAS else conta
+        self.filtros.tipo = TIPOS[self.cx_tipo.GetSelection()][0]
         self.filtros.status = SITUACOES[self.cx_situacao.GetSelection()][0]
         self.aplicar_filtros()
         self._avisar_quantidade(interromper=False)
@@ -373,46 +364,33 @@ class Janela(wx.Frame):
             partes.append(total)
         self._falar(" ".join(partes), interromper)
 
-    def _ao_digitar(self, _evt):
-        self._atraso_busca.Start(ATRASO_BUSCA_MS)
-
     @seguro
-    def _busca_pronta(self):
-        self.filtros.busca = self.campo_busca.GetValue()
+    def _ao_mudar_ordem(self, _evt):
+        """A ordem não esconde nada: fica guardada e não conta como filtro."""
+        self.filtros.ordem = ORDENS[self.cx_ordem.GetSelection()][0]
+        preferencias.salvar_ordem(self.filtros.ordem)
         self.aplicar_filtros()
-        self.SetStatusText(self._qtd_texto())
 
     @seguro
-    def _busca_enter(self, _evt):
-        self._busca_pronta()
-        self._avisar_quantidade()
-        if self.visiveis:
-            self.lista.SetFocus()
-
-    def _focar_busca(self, _evt):
-        self.campo_busca.SetFocus()
-        self.campo_busca.SelectAll()
-
-    @seguro
-    def _criterios(self, _evt):
-        dlg = dialogos.BuscaPorCriterios(self, self.banco, self.filtros)
+    def _abrir_filtrar(self, _evt):
+        dlg = dialogos.JanelaFiltrar(self, self.banco, self.filtros)
         aplicou = dlg.ShowModal() == wx.ID_OK
         dlg.Destroy()
         if aplicou:
-            self._preencher_contas()
-            self.cx_situacao.SetSelection(
-                [k for k, _ in SITUACOES].index(self.filtros.status))
             self.aplicar_filtros()
             self.lista.SetFocus()
             self._avisar_quantidade()
 
+    def _redefinir_filtros(self, banco=""):
+        """Tudo volta ao início, menos a ordem."""
+        self.filtros = regras.Filtros(ordem=self.filtros.ordem, banco=banco)
+        self.cx_tipo.SetSelection(0)
+        self.cx_situacao.SetSelection(0)
+        self.aplicar_filtros()
+
     @seguro
     def _limpar_filtros(self, _evt):
-        self.filtros = regras.Filtros()
-        self.campo_busca.ChangeValue("")
-        self.cx_situacao.SetSelection(0)
-        self._preencher_contas()
-        self.aplicar_filtros()
+        self._redefinir_filtros()
         self._avisar_quantidade("Filtros limpos. ")
 
     def _ver_resumo(self, _evt):
@@ -620,11 +598,7 @@ class Janela(wx.Frame):
 
     def ir_ao_lancamento(self, lancamento_id):
         """Limpa os filtros, porque o lançamento pode estar oculto por eles."""
-        self.filtros = regras.Filtros()
-        self.campo_busca.ChangeValue("")
-        self.cx_situacao.SetSelection(0)
-        self._preencher_contas()
-        self.aplicar_filtros()
+        self._redefinir_filtros()
         if self._selecionar_id(lancamento_id):
             l = self.lancamento_atual()
             self.avisar("%s, %s." % (regras.descricao_de(l),
@@ -894,7 +868,7 @@ class Janela(wx.Frame):
         self._item(menu, "Excluir", self._excluir)
         self._item(menu, "Ver detalhes", self._ver_detalhes)
         self._item(menu, "Marcar como pago ou pendente", self._alternar_pago)
-        self._item(menu, "Busca por critérios", self._criterios)
+        self._item(menu, "Filtrar", self._abrir_filtrar)
         self._item(menu, "Limpar filtros", self._limpar_filtros)
         self.lista.PopupMenu(menu)
         menu.Destroy()
@@ -904,11 +878,7 @@ class Janela(wx.Frame):
         dlg = dialogos.Contas(self, self._situacoes(), self._configurar_conta,
                               self._remover_conta)
         if dlg.ShowModal() == wx.ID_OK and dlg.escolhida:
-            self.filtros = regras.Filtros(banco=dlg.escolhida)
-            self.campo_busca.ChangeValue("")
-            self.cx_situacao.SetSelection(0)
-            self._preencher_contas()
-            self.aplicar_filtros()
+            self._redefinir_filtros(banco=dlg.escolhida)
             self.lista.SetFocus()
             self._avisar_quantidade("%s: " % dlg.escolhida)
         dlg.Destroy()

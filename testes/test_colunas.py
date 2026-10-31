@@ -54,6 +54,13 @@ def test_falar_total_comeca_desligado_e_e_guardado(tmp_path, monkeypatch):
     assert preferencias.ler_falar_quantidade() is True
 
 
+def test_ordem_da_tabela_fica_guardada(tmp_path, monkeypatch):
+    monkeypatch.setenv("FINANCEIRO_DADOS", str(tmp_path))
+    assert preferencias.ler_ordem() == "recentes"
+    preferencias.salvar_ordem("antigos")
+    assert preferencias.ler_ordem() == "antigos"
+
+
 def test_preferencia_sobrevive_a_reabrir(tmp_path, monkeypatch):
     monkeypatch.setenv("FINANCEIRO_DADOS", str(tmp_path))
     assert preferencias.ler_colunas() == colunas.padrao()

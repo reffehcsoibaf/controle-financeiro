@@ -80,6 +80,30 @@ def test_ordem_mais_recente_primeiro():
     assert [l["id"] for l in regras.filtrar([a, b], regras.Filtros())] == [2, 1]
 
 
+def test_ordem_antigos_primeiro_mantem_o_dia_em_ordem_de_criacao():
+    a = lanc(5, -1, data_origem="2026-02-01")
+    b = lanc(6, -1, data_origem="2026-02-01")
+    c = lanc(1, -1, data_origem="2026-01-01")
+    assert [l["id"] for l in regras.filtrar(
+        [b, a, c], regras.Filtros(ordem="antigos"))] == [1, 5, 6]
+    assert [l["id"] for l in regras.filtrar([b, a, c], regras.Filtros())] == [5, 6, 1]
+
+
+def test_filtro_de_tipo():
+    saida, entrada = lanc(1, -5.0), lanc(2, 5.0)
+    assert regras.filtrar([saida, entrada], regras.Filtros(tipo="saida")) == [saida]
+    assert regras.filtrar([saida, entrada], regras.Filtros(tipo="entrada")) == [entrada]
+    assert len(regras.filtrar([saida, entrada], regras.Filtros())) == 2
+
+
+def test_so_a_janela_conta_como_filtro_escondido():
+    assert not regras.tem_filtro_da_janela(
+        regras.Filtros(ordem="antigos", tipo="saida", status="pago"))
+    assert regras.tem_filtro_da_janela(regras.Filtros(busca="pão"))
+    assert regras.tem_filtro_da_janela(regras.Filtros(banco="Itaú"))
+    assert not regras.tem_filtro_da_janela(regras.Filtros(busca="   "))
+
+
 def test_resumo():
     r = regras.resumir([lanc(1, 100.0, pago=True), lanc(2, -30.0)])
     assert (r.entradas, r.saidas, r.total, r.pago, r.pendente) == (

@@ -40,6 +40,14 @@ def salvar_falar_total(falar):
     _gravar("falar_total_filtro", bool(falar))
 
 
+def ler_ordem():
+    return "antigos" if _ler().get("ordem_tabela") == "antigos" else "recentes"
+
+
+def salvar_ordem(ordem):
+    _gravar("ordem_tabela", ordem)
+
+
 def salvar_colunas(escolha):
     _gravar("colunas", escolha)
 

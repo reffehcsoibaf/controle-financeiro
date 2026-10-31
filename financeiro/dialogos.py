@@ -15,7 +15,6 @@ CAMPOS_LISTA = (("banco", "Banco ou cartão"), ("forma", "Forma de pagamento"),
 CAMPOS_DATA = (("origem_de", "Data de origem, de"),
                ("origem_ate", "Data de origem, até"),
                ("venc_de", "Vencimento, de"), ("venc_ate", "Vencimento, até"))
-SITUACOES = (("", "Todos"), ("pendente", "Pendentes"), ("pago", "Pagos"))
 TODOS = "Todos"
 
 
@@ -337,13 +336,16 @@ class Configuracoes(wx.Dialog):
         self.EndModal(wx.ID_OK)
 
 
-class BuscaPorCriterios(wx.Dialog):
+class JanelaFiltrar(wx.Dialog):
     def __init__(self, pai, banco, filtros):
-        super().__init__(pai, title="Busca por critérios")
+        super().__init__(pai, title="Filtrar")
         self.filtros = filtros
         grade = wx.FlexGridSizer(cols=2, vgap=6, hgap=8)
         grade.AddGrowableCol(1)
         self.datas, self.listas = {}, {}
+        grade.Add(wx.StaticText(self, label="Buscar"), 0, wx.ALIGN_CENTER_VERTICAL)
+        self.busca = wx.TextCtrl(self, name="Buscar", value=filtros.busca)
+        grade.Add(self.busca, 1, wx.EXPAND)
         for chave, rotulo in CAMPOS_DATA:
             grade.Add(wx.StaticText(self, label=rotulo),
                       0, wx.ALIGN_CENTER_VERTICAL)
@@ -351,13 +353,6 @@ class BuscaPorCriterios(wx.Dialog):
             campo = CampoData(self, rotulo, "" if valor == "—" else valor)
             grade.Add(campo, 1, wx.EXPAND)
             self.datas[chave] = campo
-        grade.Add(wx.StaticText(self, label="Situação"), 0,
-                  wx.ALIGN_CENTER_VERTICAL)
-        self.situacao = wx.Choice(self, name="Situação",
-                                  choices=[r for _, r in SITUACOES])
-        self.situacao.SetSelection(
-            [k for k, _ in SITUACOES].index(filtros.status))
-        grade.Add(self.situacao, 1, wx.EXPAND)
         for chave, rotulo in CAMPOS_LISTA:
             grade.Add(wx.StaticText(self, label=rotulo), 0,
                       wx.ALIGN_CENTER_VERTICAL)
@@ -370,9 +365,9 @@ class BuscaPorCriterios(wx.Dialog):
             grade.Add(escolha, 1, wx.EXPAND)
             self.listas[chave] = escolha
         botoes = wx.BoxSizer(wx.HORIZONTAL)
-        aplicar = wx.Button(self, wx.ID_OK, "Aplicar")
+        aplicar = wx.Button(self, wx.ID_OK, "Filtrar")
         aplicar.SetDefault()
-        limpar = wx.Button(self, label="Limpar critérios")
+        limpar = wx.Button(self, label="Limpar filtros")
         botoes.Add(aplicar, 0, wx.RIGHT, 8)
         botoes.Add(limpar, 0, wx.RIGHT, 8)
         botoes.Add(wx.Button(self, wx.ID_CANCEL, "Cancelar"))
@@ -382,15 +377,16 @@ class BuscaPorCriterios(wx.Dialog):
         caixa.Add(grade, 1, wx.EXPAND | wx.ALL, 12)
         caixa.Add(botoes, 0, wx.ALL | wx.ALIGN_RIGHT, 12)
         self.SetSizerAndFit(caixa)
-        self.datas["origem_de"].SetFocus()
+        self.busca.SetFocus()
+        self.busca.SelectAll()
 
     def _limpar(self, _evt):
+        self.busca.Clear()
         for campo in self.datas.values():
             campo.Clear()
-        self.situacao.SetSelection(0)
         for escolha in self.listas.values():
             escolha.SetSelection(0)
-        self.datas["origem_de"].SetFocus()
+        self.busca.SetFocus()
 
     def _aplicar(self, _evt):
         novos = {}
@@ -399,11 +395,11 @@ class BuscaPorCriterios(wx.Dialog):
                 novos[chave] = data_para_iso(campo.GetValue())
             except ValueError:
                 wx.MessageBox("Data inválida. Digite os números, por exemplo "
-                              "25102026, ou use as setas.", "Busca por critérios",
+                              "25102026, ou use as setas.", "Filtrar",
                               wx.OK | wx.ICON_ERROR, self)
                 campo.SetFocus()
                 return
-        self.filtros.status = SITUACOES[self.situacao.GetSelection()][0]
+        self.filtros.busca = self.busca.GetValue()
         for chave, valor in novos.items():
             setattr(self.filtros, chave, valor)
         for chave, escolha in self.listas.items():

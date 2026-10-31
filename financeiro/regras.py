@@ -28,6 +28,8 @@ class Filtros:
     venc_de: str = ""
     venc_ate: str = ""
     status: str = ""          # "", "pago" ou "pendente"
+    tipo: str = ""            # "", "entrada" ou "saida"
+    ordem: str = "recentes"   # "recentes" ou "antigos"
     banco: str = ""
     forma: str = ""
     estabelecimento: str = ""
@@ -321,7 +323,7 @@ def _bate_busca(lanc, termo):
 
 
 def filtrar(lancamentos, f):
-    """Datas mais recentes primeiro (o site mostra o contrário)."""
+    """Na ordem escolhida. No mesmo dia, sempre a ordem de criação."""
     termo = sem_acentos(f.busca).strip()
     saida = []
     for l in lancamentos:
@@ -337,6 +339,10 @@ def filtrar(lancamentos, f):
         if f.status == "pago" and not l["pago"]:
             continue
         if f.status == "pendente" and l["pago"]:
+            continue
+        if f.tipo == "entrada" and not eh_entrada(l):
+            continue
+        if f.tipo == "saida" and eh_entrada(l):
             continue
         if f.banco and l["banco"] != f.banco and not any(
                 p["banco"] == f.banco for p in l["pagamentos"]):
@@ -359,8 +365,14 @@ def filtrar(lancamentos, f):
     # No mesmo dia, na ordem de criação: assim as parcelas ficam 1/3, 2/3, 3/3.
     # Id negativo é temporário, e cada novo é menor que o anterior.
     saida.sort(key=lambda l: (l["id"] < 0, abs(l["id"])))
-    saida.sort(key=lambda l: l["data_origem"] or "", reverse=True)
+    saida.sort(key=lambda l: l["data_origem"] or "", reverse=f.ordem != "antigos")
     return saida
+
+
+def tem_filtro_da_janela(f):
+    """Os filtros que não aparecem na tela inicial, para ela poder avisar."""
+    return any((f.busca.strip(), f.origem_de, f.origem_ate, f.venc_de, f.venc_ate,
+                f.banco, f.forma, f.estabelecimento, f.categoria, f.credor, f.devedor))
 
 
 def valor_para_banco(lanc, nome):

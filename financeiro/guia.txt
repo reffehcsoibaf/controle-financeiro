@@ -12,16 +12,20 @@ F1 abre este guia.
 
 # A janela principal
 Na ordem do Tab:
-Conta ou cartão: mostra só uma conta.
+Ordem: recentes primeiro ou antigos primeiro. A escolha fica guardada.
+Tipo: entradas e saídas, só entradas ou só saídas.
 Situação: todos, pendentes ou pagos.
-Buscar: procura em descrição, estabelecimento, categoria, credor, devedor, banco, forma, valor, datas e itens. Enter leva à tabela.
-Busca por critérios: período, vencimento, forma, categoria e outros.
-Sair: fecha o programa.
+Filtrar: abre a janela de filtros.
+Fechar: fecha o programa.
 Tabela de lançamentos.
+
+Na janela Filtrar (Ctrl+F) ficam a busca e os filtros por data de origem, vencimento, banco ou cartão, forma, estabelecimento, categoria, credor e devedor. A busca procura em descrição, estabelecimento, categoria, credor, devedor, banco, forma, valor, datas e itens. O botão Limpar filtros esvazia os campos, e Filtrar aplica.
+
+Quando esses filtros estão em uso, o resumo começa com "Com filtros", para você saber que nem tudo está aparecendo.
 
 Acima da tabela fica o resumo: quantidade, entradas, saídas, saldo e pendente. Ctrl+T abre o resumo em uma janela com o texto para ler com as setas e os botões Copiar e Fechar. Ctrl+L limpa os filtros.
 
-As datas mais recentes vêm primeiro. No mesmo dia, os lançamentos ficam na ordem em que foram criados.
+No mesmo dia, os lançamentos ficam na ordem em que foram criados, seja qual for a Ordem escolhida.
 
 # Navegar na tabela
 A tabela funciona como uma planilha.
@@ -48,8 +52,7 @@ Ctrl+D: ver detalhes, com os botões Copiar e Fechar.
 Ctrl+P ou barra de espaço: marcar como pago ou pendente.
 Ctrl+Shift+V: ir ao lançamento vinculado.
 Ctrl+Shift+O: ver o documento vinculado.
-Ctrl+F: buscar.
-Ctrl+Shift+F: busca por critérios.
+Ctrl+F: filtrar.
 Ctrl+L: limpar filtros.
 Ctrl+T: ver o resumo.
 Ctrl+B: saldos e limites.

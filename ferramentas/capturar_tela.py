@@ -18,7 +18,8 @@ import wx
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FINANCEIRO_DADOS"] = tempfile.mkdtemp()
 
-from financeiro import colunas, config, dialogos, formulario, gerenciar, regras  # noqa: E402
+from financeiro import (colunas, config, dialogos, formulario, gerenciar,  # noqa: E402
+                        preferencias, regras)
 from financeiro import nuvem as nuvem_mod  # noqa: E402
 from financeiro.banco import Banco  # noqa: E402
 from financeiro.janela import Janela  # noqa: E402
@@ -305,6 +306,49 @@ def exercitar_completo(janela, banco):
     wx.MessageBox = original
 
 
+def exercitar_inicial(janela, banco):
+    falas = []
+    janela.fala.falar = lambda t, i=False: falas.append(t)
+    painel = janela.cx_ordem.GetParent()
+    print("ordem do Tab:", [
+        f.GetLabel() if isinstance(f, (wx.StaticText, wx.Button))
+        else "%s: %s" % (type(f).__name__, f.GetStringSelection())
+        if isinstance(f, wx.Choice) else type(f).__name__
+        for f in painel.GetChildren()])
+
+    def primeira():
+        return lista_texto(janela.lista, 0)[1:2], janela.lista.GetItemCount()
+
+    print("recentes:", primeira())
+    janela.cx_ordem.SetSelection(1)
+    janela._ao_mudar_ordem(None)
+    print("antigos:", primeira(), "guardada:", preferencias.ler_ordem())
+    janela.cx_tipo.SetSelection(1)
+    janela._ao_filtro(None)
+    print("entradas:", primeira(), falas[-1:], janela.resumo.GetLabel()[:40])
+    janela.cx_tipo.SetSelection(2)
+    janela.cx_situacao.SetSelection(1)
+    janela._ao_filtro(None)
+    print("saídas pendentes:", primeira())
+    # Janela Filtrar
+    dlg = dialogos.JanelaFiltrar(janela, banco, janela.filtros)
+    print("foco inicial é a busca:", [type(f).__name__ for f in dlg.GetChildren()][:2])
+    dlg.busca.SetValue("luz")
+    dlg.EndModal = lambda r: None
+    dlg._aplicar(None)
+    dlg.Destroy()
+    janela.aplicar_filtros()
+    print("busca:", primeira(), janela.resumo.GetLabel()[:40])
+    falas.clear()
+    janela._limpar_filtros(None)
+    print("limpou:", primeira(), falas, janela.resumo.GetLabel()[:30],
+          "ordem mantida:", janela.filtros.ordem,
+          "caixas:", janela.cx_tipo.GetStringSelection(),
+          janela.cx_situacao.GetStringSelection())
+    janela._redefinir_filtros(banco="Banco Alfa")
+    print("conta:", primeira(), janela.resumo.GetLabel()[:30])
+
+
 def exercitar_datas(janela, banco):
     falas = []
     janela.fala.falar = lambda t, i=False: falas.append(t)
@@ -363,7 +407,7 @@ def exercitar_datas(janela, banco):
     dlg.origem_de.SetValue("27/10/2026")
     print("filtro:", antes, "->", dlg.lista.GetItemCount())
     dlg.Destroy()
-    crit = dialogos.BuscaPorCriterios(janela, banco, regras.Filtros())
+    crit = dialogos.JanelaFiltrar(janela, banco, regras.Filtros())
     print("critérios:", type(crit.datas["origem_de"]).__name__)
     crit.Destroy()
     docs = gerenciar.Documentos(janela, banco, None, janela.todos)
@@ -597,7 +641,7 @@ def main():
     elif modo == "detalhes":
         alvo = dialogos.Detalhes(janela, janela.visiveis[0], janela.todos)
     elif modo == "criterios":
-        alvo = dialogos.BuscaPorCriterios(janela, banco, janela.filtros)
+        alvo = dialogos.JanelaFiltrar(janela, banco, janela.filtros)
     elif modo == "itens":
         alvo = dialogos.Itens(janela, janela.visiveis[0], janela.todos)
     elif modo == "formulario":
@@ -643,6 +687,8 @@ def main():
                 exercitar_restante(janela, banco)
             if modo == "datas":
                 exercitar_datas(janela, banco)
+            if modo == "inicial":
+                exercitar_inicial(janela, banco)
             if modo == "formulario":
                 # Lançamento de 3 itens: valor calculado, campos desligados
                 print("form valor:", alvo.valor.GetValue(),
@@ -740,7 +786,7 @@ def main():
                 lista.GetItemText(0, c) for c in range(colunas_n))
                 == colunas.linha(janela.visiveis[0], janela.colunas))
             # Ordem real de criação dos filtros: rótulo logo antes do controle
-            filhos = janela.cx_conta.GetParent().GetChildren()
+            filhos = janela.cx_ordem.GetParent().GetChildren()
             print("ordem:", [f.GetLabel() if isinstance(f, wx.StaticText)
                              else type(f).__name__ for f in filhos][:8])
             # Marcar e desmarcar como faz a barra de espaço

@@ -5,6 +5,9 @@ Menu:
 Saldos e limites e Documentos ficam em Ferramentas. Desconectar fica direto no Menu e pede confirmação.
 Resumo, Última sincronização, Detalhes e Sobre abrem em uma janela com o texto para ler, e os botões Copiar e Fechar.
 
+Tela inicial:
+Caixas de Ordem, Tipo e Situação, botões Filtrar e Fechar, e a tabela. A busca e os demais filtros ficam na janela Filtrar.
+
 Datas:
 Basta digitar os números, sem as barras, ou rolar com as setas.
 
