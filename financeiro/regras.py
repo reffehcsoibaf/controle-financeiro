@@ -194,6 +194,34 @@ def calcular_parcelas(total, quantidade, diferenca_na_primeira=False):
     return [p / 100 for p in parcelas]
 
 
+def ratear_itens(valores, parcelas):
+    """Divide cada item entre as parcelas, em centavos exatos: a soma de cada
+    parcela bate com o valor dela e a soma de cada item bate com o original.
+    Desconto (negativo) também é dividido. Devolve uma lista por parcela, com um
+    valor por item, na mesma ordem."""
+    itens = [round(v * 100) for v in valores]
+    totais = [round(p * 100) for p in parcelas]
+    n = len(totais)
+    # Cada item começa igual em todas; a sobra de cada um é de 0 a n-1 centavos
+    bases = [c // n for c in itens]
+    sobras = [c - b * n for c, b in zip(itens, bases)]
+    faltam = [t - sum(bases) for t in totais]
+    # Vai passando pelas parcelas que ainda têm falta, para espalhar os centavos
+    vagas = []
+    while any(f > 0 for f in faltam):
+        for j in range(n):
+            if faltam[j] > 0:
+                vagas.append(j)
+                faltam[j] -= 1
+    tabela = [list(bases) for _ in range(n)]
+    posicao = 0
+    for i, sobra in enumerate(sobras):
+        for j in vagas[posicao:posicao + sobra]:
+            tabela[j][i] += 1
+        posicao += sobra
+    return [[c / 100 for c in linha] for linha in tabela]
+
+
 def itens_orientados(lanc):
     """Valores dos itens como o site entende: positivo é item normal e negativo
     é desconto. Há lançamentos antigos gravados com os itens negativos; como o
@@ -220,7 +248,10 @@ def descricao_de(lanc):
     if lanc["itens"]:
         textos = [i["descricao"] for i in lanc["itens"] if i["descricao"]]
         if textos:
-            return " / ".join(textos)
+            juntos = " / ".join(textos)
+            # Com itens não há descrição própria para levar a etiqueta da parcela
+            parcela = lanc.get("parcela")
+            return "%s — %s" % (juntos, parcela) if parcela else juntos
     return lanc["descricao"] or lanc["estabelecimento"] or "Sem descrição"
 
 

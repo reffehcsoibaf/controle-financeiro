@@ -7,7 +7,7 @@ import shutil
 
 import openpyxl
 
-from financeiro import config
+from financeiro import config, planilha
 
 LIMITE_PLANILHA = 50000
 
@@ -42,10 +42,8 @@ def preparar_para_ia(caminho):
         if ext == "pdf":
             return "pdf", conteudo, "application/pdf"
         return "imagem", conteudo, mime
-    if ext == "xlsx":
+    if ext in ("xlsx", "xls"):
         return "texto", _planilha_em_texto(caminho), "text/plain"
-    if ext == "xls":
-        raise ValueError("Salve a planilha como XLSX para ler com a IA.")
     if ext in ("txt", "xml") or mime.startswith("text/"):
         with open(caminho, encoding="utf-8", errors="replace") as f:
             conteudo = f.read()
@@ -57,19 +55,24 @@ def preparar_para_ia(caminho):
 
 def _planilha_em_texto(caminho):
     try:
-        livro = openpyxl.load_workbook(caminho, read_only=True, data_only=True)
+        if caminho.lower().endswith(".xls"):
+            abas = planilha.linhas_xls(caminho)
+        else:
+            livro = openpyxl.load_workbook(caminho, read_only=True, data_only=True)
+            try:
+                abas = [(aba.title, list(aba.iter_rows(values_only=True)))
+                        for aba in livro.worksheets]
+            finally:
+                livro.close()
     except Exception:
         raise ValueError("Não foi possível ler a planilha. Verifique se o "
                          "arquivo não está corrompido.") from None
-    try:
-        partes = []
-        for aba in livro.worksheets:
-            partes.append("--- Planilha: %s ---" % aba.title)
-            for linha in aba.iter_rows(values_only=True):
-                partes.append(",".join("" if v is None else str(v) for v in linha))
-            partes.append("")
-    finally:
-        livro.close()
+    partes = []
+    for nome, linhas in abas:
+        partes.append("--- Planilha: %s ---" % nome)
+        for linha in linhas:
+            partes.append(",".join("" if v is None else str(v) for v in linha))
+        partes.append("")
     texto = "\n".join(partes)
     if not any(l and not l.startswith("---") and l.strip(",") for l in partes):
         raise ValueError("A planilha parece estar vazia.")

@@ -34,6 +34,54 @@ def test_soma_sempre_bate_com_o_total(total, n):
     assert round(sum(round(v * 100) for v in valores)) == round(total * 100)
 
 
+@pytest.mark.parametrize("valores,total,n", [
+    ([100.0, 50.0, 0.01], 150.01, 3),
+    ([33.33, 66.67], 100.0, 7),
+    ([200.0, 132.45, -20.0], 312.45, 4),    # com desconto
+    ([0.01, 0.02], 0.03, 3),
+    ([19.9, 10.1, 5.05, 7.77, 1.11], 43.93, 12),
+    ([1000.0], 1000.0, 360)])
+@pytest.mark.parametrize("na_primeira", [False, True])
+def test_rateio_fecha_nas_duas_direcoes(valores, total, n, na_primeira):
+    parcelas = regras.calcular_parcelas(total, n, na_primeira)
+    tabela = regras.ratear_itens(valores, parcelas)
+    centavos = [[round(v * 100) for v in linha] for linha in tabela]
+    for linha, parcela in zip(centavos, parcelas):
+        assert sum(linha) == round(parcela * 100)
+    for i, valor in enumerate(valores):
+        assert sum(linha[i] for linha in centavos) == round(valor * 100)
+
+
+def test_rateio_divide_por_igual_quando_da():
+    tabela = regras.ratear_itens([30.0, 60.0], [30.0, 30.0, 30.0])
+    assert tabela == [[10.0, 20.0]] * 3
+
+
+def test_parcelas_gravam_e_enviam_os_itens(tmp_path):
+    b = Banco(str(tmp_path / "i.db"))
+    item = dict(categoria="Comida", descricao="Pão", data_original=None)
+    b.salvar_parcelas([
+        dict(data_origem="2026-10-01", pago=False, valor=-5.0, parcela=p,
+             itens=[dict(item, valor=5.0)]) for p in ("1/2", "2/2")])
+    lista = b.lancamentos()
+    assert len(lista) == 2 and all(len(l["itens"]) == 1 for l in lista)
+    assert regras.descricao_de(next(l for l in lista if l["parcela"] == "2/2")) == (
+        "Pão — 2/2")
+    assert b.envios()[0]["itens"][0]["valor"] == 5.0
+    b.fechar()
+
+
+def test_parcelas_gravam_pagamento_dividido(tmp_path):
+    b = Banco(str(tmp_path / "d.db"))
+    b.salvar_parcelas([dict(
+        data_origem="2026-10-01", pago=False, valor=-5.0, parcela="1/2",
+        pagamentos=[dict(banco="A", forma=None, valor=3.0),
+                    dict(banco="B", forma="Pix", valor=2.0)])])
+    assert [p["banco"] for p in b.lancamentos()[0]["pagamentos"]] == ["A", "B"]
+    assert b.envios()[0]["pagamentos"][1]["valor"] == 2.0
+    b.fechar()
+
+
 def _parcela(i, rotulo, origem="2026-10-01"):
     return dict(id=i, parcela=rotulo, data_origem=origem, data_vencimento=None,
                 pago=False, banco="", forma="", estabelecimento="", categoria="",

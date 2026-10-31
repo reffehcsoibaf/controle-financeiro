@@ -424,6 +424,14 @@ class Banco:
                 i = self._novo_id("lancamentos")
                 _inserir(self._con, "lancamentos", [dict(
                     dados, id=i, pago=int(bool(dados.get("pago"))))])
+                proximo = self._novo_id("itens")
+                _inserir(self._con, "itens", [
+                    dict(item, id=proximo - n, lancamento_id=i, ordem=n)
+                    for n, item in enumerate(dados.get("itens") or [])])
+                proximo = self._novo_id("pagamentos")
+                _inserir(self._con, "pagamentos", [
+                    dict(p, id=proximo - n, lancamento_id=i, ordem=n)
+                    for n, p in enumerate(dados.get("pagamentos") or [])])
                 self._registrar(i, "salvar")
                 ids.append(i)
         return ids

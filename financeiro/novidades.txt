@@ -1,0 +1,20 @@
+# Versão 0.1.0
+Primeira versão do Controle Financeiro para Windows.
+
+Consulta e organização:
+Tabela navegável como planilha, filtros, busca, resumo e colunas configuráveis.
+Contas e cartões com saldo e limite calculados.
+Guia de uso dentro do programa.
+
+Lançamentos:
+Criar, editar e excluir, marcar como pago, itens, parcelamento, pagamento dividido, pagamento de fatura vinculado e consolidação de lançamentos antigos.
+Parcelamento também com itens e com pagamento dividido, com rateio exato dos centavos.
+
+Documentos e IA:
+Guardar, abrir, vincular e excluir documentos, inclusive colando com Ctrl+V.
+Leitura por IA de arquivos e de texto, com memória de correções.
+
+Dados:
+Listas, exportação e importação de Excel, remoção de duplicatas.
+Funcionamento sem internet, sincronização com o site e conflitos decididos pela alteração mais recente, com conferência do relógio.
+Respeita as permissões de IA e de documentos definidas no painel de administração.

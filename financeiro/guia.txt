@@ -1,0 +1,203 @@
+# Primeiros passos
+O Controle Financeiro para Windows usa os mesmos dados do site. O que você faz aqui aparece lá, e o que você faz lá aparece aqui.
+
+Na primeira vez, escolha Entrar com Google. O login abre no navegador do Windows; ao terminar, volte para o programa, com Alt+Tab se preciso. Depois disso, ele abre direto, mesmo sem internet.
+
+O programa funciona com leitor de tela e também com mouse.
+
+Para navegar:
+Alt abre o Menu. Os assuntos ficam em submenus, que abrem com a seta para a direita.
+Tab passa pelos filtros, pelos botões e pela tabela.
+F1 abre este guia.
+
+# A janela principal
+Na ordem do Tab:
+Conta ou cartão: mostra só uma conta.
+Situação: todos, pendentes ou pagos.
+Buscar: procura em descrição, estabelecimento, categoria, credor, devedor, banco, forma, valor, datas e itens. Enter leva à tabela.
+Busca por critérios: período, vencimento, forma, categoria e outros.
+Sair: fecha o programa.
+Tabela de lançamentos.
+
+Acima da tabela fica o resumo: quantidade, entradas, saídas, saldo e pendente. Ctrl+T fala o resumo. Ctrl+L limpa os filtros.
+
+As datas mais recentes vêm primeiro. No mesmo dia, os lançamentos ficam na ordem em que foram criados.
+
+# Navegar na tabela
+A tabela funciona como uma planilha.
+
+A primeira coluna é Situação, com a caixa de pago. Nela, setas para cima e para baixo leem a linha inteira.
+
+Setas para os lados mudam de coluna e falam o título e o conteúdo.
+
+Nas outras colunas, setas para cima e para baixo falam só o conteúdo da célula. Page Up e Page Down andam 10 linhas. Home e End vão à primeira e à última.
+
+Barra de espaço marca ou desmarca como pago. Enter abre: lançamento com itens abre a tabela de itens; sem itens, abre os detalhes. Delete exclui, depois de confirmar.
+
+Essas teclas agem na linha que você acabou de ouvir. Os comandos de tabela do leitor de tela, como Ctrl+Alt com setas, andam sem mudar a linha atual; por isso, depois de usá-los, confira na fala qual lançamento foi marcado.
+
+As colunas e a ordem delas são escolhidas em Configurações.
+
+# Atalhos
+Ctrl+N: novo lançamento.
+Ctrl+E: editar.
+Delete, na tabela: excluir.
+Ctrl+O ou Enter: abrir.
+Ctrl+I: ver itens.
+Ctrl+D: ver detalhes.
+Ctrl+P ou barra de espaço: marcar como pago ou pendente.
+Ctrl+Shift+V: ir ao lançamento vinculado.
+Ctrl+Shift+O: ver o documento vinculado.
+Ctrl+F: buscar.
+Ctrl+Shift+F: busca por critérios.
+Ctrl+L: limpar filtros.
+Ctrl+T: falar o resumo.
+Ctrl+B: contas e cartões.
+Ctrl+Shift+D: documentos.
+Ctrl+Shift+L: gerenciar listas.
+Ctrl+Shift+E: exportar para Excel.
+Ctrl+Shift+I: importar do Excel.
+Ctrl+vírgula: configurações.
+F5: sincronizar.
+F1: guia de uso.
+Ctrl+Q: sair.
+
+# Novo lançamento
+Ctrl+N abre o formulário, com três abas. Ctrl+Tab passa de uma para outra.
+
+Na aba Dados ficam tipo (saída ou entrada), valor, data de origem, vencimento, banco ou cartão, forma de pagamento, estabelecimento, categoria, cartão a quitar, credor, devedor, descrição e a caixa Pago.
+
+Digite o valor sem sinal: quem define entrada ou saída é o campo Tipo. Valores como 1.234,50 ou 12,5 são aceitos. Datas são no formato dia/mês/ano.
+
+Banco, forma, estabelecimento, categoria, credor e devedor mostram as opções cadastradas, e também aceitam um texto digitado. Esse texto vale só para este lançamento, a menos que você use o botão Cadastrar textos novos nas listas.
+
+Ao salvar, o programa fala o valor gravado. Se o lançamento não aparecer na tabela, é porque os filtros atuais o escondem, e o programa avisa.
+
+# Lançamentos com vários itens
+Na aba Itens do formulário, use Adicionar item para cada produto, com valor, categoria e descrição.
+
+Quando há itens, o valor do lançamento passa a ser a soma deles, e os campos Valor, Descrição e Categoria da aba Dados ficam desativados.
+
+Item normal tem valor positivo. Desconto tem valor negativo. Saída ou entrada continua sendo definido pelo campo Tipo.
+
+Na tabela principal, a coluna Itens mostra a quantidade. Enter abre a tabela de itens do lançamento.
+
+# Parcelar
+Só para lançamento novo. Preencha o formulário e use o botão Parcelar, ao lado de Salvar.
+
+Informe o número de parcelas, de 2 a 360, e confira o Resumo e a Prévia das parcelas. Escolha se a diferença de centavos fica na última ou na primeira parcela.
+
+Cada parcela vira um lançamento pendente, com etiqueta como 3/12 e vencimento avançando mês a mês. Sem vencimento preenchido, começa no dia de hoje. Depois de criadas, editar ou excluir uma parcela não muda as outras.
+
+Com itens: cada parcela leva todos os itens, em valores proporcionais. Os centavos fecham nas duas direções: os itens somam o valor da parcela, e as partes de cada item somam o valor original.
+
+Com pagamento dividido: cada parcela leva as mesmas formas de pagamento, também em valores proporcionais.
+
+Com documento lido por IA: o documento fica vinculado à primeira parcela.
+
+# Pagamento dividido
+Quando uma compra foi paga por mais de uma conta ou forma. Na aba Pagamento dividido, marque Dividir pagamento e adicione cada parte, com banco, forma e valor.
+
+A soma das partes precisa ser igual ao valor do lançamento. Os saldos e limites contam em cada conta só a parte dela.
+
+Enquanto a divisão estiver marcada, os campos de banco e forma da aba Dados ficam desativados.
+
+# Pagamento de fatura
+Ao pagar a fatura de um cartão, use a categoria Cartão de crédito em um lançamento novo. O campo Cartão a quitar fica disponível, listando os cartões configurados; com um só, ele já vem escolhido.
+
+Ao salvar, o programa cria também uma entrada no cartão, para recuperar o limite, e vincula os dois lançamentos. Escolha Não vincular se não for pagamento de fatura.
+
+Ctrl+Shift+V vai de um lançamento ao outro. Ao excluir um deles, o programa pergunta se exclui os dois.
+
+# Consolidar lançamentos antigos
+Para juntar várias dívidas em um único pagamento. Na aba Itens de um lançamento, use Importar lançamentos.
+
+Busque, filtre e marque os lançamentos com a barra de espaço. Por padrão, só aparecem os pendentes.
+
+Cada lançamento marcado vira item deste, guardando a data original. Ao salvar, o programa pede confirmação, passa os documentos para o novo lançamento e exclui os originais.
+
+# Contas e cartões
+Ctrl+B mostra cada banco ou cartão, com o saldo ou o limite calculado. Em vermelho, com o valor negativo, está o que passou do saldo ou do limite.
+
+Use Configurar para definir o tipo e o saldo inicial ou o limite total. Remover configuração mantém o nome nas listas, só deixa de calcular.
+
+Conta corrente: o saldo conta só o que está pago.
+Cartão de crédito: o limite conta também o que está pendente, porque costuma ser fatura em aberto.
+
+Enter ou Ver lançamentos desta conta mostra na tabela principal os lançamentos usados no cálculo.
+
+# Documentos
+Ctrl+Shift+D abre a lista de documentos guardados, a mesma do site, com busca pelo nome e por datas.
+
+Guardar arquivo: envia um arquivo novo. Sem internet, ele fica guardado aqui e sobe depois.
+Colar: com um arquivo ou uma imagem copiados, Ctrl+V guarda direto, em qualquer lugar desta janela.
+Abrir ou Enter: abre no programa padrão do Windows. Na primeira vez, baixa o arquivo, o que precisa de internet.
+Salvar cópia: grava em uma pasta à sua escolha.
+Analisar com IA: abre um lançamento novo preenchido a partir do documento.
+Ir ao lançamento: mostra o lançamento vinculado na tabela principal.
+Vincular ao lançamento atual: usa a linha selecionada na tabela principal.
+Desvincular: o documento continua guardado.
+Excluir: apaga o documento, depois de confirmar.
+
+# Leitura por IA
+Precisa de internet. No formulário de lançamento, na aba Dados:
+
+Ler documento com IA: imagem, PDF, TXT, XML, XLSX ou XLS.
+Ler texto com IA: para colar o texto de um e-mail ou mensagem.
+Colar: com um arquivo ou uma imagem copiados, Ctrl+V lê direto, em qualquer lugar do formulário.
+
+A IA preenche o que encontra e o programa fala o que foi preenchido. Com 2 ou mais produtos, preenche os itens; com 2 ou mais formas de pagamento, divide o pagamento. Sempre confira antes de salvar: nada é gravado até você salvar.
+
+O que a IA sugerir fora das suas listas é oferecido para cadastrar.
+
+Guardar também o arquivo lido: guarda o arquivo em Documentos e o vincula ao lançamento ao salvar. Não vincular o documento desfaz esse vínculo; o arquivo continua guardado.
+
+Se você corrigir banco, forma, estabelecimento, categoria, credor ou devedor antes de salvar, o programa memoriza. Essas correções vão junto nas próximas leituras. Elas ficam em Menu, Ferramentas, Correções aprendidas pela IA.
+
+Em um lançamento vindo de documento, a soma dos itens não pode passar do valor lido.
+
+# Listas
+Ctrl+Shift+L gerencia as opções de banco, forma, estabelecimento, categoria, credor e devedor.
+
+Renomear troca o texto em todos os lançamentos que usam a opção, então confira antes. O programa não permite renomear para um nome que já existe.
+
+Excluir uma opção não altera os lançamentos antigos. Excluir um banco remove também a configuração dele em Contas e cartões.
+
+No formulário, Cadastrar textos novos nas listas cadastra de uma vez o que você digitou, depois de mostrar a lista e pedir confirmação.
+
+# Excel
+Exportar (Ctrl+Shift+E): grava os lançamentos mostrados na tabela, respeitando os filtros, no mesmo formato do site.
+
+Importar (Ctrl+Shift+I): aceita XLSX e XLS no formato exportado pelo programa ou pelo site. Lançamentos que já existem são ignorados, e o programa informa quantos são novos antes de importar.
+
+Limpar lançamentos duplicados, em Menu, Ferramentas: mantém o mais antigo de cada grupo igual e exclui as cópias, depois de confirmar.
+
+# Sem internet e sincronização
+Quase tudo funciona sem internet: consultar, filtrar, criar, editar, excluir, parcelar, marcar como pago, mudar listas e contas, e guardar arquivos. As alterações ficam guardadas e sobem quando a conexão voltar.
+
+Precisam de internet: entrar na conta, a leitura por IA e abrir um documento ainda não baixado.
+
+O programa sincroniza ao abrir, a cada 5 minutos e depois de cada alteração. F5 sincroniza na hora.
+
+Quando o mesmo lançamento muda aqui e no site, vale a alteração mais recente, e o programa avisa. Antes, ele compara o relógio do computador com o do servidor. Se a diferença passar de 2 minutos, ele avisa e não decide pela hora: a escolha fica em Menu, Sincronização, Resolver conflitos. O mesmo vale para alterações quase simultâneas e para lançamentos excluídos no site.
+
+Se o servidor recusar uma operação, ela fica em Menu, Sincronização, Operações pendentes, onde pode ser descartada, porque a fila anda em ordem.
+
+# Permissões
+Quem administra o sistema pode ligar ou desligar a leitura por IA e o envio de documentos da sua conta. Desligada, a função some do programa. A mudança chega na próxima sincronização, e o programa avisa.
+
+Sem envio de documentos, os já guardados continuam na lista e podem ser abertos.
+
+# Configurações
+Ctrl+vírgula abre as configurações. Ctrl+Tab muda de aba.
+
+Colunas da tabela: marque com a barra de espaço as colunas que quer ver e mude a ordem com Alt e setas para cima e para baixo, ou com os botões. Situação fica sempre em primeiro, porque tem a caixa de pago.
+
+Filtros: escolha se o programa fala a quantidade de lançamentos e o total em valores ao aplicar um filtro. Os dois continuam na barra de status, que o leitor de tela consegue ler, e no resumo.
+
+# Sua conta e seus dados
+Em Menu, Minha conta, Conta conectada fala o e-mail em uso.
+
+Sair da conta apaga deste computador a cópia dos dados e os documentos baixados. Os dados online continuam guardados. Se houver alterações ainda não enviadas, o programa avisa antes, porque elas seriam perdidas.
+
+Os dados ficam na pasta do seu usuário do Windows, sem cifragem própria do banco. A sessão de login é cifrada e presa à sua conta do Windows. Para proteger os dados, use senha no Windows e, se possível, a criptografia de disco.

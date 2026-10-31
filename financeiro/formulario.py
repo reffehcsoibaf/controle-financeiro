@@ -2,12 +2,13 @@
 leitor de tela usa o texto que vem logo antes na ordem de criação."""
 import datetime
 import logging
+import os
 import re
 import threading
 
 import wx
 
-from financeiro import documentos, nuvem as nuvem_mod, regras
+from financeiro import config, documentos, nuvem as nuvem_mod, regras
 from financeiro.navegacao import NavegacaoDeColunas
 
 log = logging.getLogger("financeiro.formulario")
@@ -50,6 +51,42 @@ def mensagem_de_erro(erro):
     if isinstance(erro, nuvem_mod.SessaoExpirada):
         return "A sessão expirou. Saia e entre de novo."
     return str(erro) or "Ocorreu um erro."
+
+
+def arquivo_colado():
+    """O arquivo ou a imagem copiados, ou None. Copiar célula de planilha também
+    traz imagem junto com o texto: nesse caso vale o texto, como colar normal."""
+    if not wx.TheClipboard.Open():
+        return None
+    try:
+        if wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_FILENAME)):
+            dados = wx.FileDataObject()
+            if wx.TheClipboard.GetData(dados) and dados.GetFilenames():
+                return dados.GetFilenames()[0]
+        if (wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_BITMAP))
+                and not wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_UNICODETEXT))):
+            dados = wx.BitmapDataObject()
+            if wx.TheClipboard.GetData(dados):
+                nome = "colado-%s.png" % datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                caminho = os.path.join(config.pasta_documentos(), nome)
+                dados.GetBitmap().SaveFile(caminho, wx.BITMAP_TYPE_PNG)
+                return caminho
+    finally:
+        wx.TheClipboard.Close()
+    return None
+
+
+def ligar_colar(dialogo, ao_colar):
+    """Ctrl+V com arquivo copiado vale em qualquer lugar da janela; colar texto
+    segue normal."""
+    def tecla(evt):
+        if evt.GetKeyCode() == ord("V") and evt.GetModifiers() == wx.MOD_CONTROL:
+            caminho = arquivo_colado()
+            if caminho:
+                ao_colar(caminho)
+                return
+        evt.Skip()
+    dialogo.Bind(wx.EVT_CHAR_HOOK, tecla)
 
 
 def _combo(pai, grade, rotulo, opcoes, valor=""):
@@ -193,10 +230,13 @@ class DialogoParcelar(wx.Dialog):
 
     MAXIMO = 360
 
-    def __init__(self, pai, valor, entrada, vencimento_base):
+    def __init__(self, pai, valor, entrada, vencimento_base, quantidade_itens=0,
+                 quantidade_pagamentos=0):
         super().__init__(pai, title="Parcelar", size=(620, 560),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.vencimento_base = vencimento_base
+        self.quantidade_itens = quantidade_itens
+        self.quantidade_pagamentos = quantidade_pagamentos
         self.parcelas = None      # [(rótulo, vencimento, valor com sinal)]
         grade = _grade()
         grade.Add(wx.StaticText(self, label="Tipo"), 0, wx.ALIGN_CENTER_VERTICAL)
@@ -204,6 +244,8 @@ class DialogoParcelar(wx.Dialog):
         self.tipo.SetSelection(1 if entrada else 0)
         grade.Add(self.tipo, 1, wx.EXPAND)
         self.valor = _texto(self, grade, "Valor total", valor)
+        if quantidade_itens or quantidade_pagamentos:
+            self.valor.SetEditable(False)   # o total já foi conferido com a soma
         self.quantidade = _texto(self, grade, "Número de parcelas")
         grade.Add(wx.StaticText(self, label="Diferença de centavos"), 0,
                   wx.ALIGN_CENTER_VERTICAL)
@@ -291,6 +333,12 @@ class DialogoParcelar(wx.Dialog):
             texto += " %s parcela: %s." % (
                 "Primeira" if na_primeira else "Última",
                 regras.fmt_valor(valores[ajuste]))
+        if self.quantidade_itens:
+            texto += " Cada parcela leva os %d itens, em valores proporcionais." % (
+                self.quantidade_itens)
+        if self.quantidade_pagamentos:
+            texto += " O pagamento segue dividido em %d formas em cada parcela." % (
+                self.quantidade_pagamentos)
         self.resumo.ChangeValue(texto)
         self.lista.Select(0)
         self.lista.Focus(0)
@@ -586,10 +634,18 @@ class Formulario(wx.Dialog):
                 self.guardar_arquivo = wx.CheckBox(
                     p, label="Guardar também o arquivo lido")
                 self.guardar_arquivo.SetValue(True)
-                linha.Add(self.guardar_arquivo, 0, wx.ALIGN_CENTER_VERTICAL)
+                linha.Add(self.guardar_arquivo, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 8)
+            self.botao_nao_vincular = wx.Button(p, label="Não vincular o documento")
+            self.botao_nao_vincular.Bind(wx.EVT_BUTTON, self._nao_vincular)
+            self.botao_nao_vincular.Disable()
+            linha.Add(self.botao_nao_vincular)
+            ligar_colar(self, self._colar)
+        cadastrar = wx.Button(p, label="Cadastrar textos novos nas listas")
+        cadastrar.Bind(wx.EVT_BUTTON, self._cadastrar_novos)
         caixa = wx.BoxSizer(wx.VERTICAL)
         caixa.Add(grade, 0, wx.EXPAND | wx.ALL, 12)
         caixa.Add(linha, 0, wx.LEFT | wx.BOTTOM, 12)
+        caixa.Add(cadastrar, 0, wx.LEFT | wx.BOTTOM, 12)
         p.SetSizer(caixa)
         self.categoria.Bind(wx.EVT_TEXT, lambda e: self._atualizar_fatura())
         self.campo_banco.Bind(wx.EVT_TEXT, lambda e: self._atualizar_fatura())
@@ -853,7 +909,7 @@ class Formulario(wx.Dialog):
     def _ler_arquivo(self, _evt):
         with wx.FileDialog(
                 self, "Escolher documento", wildcard=(
-                    "Documentos|*.pdf;*.png;*.jpg;*.jpeg;*.webp;*.txt;*.xml;*.xlsx|"
+                    "Documentos|*.pdf;*.png;*.jpg;*.jpeg;*.webp;*.txt;*.xml;*.xlsx;*.xls|"
                     "Todos os arquivos|*.*"),
                 style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
             if dlg.ShowModal() != wx.ID_OK:
@@ -861,6 +917,52 @@ class Formulario(wx.Dialog):
             caminho = dlg.GetPath()
         self.ler_caminho(caminho, guardar=bool(
             self.guardar_arquivo and self.guardar_arquivo.GetValue()))
+
+    def _colar(self, caminho):
+        self.ler_caminho(caminho, guardar=bool(
+            self.guardar_arquivo and self.guardar_arquivo.GetValue()))
+
+    def _nao_vincular(self, _evt):
+        """O arquivo continua guardado; só não fica ligado a este lançamento."""
+        self.documento_id = None
+        self.botao_nao_vincular.Disable()
+        self.fala.falar("Este lançamento será salvo sem vínculo com o documento.", True)
+        self.tipo.SetFocus()
+
+    def _cadastrar_novos(self, _evt):
+        """O que foi digitado e ainda não está nas listas, inclusive em itens e
+        pagamentos. Um botão só evita seis paradas a mais no Tab."""
+        novos = []
+        for campo, valor in self.textos_digitados():
+            if valor and valor not in self.banco_dados.opcoes(campo) and (
+                    (campo, valor) not in novos):
+                novos.append((campo, valor))
+        if not novos:
+            self.fala.falar("Nenhum texto novo para cadastrar.", True)
+            return
+        nomes = {c: r for _, c, r in CAMPOS_IA}
+        texto = "; ".join("%s: %s" % (nomes[c], v) for c, v in novos)
+        if wx.MessageBox("Cadastrar nas listas? %s." % texto, "Cadastrar nas listas",
+                         wx.YES_NO | wx.ICON_QUESTION, self) != wx.YES:
+            return
+        for campo, valor in novos:
+            self.banco_dados.registrar_operacao("opcao_add", campo=campo, valor=valor)
+        self.categorias = self.banco_dados.opcoes("categoria")
+        self.fala.falar("%d opç%s cadastrada%s." % (
+            len(novos), "ão" if len(novos) == 1 else "ões",
+            "" if len(novos) == 1 else "s"), True)
+
+    def textos_digitados(self):
+        pares = [("banco", self.campo_banco.GetValue()),
+                 ("forma", self.forma.GetValue()),
+                 ("estabelecimento", self.estabelecimento.GetValue()),
+                 ("categoria", self.categoria.GetValue()),
+                 ("credor", self.credor.GetValue()),
+                 ("devedor", self.devedor.GetValue())]
+        pares += [("categoria", i["categoria"]) for i in self.itens]
+        for p in self.pagamentos:
+            pares += [("banco", p["banco"]), ("forma", p["forma"])]
+        return [(c, (v or "").strip()) for c, v in pares]
 
     def ler_caminho(self, caminho, guardar=False, documento_id=None):
         try:
@@ -876,6 +978,7 @@ class Formulario(wx.Dialog):
             self.documento_id = documento_id
         elif guardar:
             self.documento_id = self.GetParent().guardar_documento(caminho)
+        self.botao_nao_vincular.Enable(bool(self.documento_id))
 
     def _ler_texto(self, _evt):
         dlg = DialogoTextoIA(self)
@@ -1027,18 +1130,26 @@ class Formulario(wx.Dialog):
         return origem, vencimento
 
     def _parcelar(self, _evt):
-        if self.itens or self.dividir.GetValue():
-            # As parcelas não levam itens: parcelar agora os perderia sem aviso
-            self._erro("Um lançamento com itens ou pagamento dividido não pode ser "
-                       "parcelado. Remova-os ou salve sem parcelar.", self.tipo, 0)
+        if self.itens and not self._soma_itens():
+            self._erro("A soma dos itens precisa ser diferente de zero para parcelar.",
+                       self.lista, 1)
             return
         datas = self._ler_datas()
         if not datas:
             return
         origem, vencimento = datas
+        dividido = self.dividir.GetValue()
+        if dividido:
+            # O total precisa estar certo antes de dividir as formas entre as parcelas
+            valor = self._valor_informado()
+            if valor is None or not self._pagamentos_conferem(valor):
+                return
+        if not self._confirmar_importados():
+            return
         base = vencimento or datetime.date.today().isoformat()
         dlg = DialogoParcelar(self, self.valor.GetValue().strip(),
-                              self.tipo.GetSelection() == 1, base)
+                              self.tipo.GetSelection() == 1, base, len(self.itens),
+                              len(self.pagamentos) if dividido else 0)
         if dlg.ShowModal() == wx.ID_OK:
             self.parcelas = self._montar_parcelas(dlg.parcelas, origem)
             self.EndModal(wx.ID_OK)
@@ -1048,21 +1159,41 @@ class Formulario(wx.Dialog):
         def texto(controle):
             return controle.GetValue().strip() or None
 
+        dividido = self.dividir.GetValue()
+        comum = dict(
+            data_origem=origem,
+            banco=None if dividido else texto(self.campo_banco),
+            forma=None if dividido else texto(self.forma),
+            estabelecimento=texto(self.estabelecimento), credor=texto(self.credor),
+            devedor=texto(self.devedor), pago=False)
+        absolutos = [abs(valor) for _, _, valor in parcelas]
+        pagamentos = [[] for _ in parcelas]
+        if dividido:
+            rateio = regras.ratear_itens([p["valor"] for p in self.pagamentos], absolutos)
+            pagamentos = [[dict(p, valor=parte)
+                           for p, parte in zip(self.pagamentos, partes) if parte]
+                          for partes in rateio]
+        if self.itens:
+            # Como em qualquer lançamento com itens, categoria e descrição são deles
+            sinal = -1 if self._soma_itens() < 0 else 1
+            rateio = regras.ratear_itens(
+                [i["valor"] * sinal for i in self.itens], absolutos)
+            return [dict(
+                comum, data_vencimento=vencimento, valor=valor, parcela=rotulo,
+                pagamentos=pags,
+                itens=[dict(item, valor=parte)
+                       for item, parte in zip(self.itens, partes) if parte])
+                for (rotulo, vencimento, valor), partes, pags
+                in zip(parcelas, rateio, pagamentos)]
         descricao = texto(self.descricao)
         return [dict(
-            data_origem=origem, data_vencimento=vencimento, valor=valor,
-            banco=texto(self.campo_banco), forma=texto(self.forma),
-            estabelecimento=texto(self.estabelecimento),
-            categoria=texto(self.categoria), credor=texto(self.credor),
-            devedor=texto(self.devedor), parcela=rotulo, pago=False,
+            comum, data_vencimento=vencimento, valor=valor, parcela=rotulo,
+            categoria=texto(self.categoria), itens=[], pagamentos=pags,
             descricao="%s — %s" % (descricao, rotulo) if descricao else rotulo)
-            for rotulo, vencimento, valor in parcelas]
+            for (rotulo, vencimento, valor), pags in zip(parcelas, pagamentos)]
 
-    def _salvar(self, _evt):
-        datas = self._ler_datas()
-        if not datas:
-            return
-        origem, vencimento = datas
+    def _valor_informado(self):
+        """O valor com sinal, ou None depois de avisar do erro."""
         if self.itens:
             bruto = self._soma_itens()
         else:
@@ -1071,39 +1202,56 @@ class Formulario(wx.Dialog):
             except ValueError:
                 self._erro("Informe o valor em números, por exemplo 12,50, ou "
                            "adicione itens.", self.valor, 0)
-                return
-        valor = regras.valor_com_tipo(bruto, self.tipo.GetSelection() == 1)
-        dividido = self.dividir.GetValue()
-        if dividido:
-            if not self.pagamentos:
-                self._erro("Adicione ao menos uma forma de pagamento, ou desmarque "
-                           "Dividir pagamento.", self.dividir, 2)
-                return
-            sem_banco = next((n for n, p in enumerate(self.pagamentos, 1)
-                              if not p["banco"]), None)
-            if sem_banco:
-                self._erro("Escolha o banco ou cartão do pagamento %d." % sem_banco,
-                           self.lista_pag, 2)
-                return
-            soma = sum(p["valor"] for p in self.pagamentos)
-            if abs(soma - abs(valor)) > 0.005:
-                self._erro(
-                    "A soma dos pagamentos, %s, não bate com o valor total do "
-                    "lançamento, %s." % (regras.fmt_valor(soma),
-                                         regras.fmt_valor(abs(valor))),
-                    self.lista_pag, 2)
-                return
+                return None
+        return regras.valor_com_tipo(bruto, self.tipo.GetSelection() == 1)
+
+    def _pagamentos_conferem(self, valor):
+        if not self.pagamentos:
+            self._erro("Adicione ao menos uma forma de pagamento, ou desmarque "
+                       "Dividir pagamento.", self.dividir, 2)
+            return False
+        sem_banco = next((n for n, p in enumerate(self.pagamentos, 1)
+                          if not p["banco"]), None)
+        if sem_banco:
+            self._erro("Escolha o banco ou cartão do pagamento %d." % sem_banco,
+                       self.lista_pag, 2)
+            return False
+        soma = sum(p["valor"] for p in self.pagamentos)
+        if abs(soma - abs(valor)) > 0.005:
+            self._erro(
+                "A soma dos pagamentos, %s, não bate com o valor total do "
+                "lançamento, %s." % (regras.fmt_valor(soma),
+                                     regras.fmt_valor(abs(valor))),
+                self.lista_pag, 2)
+            return False
+        return True
+
+    def _confirmar_importados(self):
         importados = self.ids_importados()
-        if importados:
-            resposta = wx.MessageBox(
-                "Este lançamento vai importar %d lançamento%s antigo%s como itens. "
-                "Os originais serão excluídos ao salvar, e os documentos anexados "
-                "passam a ficar vinculados a este. Continuar?" % (
-                    len(importados), "" if len(importados) == 1 else "s",
-                    "" if len(importados) == 1 else "s"),
-                self.GetTitle(), wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION, self)
-            if resposta != wx.YES:
-                return
+        if not importados:
+            return True
+        return wx.MessageBox(
+            "Este lançamento vai importar %d lançamento%s antigo%s como itens. "
+            "Os originais serão excluídos ao salvar, e os documentos anexados "
+            "passam a ficar vinculados a este. Continuar?" % (
+                len(importados), "" if len(importados) == 1 else "s",
+                "" if len(importados) == 1 else "s"),
+            self.GetTitle(), wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
+            self) == wx.YES
+
+    def _salvar(self, _evt):
+        datas = self._ler_datas()
+        if not datas:
+            return
+        origem, vencimento = datas
+        valor = self._valor_informado()
+        if valor is None:
+            return
+        dividido = self.dividir.GetValue()
+        if dividido and not self._pagamentos_conferem(valor):
+            return
+        if not self._confirmar_importados():
+            return
 
         def texto(controle):
             return controle.GetValue().strip() or None

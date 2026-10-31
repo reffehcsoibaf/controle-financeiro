@@ -8,7 +8,7 @@ import wx
 
 from financeiro import documentos, regras
 from financeiro.formulario import (_botoes_ok, _grade, _texto, executar_com_espera,
-                                   mensagem_de_erro)
+                                   ligar_colar, mensagem_de_erro)
 from financeiro.navegacao import NavegacaoDeColunas
 
 log = logging.getLogger("financeiro.gerenciar")
@@ -183,7 +183,7 @@ class ConfigurarConta(wx.Dialog):
 class Documentos(wx.Dialog):
     """Documentos guardados. "Analisar" fecha esta janela e abre o formulário."""
 
-    def __init__(self, pai, banco, nuvem, todos):
+    def __init__(self, pai, banco, nuvem, todos, do_lancamento=None):
         super().__init__(pai, title="Documentos", size=(860, 560),
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.janela, self.banco, self.nuvem = pai, banco, nuvem
@@ -191,6 +191,7 @@ class Documentos(wx.Dialog):
         self.por_id = {l["id"]: l for l in todos}
         self.visiveis = []
         self.analisar_doc = None
+        self.ir_para_lancamento = None
         grade = _grade()
         self.busca = _texto(self, grade, "Buscar pelo nome")
         self.de = _texto(self, grade, "Guardado de (dia/mês/ano)")
@@ -211,6 +212,7 @@ class Documentos(wx.Dialog):
                 ("Abrir", self.abrir, True),
                 ("Salvar cópia", self.salvar_copia, True),
                 ("Analisar com IA", self.analisar, permissoes["ia"]),
+                ("Ir ao lançamento", self.ir_ao_lancamento, True),
                 ("Vincular ao lançamento atual", self.vincular, True),
                 ("Desvincular", self.desvincular, True),
                 ("Excluir", self.excluir, True)):
@@ -229,6 +231,34 @@ class Documentos(wx.Dialog):
         self.Layout()
         self.atualizar()
         self.lista.SetFocus()
+        if do_lancamento is not None:
+            self._selecionar_do_lancamento(do_lancamento)
+        if permissoes["documentos"]:
+            ligar_colar(self, self._colar)
+
+    def _selecionar_do_lancamento(self, lancamento_id):
+        for n, d in enumerate(self.visiveis):
+            if d["lancamento_id"] == lancamento_id:
+                self.lista.Select(n)
+                self.lista.Focus(n)
+                self.lista.EnsureVisible(n)
+                self.navegacao.definir_linha(n)
+                return
+
+    def _colar(self, caminho):
+        self.janela.guardar_documento(caminho)
+        self.atualizar()
+        self.fala.falar("Arquivo guardado: %s." % os.path.basename(caminho), True)
+
+    def ir_ao_lancamento(self):
+        d = self._atual()
+        if not d:
+            return
+        if d["lancamento_id"] in self.por_id:
+            self.ir_para_lancamento = d["lancamento_id"]
+            self.EndModal(wx.ID_OK)
+        else:
+            self.fala.falar("Este documento não está vinculado a um lançamento.", True)
 
     @staticmethod
     def _data(campo):
@@ -244,12 +274,12 @@ class Documentos(wx.Dialog):
         self.visiveis = [
             d for d in self.banco.documentos()
             if (not termo or termo in regras.sem_acentos(d["nome_arquivo"]))
-            and (not de or (d["criado_em"] or "")[:10] >= de)
-            and (not ate or (d["criado_em"] or "")[:10] <= ate)]
+            and (not de or data_local(d["criado_em"]) >= de)
+            and (not ate or data_local(d["criado_em"]) <= ate)]
         self.lista.DeleteAllItems()
         for n, d in enumerate(self.visiveis):
             self.lista.InsertItem(n, d["nome_arquivo"])
-            self.lista.SetItem(n, 1, regras.fmt_data((d["criado_em"] or "")[:10]))
+            self.lista.SetItem(n, 1, regras.fmt_data(data_local(d["criado_em"])))
             self.lista.SetItem(n, 2, _tamanho(d["tamanho_bytes"]))
             self.lista.SetItem(n, 3, self._nome_lancamento(d))
         self.navegacao.definir_linha(-1)
@@ -357,6 +387,14 @@ class Documentos(wx.Dialog):
                 os.remove(local)
             self.atualizar()
             self.fala.falar("Documento excluído.", True)
+
+
+def data_local(iso):
+    """O servidor guarda em UTC: à noite, no Brasil, já seria o dia seguinte."""
+    try:
+        return datetime.datetime.fromisoformat(iso).astimezone().date().isoformat()
+    except (TypeError, ValueError):
+        return (iso or "")[:10]
 
 
 def _tamanho(bytes_):
@@ -482,6 +520,69 @@ class Correcoes(wx.Dialog):
             self.banco.registrar_operacao("correcoes_limpar")
             self.atualizar()
             self.fala.falar("Correções apagadas.", True)
+
+
+class Guia(wx.Dialog):
+    """Lista de assuntos e o texto do assunto escolhido, sem navegador. O arquivo
+    usa "# Título" para abrir cada assunto."""
+
+    def __init__(self, pai, titulo, arquivo):
+        super().__init__(pai, title=titulo, size=(820, 560),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+        self.assuntos = ler_assuntos(arquivo)
+        rotulo = wx.StaticText(self, label="Assuntos")
+        self.lista = wx.ListBox(self, name="Assuntos",
+                                choices=[t for t, _ in self.assuntos])
+        rotulo_texto = wx.StaticText(self, label="Texto")
+        self.texto = wx.TextCtrl(self, name="Texto",
+                                 style=wx.TE_MULTILINE | wx.TE_READONLY)
+        lado_a = wx.BoxSizer(wx.VERTICAL)
+        lado_a.Add(rotulo, 0, wx.BOTTOM, 4)
+        lado_a.Add(self.lista, 1, wx.EXPAND)
+        lado_b = wx.BoxSizer(wx.VERTICAL)
+        lado_b.Add(rotulo_texto, 0, wx.BOTTOM, 4)
+        lado_b.Add(self.texto, 1, wx.EXPAND)
+        meio = wx.BoxSizer(wx.HORIZONTAL)
+        meio.Add(lado_a, 1, wx.EXPAND | wx.RIGHT, 8)
+        meio.Add(lado_b, 2, wx.EXPAND)
+        fechar = wx.Button(self, wx.ID_CANCEL, "Fechar")
+        caixa = wx.BoxSizer(wx.VERTICAL)
+        caixa.Add(meio, 1, wx.EXPAND | wx.ALL, 8)
+        caixa.Add(fechar, 0, wx.ALL | wx.ALIGN_RIGHT, 8)
+        self.SetSizer(caixa)
+        self.Layout()
+        self.lista.Bind(wx.EVT_LISTBOX, lambda e: self._mostrar())
+        # Enter no assunto leva direto ao texto dele
+        self.lista.Bind(wx.EVT_LISTBOX_DCLICK, lambda e: self.texto.SetFocus())
+        self.lista.Bind(wx.EVT_KEY_DOWN, self._tecla)
+        if self.assuntos:
+            self.lista.SetSelection(0)
+            self._mostrar()
+        self.lista.SetFocus()
+
+    def _tecla(self, evt):
+        if evt.GetKeyCode() in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.texto.SetFocus()
+        else:
+            evt.Skip()
+
+    def _mostrar(self):
+        n = self.lista.GetSelection()
+        if 0 <= n < len(self.assuntos):
+            self.texto.SetValue(self.assuntos[n][1])
+            self.texto.SetInsertionPoint(0)
+
+
+def ler_assuntos(arquivo):
+    caminho = os.path.join(os.path.dirname(os.path.abspath(__file__)), arquivo)
+    assuntos = []
+    with open(caminho, encoding="utf-8") as f:
+        for linha in f:
+            if linha.startswith("# "):
+                assuntos.append([linha[2:].strip(), []])
+            elif assuntos:
+                assuntos[-1][1].append(linha.rstrip())
+    return [(t, "\n".join(c).strip()) for t, c in assuntos]
 
 
 DESCRICAO_OPERACAO = {

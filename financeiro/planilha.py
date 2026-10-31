@@ -3,6 +3,7 @@ import datetime
 
 import openpyxl
 import openpyxl.utils
+import xlrd
 
 from financeiro import regras
 
@@ -147,54 +148,80 @@ def _parcela(valor):
 def ler(caminho):
     """Lançamentos da primeira aba, com itens e pagamentos agrupados. Levanta
     ValueError se a planilha não tiver o cabeçalho esperado."""
+    linhas = iter(linhas_da_primeira_aba(caminho))
+    cabecalho = next(linhas, None)
+    if not cabecalho or "Valor (R$)" not in cabecalho:
+        raise ValueError("A planilha não tem as colunas esperadas.")
+    nomes = [_texto(c) for c in cabecalho]
+    saida, atual = [], None
+    for valores in linhas:
+        if not any(v not in (None, "") for v in valores):
+            continue
+        row = dict(zip(nomes, valores))
+        tipo = _texto(row.get("Tipo"))
+        if tipo.startswith("Item "):
+            if atual:
+                atual["itens"].append(dict(
+                    valor=_numero(row.get("Valor (R$)")),
+                    categoria=_texto(row.get("Categoria")) or None,
+                    descricao=_texto(row.get("Descrição")) or None,
+                    data_original=_ler_data(row.get("Data Origem"))))
+            continue
+        if tipo.startswith("Pagamento "):
+            if atual:
+                atual["pagamentos"].append(dict(
+                    banco=_texto(row.get("Banco / Cartão")) or None,
+                    forma=_texto(row.get("Forma de Pagamento")) or None,
+                    valor=_numero(row.get("Valor (R$)"))))
+            continue
+        banco = _texto(row.get("Banco / Cartão"))
+        forma = _texto(row.get("Forma de Pagamento"))
+        atual = dict(
+            data_origem=_ler_data(row.get("Data Origem")),
+            data_vencimento=_ler_data(row.get("Data Vencimento")),
+            valor=_numero(row.get("Valor (R$)")),
+            banco=None if banco == "(dividido)" else banco or None,
+            estabelecimento=_texto(row.get("Estabelecimento")) or None,
+            forma=None if forma == "(dividido)" else forma or None,
+            parcela=_parcela(row.get("Parcela")) or None,
+            descricao=_texto(row.get("Descrição")) or None,
+            categoria=_texto(row.get("Categoria")) or None,
+            credor=_texto(row.get("Credor")) or None,
+            devedor=_texto(row.get("Devedor")) or None,
+            pago=_texto(row.get("Status")).lower() == "pago",
+            itens=[], pagamentos=[])
+        saida.append(atual)
+    return saida
+
+
+def linhas_da_primeira_aba(caminho):
+    """Lista de linhas, de arquivo .xlsx ou do formato antigo .xls."""
+    if caminho.lower().endswith(".xls"):
+        return linhas_xls(caminho)[0][1]
     livro = openpyxl.load_workbook(caminho, read_only=True, data_only=True)
     try:
-        linhas = livro.worksheets[0].iter_rows(values_only=True)
-        cabecalho = next(linhas, None)
-        if not cabecalho or "Valor (R$)" not in cabecalho:
-            raise ValueError("A planilha não tem as colunas esperadas.")
-        nomes = [_texto(c) for c in cabecalho]
-        saida, atual = [], None
-        for valores in linhas:
-            if not any(v not in (None, "") for v in valores):
-                continue
-            row = dict(zip(nomes, valores))
-            tipo = _texto(row.get("Tipo"))
-            if tipo.startswith("Item "):
-                if atual:
-                    atual["itens"].append(dict(
-                        valor=_numero(row.get("Valor (R$)")),
-                        categoria=_texto(row.get("Categoria")) or None,
-                        descricao=_texto(row.get("Descrição")) or None,
-                        data_original=_ler_data(row.get("Data Origem"))))
-                continue
-            if tipo.startswith("Pagamento "):
-                if atual:
-                    atual["pagamentos"].append(dict(
-                        banco=_texto(row.get("Banco / Cartão")) or None,
-                        forma=_texto(row.get("Forma de Pagamento")) or None,
-                        valor=_numero(row.get("Valor (R$)"))))
-                continue
-            banco = _texto(row.get("Banco / Cartão"))
-            forma = _texto(row.get("Forma de Pagamento"))
-            atual = dict(
-                data_origem=_ler_data(row.get("Data Origem")),
-                data_vencimento=_ler_data(row.get("Data Vencimento")),
-                valor=_numero(row.get("Valor (R$)")),
-                banco=None if banco == "(dividido)" else banco or None,
-                estabelecimento=_texto(row.get("Estabelecimento")) or None,
-                forma=None if forma == "(dividido)" else forma or None,
-                parcela=_parcela(row.get("Parcela")) or None,
-                descricao=_texto(row.get("Descrição")) or None,
-                categoria=_texto(row.get("Categoria")) or None,
-                credor=_texto(row.get("Credor")) or None,
-                devedor=_texto(row.get("Devedor")) or None,
-                pago=_texto(row.get("Status")).lower() == "pago",
-                itens=[], pagamentos=[])
-            saida.append(atual)
-        return saida
+        return list(livro.worksheets[0].iter_rows(values_only=True))
     finally:
         livro.close()
+
+
+def linhas_xls(caminho):
+    """[(nome da aba, linhas)] do formato antigo. Datas de verdade viram datas."""
+    livro = xlrd.open_workbook(caminho)
+    saida = []
+    for aba in livro.sheets():
+        linhas = []
+        for r in range(aba.nrows):
+            linha = []
+            for c in range(aba.ncols):
+                celula = aba.cell(r, c)
+                if celula.ctype == xlrd.XL_CELL_DATE:
+                    linha.append(xlrd.xldate_as_datetime(celula.value, livro.datemode))
+                else:
+                    linha.append(celula.value)
+            linhas.append(tuple(linha))
+        saida.append((aba.name, linhas))
+    return saida
 
 
 def novos_e_repetidos(lidos, existentes):

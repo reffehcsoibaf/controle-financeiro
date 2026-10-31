@@ -87,6 +87,10 @@ class Janela(wx.Frame):
         self._item(lanc, "Ver detalhes\tCtrl+D", self._ver_detalhes)
         self._item(lanc, "Marcar como pago ou pendente\tCtrl+P",
                    self._alternar_pago)
+        self._item(lanc, "Ir ao lançamento vinculado\tCtrl+Shift+V",
+                   self._ir_vinculado)
+        self._item(lanc, "Ver documento vinculado\tCtrl+Shift+O",
+                   self._ver_documento_vinculado)
         self._item(lanc, "Buscar\tCtrl+F", self._focar_busca)
         self._item(lanc, "Busca por critérios\tCtrl+Shift+F", self._criterios)
         self._item(lanc, "Limpar filtros\tCtrl+L", self._limpar_filtros)
@@ -105,6 +109,7 @@ class Janela(wx.Frame):
         self._item(sinc, "Operações pendentes", self._pendencias)
         principal.AppendSubMenu(sinc, "Sincronização")
         conta = wx.Menu()
+        self._item(conta, "Conta conectada", self._falar_conta)
         self._item(conta, "Sair da conta e apagar a cópia local",
                    self._sair_da_conta)
         principal.AppendSubMenu(conta, "Minha conta")
@@ -118,6 +123,8 @@ class Janela(wx.Frame):
                    self._limpar_duplicatas)
         principal.AppendSubMenu(ferramentas, "Ferramentas")
         ajuda = wx.Menu()
+        self._item(ajuda, "Guia de uso\tF1", self._guia)
+        self._item(ajuda, "Novidades", self._novidades)
         self._item(ajuda, "Sobre", self._sobre)
         principal.AppendSubMenu(ajuda, "Ajuda")
         principal.AppendSeparator()
@@ -420,7 +427,8 @@ class Janela(wx.Frame):
             wx.CallAfter(dlg.ler_caminho, caminho, False, d["id"])
         if dlg.ShowModal() == wx.ID_OK:
             if dlg.parcelas:
-                self._gravar_parcelas(dlg.parcelas)
+                self._gravar_parcelas(dlg.parcelas, dlg.documento_id,
+                                      dlg.ids_importados())
             else:
                 self._gravar_formulario(dlg, None)
         dlg.Destroy()
@@ -445,8 +453,15 @@ class Janela(wx.Frame):
         self._sincronizar(manual=False)
         return doc_id
 
-    def _gravar_parcelas(self, parcelas):
+    def _gravar_parcelas(self, parcelas, documento_id=None, importados=()):
         ids = self.banco.salvar_parcelas(parcelas)
+        if documento_id:    # um documento só tem um lançamento: fica na primeira
+            self.banco.registrar_operacao("doc_vincular", doc_id=documento_id,
+                                          ids=[ids[0]])
+        if importados:
+            self.banco.registrar_operacao("docs_mover", ids=[ids[0]] + list(importados))
+            for i in importados:
+                self.banco.excluir_lancamento(i)
         self.recarregar()
         visivel = self._selecionar_id(ids[0])
         texto = "%d parcelas criadas, total %s." % (
@@ -565,15 +580,72 @@ class Janela(wx.Frame):
         self._sincronizar(manual=False)
 
     @seguro
-    def _documentos(self, _evt):
-        dlg = gerenciar.Documentos(self, self.banco, self.nuvem, self.todos)
+    def _documentos(self, _evt, do_lancamento=None):
+        dlg = gerenciar.Documentos(self, self.banco, self.nuvem, self.todos,
+                                   do_lancamento)
         dlg.ShowModal()
-        documento = dlg.analisar_doc
+        documento, destino = dlg.analisar_doc, dlg.ir_para_lancamento
         dlg.Destroy()
         self.recarregar()
         self._sincronizar(manual=False)
         if documento:
             self._abrir_formulario_novo(documento)
+        if destino:
+            self.ir_ao_lancamento(destino)
+        self.lista.SetFocus()
+
+    def ir_ao_lancamento(self, lancamento_id):
+        """Limpa os filtros, porque o lançamento pode estar oculto por eles."""
+        self.filtros = regras.Filtros()
+        self.campo_busca.ChangeValue("")
+        self.cx_situacao.SetSelection(0)
+        self._preencher_contas()
+        self.aplicar_filtros()
+        if self._selecionar_id(lancamento_id):
+            l = self.lancamento_atual()
+            self.avisar("%s, %s." % (regras.descricao_de(l),
+                                     regras.fmt_valor_com_sinal(l["valor"])), True)
+            return True
+        self.avisar("Lançamento não encontrado. Ele pode ter sido excluído.", True)
+        return False
+
+    @seguro
+    def _ir_vinculado(self, _evt):
+        l = self._selecionado()
+        if not l:
+            return
+        if l["lancamento_vinculado_id"]:
+            self.ir_ao_lancamento(l["lancamento_vinculado_id"])
+        else:
+            self.avisar("Este lançamento não tem outro vinculado.", True)
+
+    @seguro
+    def _ver_documento_vinculado(self, _evt):
+        l = self._selecionado()
+        if not l:
+            return
+        if l["documentos"]:
+            self._documentos(None, l["id"])
+        else:
+            self.avisar("Este lançamento não tem documento vinculado.", True)
+
+    def _falar_conta(self, _evt):
+        email = self.nuvem.email if self.nuvem else ""
+        self.avisar("Conta conectada: %s." % email if email
+                    else "Nenhuma conta conectada.", True)
+
+    @seguro
+    def _guia(self, _evt):
+        self._mostrar_guia("Guia de uso", "guia.txt")
+
+    @seguro
+    def _novidades(self, _evt):
+        self._mostrar_guia("Novidades", "novidades.txt")
+
+    def _mostrar_guia(self, titulo, arquivo):
+        dlg = gerenciar.Guia(self, titulo, arquivo)
+        dlg.ShowModal()
+        dlg.Destroy()
         self.lista.SetFocus()
 
     def _situacoes(self):
@@ -622,7 +694,7 @@ class Janela(wx.Frame):
     @seguro
     def _importar_excel(self, _evt):
         with wx.FileDialog(self, "Importar do Excel",
-                           wildcard="Planilha do Excel (*.xlsx)|*.xlsx",
+                           wildcard="Planilhas do Excel (*.xlsx;*.xls)|*.xlsx;*.xls",
                            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as dlg:
             if dlg.ShowModal() != wx.ID_OK:
                 return

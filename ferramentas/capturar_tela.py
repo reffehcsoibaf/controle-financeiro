@@ -163,11 +163,29 @@ def exercitar_parcelar(janela, banco):
           "fila:", banco.qtd_pendentes())
     print("na tabela:", lista_texto(janela.lista, janela.navegacao.atual()))
     form2 = formulario.Formulario(janela, banco)
-    form2.itens.append(dict(valor=5.0, categoria="", descricao="x",
-                            data_original=None))
+    form2.itens += [dict(valor=100.0, categoria="Casa", descricao="Mesa",
+                         data_original=None),
+                    dict(valor=50.01, categoria="Casa", descricao="Cadeira",
+                         data_original=None),
+                    dict(valor=-10.0, categoria="", descricao="Desconto",
+                         data_original=None)]
+    form2._preencher_itens(0)
+    dlg2 = formulario.DialogoParcelar(form2, form2.valor.GetValue(), False,
+                                      "2027-01-15", len(form2.itens))
+    dlg2.quantidade.SetValue("3")
+    print("com itens:", dlg2.resumo.GetValue(), "editável:", dlg2.valor.IsEditable())
+    parcelas2 = form2._montar_parcelas(dlg2.parcelas, "2026-10-30")
+    for p in parcelas2:
+        print(" ", p["parcela"], p["valor"], [(i["descricao"], i["valor"])
+                                              for i in p["itens"]])
+    janela._gravar_parcelas(parcelas2, "doc-x")
+    print("tabela:", lista_texto(janela.lista, janela.navegacao.atual()))
+    print("fila com itens:", [(e["dados"]["parcela"], len(e["itens"]))
+                              for e in banco.envios() if e["itens"]])
+    form2.dividir.SetValue(True)
     avisos.clear()
     form2._parcelar(None)
-    print("com itens:", avisos)
+    print("dividido:", avisos)
     wx.MessageBox = original
 
 
@@ -287,6 +305,127 @@ def exercitar_completo(janela, banco):
     wx.MessageBox = original
 
 
+def exercitar_restante(janela, banco):
+    avisos, falas = [], []
+    original = wx.MessageBox
+    wx.MessageBox = lambda *a, **k: (avisos.append(a[0]), wx.YES)[1]
+    janela.fala.falar = lambda t, i=False: falas.append(t)
+    janela._sincronizar = lambda manual: None
+
+    class NuvemFalsa:
+        permissoes = None
+        email = "conta@exemplo.com"
+
+        def caminho_novo_documento(self, nome):
+            return "u/1-" + nome
+
+        def ler_documento(self, *a):
+            return dict(valor=25, descricao="Lido")
+
+    janela.nuvem = NuvemFalsa()
+    janela._falar_conta(None)
+    print("conta:", falas[-1])
+
+    # Parcelar com pagamento dividido e itens
+    form = formulario.Formulario(janela, banco, nuvem=janela.nuvem, todos=janela.todos)
+    form.EndModal = lambda r: None
+    form.itens += [dict(valor=60.0, categoria="A", descricao="x", data_original=None),
+                   dict(valor=40.01, categoria="B", descricao="y", data_original=None)]
+    form._preencher_itens(0)
+    form.dividir.SetValue(True)
+    form.pagamentos = [dict(banco="Banco Alfa", forma="PIX", valor=70.0),
+                       dict(banco="Cartão Azul", forma=None, valor=30.01)]
+    form._preencher_pagamentos(0)
+    dlg = formulario.DialogoParcelar(form, form.valor.GetValue(), False, "2027-01-31",
+                                     2, 2)
+    dlg.quantidade.SetValue("3")
+    print("resumo:", dlg.resumo.GetValue())
+    parcelas = form._montar_parcelas(dlg.parcelas, "2026-10-30")
+    for p in parcelas:
+        print(" ", p["parcela"], p["valor"], p["banco"],
+              [i["valor"] for i in p["itens"]], [x["valor"] for x in p["pagamentos"]])
+    janela._gravar_parcelas(parcelas)
+    dlg.Destroy()
+
+    # Parcelar com itens importados exclui os originais
+    form = formulario.Formulario(janela, banco, nuvem=janela.nuvem, todos=janela.todos)
+    form.EndModal = lambda r: None
+    origem = next(l for l in janela.todos if l["id"] == 3)
+    form.receber_importados([origem])
+    print("confirma importados:", form._confirmar_importados(), form.ids_importados())
+    dlg = formulario.DialogoParcelar(form, form.valor.GetValue(), False, "2027-01-31", 1)
+    dlg.quantidade.SetValue("2")
+    janela._gravar_parcelas(form._montar_parcelas(dlg.parcelas, "2026-10-30"), None,
+                            form.ids_importados())
+    print("original excluído:", 3 not in {l["id"] for l in banco.lancamentos()})
+    dlg.Destroy()
+
+    # Cadastrar textos novos
+    form = formulario.Formulario(janela, banco, nuvem=janela.nuvem, todos=janela.todos)
+    form.credor.SetValue("Credor Novo")
+    form.categoria.SetValue("Categoria Nova")
+    form.campo_banco.SetValue("Banco Alfa")
+    avisos.clear()
+    form._cadastrar_novos(None)
+    print("cadastrar:", avisos, banco.opcoes("credor"), banco.opcoes("categoria"))
+    falas.clear()
+    form._cadastrar_novos(None)
+    print("de novo:", falas)
+
+    # Vínculo de documento: desfazer antes de salvar
+    arquivo = os.path.join(config.pasta_dados(), "nota.txt")
+    with open(arquivo, "w", encoding="utf-8") as f:
+        f.write("nota")
+    form.ler_caminho(arquivo, guardar=True)
+    print("documento:", bool(form.documento_id), form.botao_nao_vincular.IsEnabled(),
+          "valor:", form.valor.GetValue())
+    form._nao_vincular(None)
+    print("sem vínculo:", form.documento_id, form.botao_nao_vincular.IsEnabled(),
+          "guardado:", [d["nome_arquivo"] for d in banco.documentos()])
+
+    # Colar
+    chamados = []
+    print("colar é seguro de consultar:", isinstance(
+        formulario.arquivo_colado.__name__, str))
+    form._colar = lambda c: chamados.append(c)
+
+    # Ir ao vinculado e ao documento
+    a, b = banco.salvar_parcelas([
+        dict(data_origem="2026-10-01", pago=False, valor=-1.0, descricao="Um"),
+        dict(data_origem="2026-10-01", pago=False, valor=1.0, descricao="Dois")])
+    banco.registrar_operacao("vincular", ids=[a, b])
+    janela.recarregar()
+    janela.filtros = regras.Filtros(busca="Outra coisa")
+    janela.aplicar_filtros()
+    falas.clear()
+    print("foi:", janela.ir_ao_lancamento(a), falas)
+    janela._ir_vinculado(None)
+    print("vinculado:", falas[-1])
+    print("inexistente:", janela.ir_ao_lancamento(99999), falas[-1])
+    doc = banco.documentos()[0]
+    banco.registrar_operacao("doc_vincular", doc_id=doc["id"], ids=[a])
+    janela.recarregar()
+    docs = gerenciar.Documentos(janela, banco, janela.nuvem, janela.todos, a)
+    print("documento selecionado:", lista_texto(docs.lista, docs.navegacao.atual()))
+    docs.EndModal = lambda r: None
+    docs.ir_ao_lancamento()
+    print("destino do documento:", docs.ir_para_lancamento == a)
+    docs.Destroy()
+
+    # Guia
+    guia = gerenciar.Guia(janela, "Guia de uso", "guia.txt")
+    print("assuntos:", guia.lista.GetCount(), "| primeiro:", guia.lista.GetString(0))
+    guia.lista.SetSelection(3)
+    guia._mostrar()
+    print("texto:", guia.texto.GetValue()[:60])
+    guia.Destroy()
+    nov = gerenciar.Guia(janela, "Novidades", "novidades.txt")
+    print("novidades:", nov.lista.GetCount())
+    nov.Destroy()
+    print("erros:", [a for a in avisos if "rro" in a])
+    wx.MessageBox = original
+
+
 def exercitar_permissoes(janela, banco):
     class NuvemFalsa:
         permissoes = None
@@ -398,6 +537,8 @@ def main():
                 exercitar_completo(janela, banco)
             if modo == "permissoes":
                 exercitar_permissoes(janela, banco)
+            if modo == "restante":
+                exercitar_restante(janela, banco)
             if modo == "formulario":
                 # Lançamento de 3 itens: valor calculado, campos desligados
                 print("form valor:", alvo.valor.GetValue(),
