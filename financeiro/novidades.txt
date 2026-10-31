@@ -1,5 +1,12 @@
-# Versão 0.1.0
+# Versão 2026.10.31.0
 Primeira versão do Controle Financeiro para Windows.
+
+Instalação e atualização:
+Instalador com os botões Instalar, Cópia portátil, Guia de uso e Fechar.
+Avisa quando há versão nova e atualiza sem mexer nos dados.
+
+Ao fechar e abrir de novo:
+O programa volta à linha e à coluna em que você estava na tabela, com as mesmas escolhas de Ordem, Tipo e Situação.
 
 Menu:
 Saldos e limites e Documentos ficam em Ferramentas. Desconectar fica direto no Menu e pede confirmação.

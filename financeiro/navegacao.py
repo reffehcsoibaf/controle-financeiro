@@ -38,6 +38,16 @@ class NavegacaoDeColunas:
         self.linha = n
         self._destacada = -1
 
+    def coluna_atual(self):
+        return self._coluna_valida()
+
+    def definir_coluna(self, coluna):
+        """Ao reabrir o programa: volta à coluna em que a pessoa estava."""
+        self.coluna = coluna
+        linha = self.atual()
+        if linha >= 0:
+            self._mostrar_coluna(linha, self._coluna_valida())
+
     def sincronizar(self):
         """Leva a seleção nativa até o cursor."""
         n = self.atual()

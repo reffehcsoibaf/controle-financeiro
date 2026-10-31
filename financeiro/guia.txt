@@ -10,14 +10,25 @@ Alt abre o Menu. Os assuntos ficam em submenus, que abrem com a seta para a dire
 Tab passa pelos filtros, pelos botões e pela tabela.
 F1 abre este guia.
 
+# Instalar, cópia portátil e atualizar
+Ao abrir o arquivo baixado, a primeira tela tem os botões Instalar, Cópia portátil, Guia de uso e Fechar.
+
+Instalar copia o programa para o computador, sem precisar de administrador, e cria os atalhos que você escolher. Os dados ficam na pasta do seu usuário do Windows. Para desinstalar, use Aplicativos instalados, nas configurações do Windows. O programa pergunta se apaga também a cópia dos dados deste computador; os dados online continuam guardados.
+
+Cópia portátil cria, no lugar que você escolher, uma pasta com o programa e uma pasta dados ao lado dele. Tudo fica nessa pasta, que pode ir em um pendrive. Por segurança, o login fica preso à conta do Windows em que foi feito: em outro computador, será preciso entrar de novo. Quem tiver a pasta tem acesso à cópia dos dados, então guarde-a com cuidado.
+
+Ao abrir, o programa verifica se há versão nova e mostra as novidades. Baixar e instalar fecha o programa, troca os arquivos e abre de novo. Alterações ainda não enviadas continuam guardadas. Não avisar mais nesta versão deixa de avisar até sair outra. A qualquer momento, use Menu, Ajuda, Verificar atualizações.
+
 # A janela principal
 Na ordem do Tab:
-Ordem: recentes primeiro ou antigos primeiro. A escolha fica guardada.
+Ordem: recentes primeiro ou antigos primeiro.
 Tipo: entradas e saídas, só entradas ou só saídas.
 Situação: todos, pendentes ou pagos.
 Filtrar: abre a janela de filtros.
 Fechar: fecha o programa.
 Tabela de lançamentos.
+
+Ao fechar e abrir o programa, Ordem, Tipo e Situação continuam como você deixou, e a tabela volta à linha e à coluna em que você estava. Os filtros da janela Filtrar não ficam guardados, para nenhum lançamento parecer sumido ao abrir.
 
 Na janela Filtrar (Ctrl+F) ficam a busca e os filtros por data de origem, vencimento, banco ou cartão, forma, estabelecimento, categoria, credor e devedor. A busca procura em descrição, estabelecimento, categoria, credor, devedor, banco, forma, valor, datas e itens. O botão Limpar filtros esvazia os campos, e Filtrar aplica.
 

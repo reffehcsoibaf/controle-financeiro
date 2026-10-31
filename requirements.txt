@@ -3,3 +3,4 @@ accessible_output2
 openpyxl>=3.1
 xlrd>=2.0
 pytest
+pyinstaller

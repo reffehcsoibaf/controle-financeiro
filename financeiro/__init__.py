@@ -1,2 +1,5 @@
 """Controle Financeiro para Windows: programa nativo ligado ao mesmo Supabase do site."""
-__version__ = "0.1.0"
+NOME = "Controle Financeiro"
+DESENVOLVEDOR = "Fábio Scheffer Moraes"
+# ano.mes.dia.dígito; é também a tag da Release
+__version__ = "2026.10.31.0"

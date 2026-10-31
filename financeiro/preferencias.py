@@ -48,6 +48,48 @@ def salvar_ordem(ordem):
     _gravar("ordem_tabela", ordem)
 
 
+def ler_tipo():
+    tipo = _ler().get("tipo_tabela")
+    return tipo if tipo in ("entrada", "saida") else ""
+
+
+def ler_situacao():
+    situacao = _ler().get("situacao_tabela")
+    return situacao if situacao in ("pendente", "pago") else ""
+
+
+def ler_posicao():
+    """(id do lançamento, linha, coluna). A linha serve quando o lançamento
+    não aparece mais na tabela."""
+    posicao = _ler().get("posicao_tabela")
+    if not isinstance(posicao, dict):
+        return None, 0, 0
+
+    def inteiro(chave):
+        valor = posicao.get(chave)
+        return valor if type(valor) is int and valor >= 0 else 0
+
+    lancamento = posicao.get("lancamento")
+    return (lancamento if type(lancamento) is int else None,
+            inteiro("linha"), inteiro("coluna"))
+
+
+def salvar_tela(tipo, situacao, lancamento, linha, coluna):
+    """Numa gravação só, porque acontece ao fechar o programa."""
+    dados = _ler()
+    dados.update(tipo_tabela=tipo, situacao_tabela=situacao, posicao_tabela=dict(
+        lancamento=lancamento, linha=linha, coluna=coluna))
+    _escrever(dados)
+
+
+def ler_atualizacao_ignorada():
+    return str(_ler().get("atualizacao_ignorada") or "")
+
+
+def salvar_atualizacao_ignorada(versao):
+    _gravar("atualizacao_ignorada", versao)
+
+
 def salvar_colunas(escolha):
     _gravar("colunas", escolha)
 
@@ -59,6 +101,10 @@ def salvar_falar_quantidade(falar):
 def _gravar(chave, valor):
     dados = _ler()
     dados[chave] = valor
+    _escrever(dados)
+
+
+def _escrever(dados):
     temporario = _caminho() + ".tmp"
     with open(temporario, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)

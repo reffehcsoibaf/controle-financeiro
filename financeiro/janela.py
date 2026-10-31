@@ -7,13 +7,15 @@ import datetime
 import functools
 import logging
 import os
+import sys
 import threading
 import time
 import uuid
 
 import wx
 
-from financeiro import (__version__, banco as banco_mod, colunas, config, dialogos,
+from financeiro import (DESENVOLVEDOR, __version__, atualizacao,
+                        banco as banco_mod, colunas, config, dialogos,
                         documentos, formulario, gerenciar, icones,
                         nuvem as nuvem_mod, planilha, preferencias, regras, sincro)
 from financeiro.fala import Fala
@@ -24,6 +26,7 @@ log = logging.getLogger("financeiro.janela")
 INTERVALO_SYNC_MS = 5 * 60 * 1000
 ESPERA_MENU_MS = 600
 JANELA_MENU_S = 1.0
+ESPERA_ATUALIZACAO_MS = 10 * 1000
 ORDENS = (("recentes", "Recentes primeiro"), ("antigos", "Antigos primeiro"))
 TIPOS = (("", "Entradas e saídas"), ("entrada", "Entradas"), ("saida", "Saídas"))
 SITUACOES = (("", "Todos"), ("pendente", "Pendentes"), ("pago", "Pagos"))
@@ -52,8 +55,12 @@ class Janela(wx.Frame):
     def __init__(self, banco, nuvem):
         super().__init__(None, title="Controle Financeiro", size=(1120, 680))
         self.banco, self.nuvem = banco, nuvem
+        if getattr(sys, "frozen", False):
+            self.SetIcon(wx.Icon(sys.executable, wx.BITMAP_TYPE_ICO))
         self.fala = Fala()
-        self.filtros = regras.Filtros(ordem=preferencias.ler_ordem())
+        self.filtros = regras.Filtros(ordem=preferencias.ler_ordem(),
+                                      tipo=preferencias.ler_tipo(),
+                                      status=preferencias.ler_situacao())
         self.todos, self.visiveis, self._linhas = [], [], None
         self._sincronizando = False
         self._sincronizar_de_novo = False
@@ -74,6 +81,8 @@ class Janela(wx.Frame):
         self.Bind(wx.EVT_MENU_OPEN, self._ao_abrir_menu)
         self.Bind(wx.EVT_MENU_CLOSE, self._ao_fechar_menu)
         self.recarregar()
+        lancamento, linha, self._coluna_guardada = preferencias.ler_posicao()
+        self._restaurar_foco(lancamento, linha)
         self.lista.SetFocus()
 
     # ---- montagem ----
@@ -121,6 +130,7 @@ class Janela(wx.Frame):
         ajuda = wx.Menu()
         self._item(ajuda, "Guia de uso\tF1", self._guia)
         self._item(ajuda, "Novidades", self._novidades)
+        self._item(ajuda, "Verificar atualizações", self._verificar_agora)
         self._item(ajuda, "Sobre", self._sobre)
         principal.AppendSubMenu(ajuda, "Ajuda")
         principal.AppendSeparator()
@@ -169,9 +179,10 @@ class Janela(wx.Frame):
         self.cx_ordem.SetSelection(
             [k for k, _ in ORDENS].index(self.filtros.ordem))
         self.cx_tipo = caixa_de_escolha("Tipo", TIPOS)
-        self.cx_tipo.SetSelection(0)
+        self.cx_tipo.SetSelection([k for k, _ in TIPOS].index(self.filtros.tipo))
         self.cx_situacao = caixa_de_escolha("Situação", SITUACOES)
-        self.cx_situacao.SetSelection(0)
+        self.cx_situacao.SetSelection(
+            [k for k, _ in SITUACOES].index(self.filtros.status))
         filtros.AddStretchSpacer()
         self.botao_filtrar = wx.Button(p, label="Filtrar")
         filtros.Add(self.botao_filtrar, 0, wx.LEFT, 8)
@@ -884,8 +895,8 @@ class Janela(wx.Frame):
         dlg.Destroy()
 
     def _sobre(self, _evt):
-        self._mostrar_texto("Sobre", "Controle Financeiro para Windows\nVersão %s"
-                            % __version__)
+        self._mostrar_texto("Sobre", "Controle Financeiro para Windows\nVersão %s\n"
+                            "Desenvolvedor: %s" % (__version__, DESENVOLVEDOR))
 
     def _ver_ultima(self, _evt):
         texto = self._texto_ultima()
@@ -903,6 +914,10 @@ class Janela(wx.Frame):
     # ---- login e sincronização ----
     def iniciar(self):
         """Com sessão guardada abre direto, mesmo sem internet."""
+        # Só agora a janela tem tamanho para rolar a tabela até a coluna
+        self.navegacao.definir_coluna(self._coluna_guardada)
+        if getattr(sys, "frozen", False):
+            wx.CallLater(ESPERA_ATUALIZACAO_MS, self._verificar_atualizacao, False)
         if self.nuvem.sessao:
             self.SetStatusText(self._texto_ultima())
             self._sincronizar(manual=False)
@@ -1223,6 +1238,81 @@ class Janela(wx.Frame):
         self.recarregar()
         self._pedir_login()
 
+    # ---- atualização ----
+    @seguro
+    def _verificar_agora(self, _evt):
+        self._verificar_atualizacao(True)
+
+    def _verificar_atualizacao(self, manual):
+        def trabalhar():
+            try:
+                lancamento, erro = atualizacao.consultar(), None
+            except atualizacao.ErroAtualizacao as e:
+                lancamento, erro = None, str(e)
+            wx.CallAfter(self._consultou_atualizacao, lancamento, erro, manual)
+
+        threading.Thread(target=trabalhar, daemon=True).start()
+
+    @seguro
+    def _consultou_atualizacao(self, lancamento, erro, manual):
+        if manual:
+            if erro or not atualizacao.e_mais_nova(lancamento):
+                wx.MessageBox(erro or "Você já está com a versão mais recente: %s."
+                              % __version__, "Verificar atualizações",
+                              wx.OK | (wx.ICON_WARNING if erro
+                                       else wx.ICON_INFORMATION), self)
+                return
+        elif erro or not atualizacao.deve_avisar_ao_abrir(
+                lancamento, preferencias.ler_atualizacao_ignorada()):
+            return
+        self._oferecer_atualizacao(lancamento)
+
+    def _oferecer_atualizacao(self, lancamento):
+        # Não abre por cima de outra janela nem de um menu: tenta de novo depois
+        if not self.IsEnabled() or self._menu_aberto:
+            wx.CallLater(ESPERA_ATUALIZACAO_MS, self._oferecer_atualizacao, lancamento)
+            return
+        programa = config.pasta_do_programa()
+        dlg = dialogos.NovaVersao(self, lancamento, bool(programa))
+        quer = dlg.ShowModal() == wx.ID_OK
+        if dlg.nao_avisar.GetValue():
+            preferencias.salvar_atualizacao_ignorada(lancamento.versao)
+        dlg.Destroy()
+        if quer and programa:
+            self._baixar_atualizacao(lancamento, programa)
+        self.lista.SetFocus()
+
+    def _baixar_atualizacao(self, lancamento, programa):
+        barra = dialogos.Progresso(self, "Baixando a atualização", pode_cancelar=True)
+        espera = atualizacao.pasta_de_espera(programa)
+
+        def trabalho(progresso):
+            arquivo = atualizacao.baixar(
+                lancamento, espera,
+                lambda feito, total: progresso(
+                    feito * 100 / total if total else None, "Baixando"),
+                cancelado=lambda: barra.cancelado)
+            progresso(None, "Preparando")
+            return atualizacao.extrair(arquivo, os.path.join(espera, "extraido"))
+
+        nova = barra.executar(trabalho)
+        erro, cancelado = barra.erro, barra.cancelado
+        barra.Destroy()
+        if cancelado:
+            self.avisar("Atualização cancelada.", True)
+        elif erro:
+            wx.MessageBox(erro, "Atualização", wx.OK | wx.ICON_WARNING, self)
+        else:
+            atualizacao.aplicar(programa, nova)
+            self.Close()
+
     def _ao_fechar(self, evt):
         self._relogio.Stop()
+        try:
+            preferencias.salvar_tela(self.filtros.tipo, self.filtros.status,
+                                     self._linha_em_foco_id,
+                                     max(self.navegacao.atual(), 0),
+                                     self.navegacao.coluna_atual())
+        except OSError as e:     # não pode impedir o programa de fechar
+            log.warning("posição não guardada: %r", e)
         evt.Skip()

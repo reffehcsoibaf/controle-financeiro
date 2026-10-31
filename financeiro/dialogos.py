@@ -1,10 +1,12 @@
 """Janelas auxiliares. Janela aberta de dentro de um diálogo tem esse diálogo
 como dona; senão o leitor de tela diz "janela indisponível" ao fechar."""
 import datetime
+import logging
+import threading
 
 import wx
 
-from financeiro import colunas, icones, regras
+from financeiro import __version__, colunas, icones, regras
 from financeiro.campo_data import CampoData
 from financeiro.navegacao import NavegacaoDeColunas
 
@@ -94,6 +96,108 @@ class JanelaDeTexto(wx.Dialog):
         fala = getattr(wx.GetApp().GetTopWindow(), "fala", None)
         if fala:
             fala.falar("Copiado." if copiou else "Não consegui copiar.", True)
+
+
+class Progresso(wx.Dialog):
+    """Barra de progresso de um trabalho em outra thread; o leitor de tela toca
+    os bipes da barra. Depois de `executar`, olhar `erro` e `cancelado`."""
+
+    def __init__(self, pai, titulo, pode_cancelar=False):
+        super().__init__(pai, title=titulo, size=(420, 150),
+                         style=wx.CAPTION | wx.SYSTEM_MENU)
+        self.titulo = titulo
+        self.erro = None
+        self.cancelado = False
+        self.resultado = None
+        self._estado = (None, "Aguarde")
+        self._thread = None
+        caixa = wx.BoxSizer(wx.VERTICAL)
+        self.texto = wx.StaticText(self, label="Aguarde")
+        caixa.Add(self.texto, 0, wx.EXPAND | wx.ALL, 10)
+        self.barra = wx.Gauge(self, range=100, name=titulo)
+        caixa.Add(self.barra, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        if pode_cancelar:
+            cancelar = wx.Button(self, wx.ID_CANCEL, "Cancelar")
+            cancelar.Bind(wx.EVT_BUTTON, self._cancelar)
+            caixa.Add(cancelar, 0, wx.ALL | wx.ALIGN_RIGHT, 10)
+        self.SetSizer(caixa)
+        self.Layout()
+        self.CentreOnParent()
+        self._relogio = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.acompanhar, self._relogio)
+        # Fechar a janela não pode largar o trabalho pela metade
+        self.Bind(wx.EVT_CLOSE, self._cancelar if pode_cancelar else lambda e: None)
+
+    def progresso(self, pct, texto=""):
+        self._estado = (pct, texto or self._estado[1])
+
+    def iniciar(self, trabalho):
+        def corpo():
+            try:
+                self.resultado = trabalho(self.progresso)
+            except Exception as e:
+                logging.getLogger("financeiro.dialogos").exception(
+                    "erro em %s", self.titulo)
+                self.erro = str(e) or e.__class__.__name__
+
+        self._thread = threading.Thread(target=corpo, daemon=True)
+        self._thread.start()
+
+    def executar(self, trabalho):
+        """Devolve o que `trabalho(progresso)` devolveu."""
+        self.iniciar(trabalho)
+        self._relogio.Start(100)
+        self.ShowModal()
+        return self.resultado
+
+    def _cancelar(self, _evt):
+        self.cancelado = True
+        self.texto.SetLabel("Cancelando")
+
+    def acompanhar(self, _evt):
+        pct, texto = self._estado
+        if not self.cancelado and texto != self.texto.GetLabel():
+            self.texto.SetLabel(texto)
+        if pct is None:
+            self.barra.Pulse()
+        else:
+            self.barra.SetValue(min(int(pct), 100))
+        if not self._thread.is_alive():
+            self._relogio.Stop()
+            self.EndModal(wx.ID_OK)
+
+
+class NovaVersao(wx.Dialog):
+    """Mostra as novidades. `pode_atualizar` é falso rodando pelo código."""
+
+    def __init__(self, pai, lancamento, pode_atualizar=True):
+        super().__init__(pai, title="Versão nova: %s" % lancamento.versao,
+                         size=(560, 420),
+                         style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+        caixa = wx.BoxSizer(wx.VERTICAL)
+        caixa.Add(wx.StaticText(self, label=(
+            "Você usa a versão %s. Há uma versão nova: %s. Para atualizar, o programa "
+            "fecha e abre de novo; os seus dados não são afetados."
+            % (__version__, lancamento.versao))), 0, wx.ALL, 8)
+        caixa.Add(wx.StaticText(self, label="Novidades"), 0, wx.LEFT | wx.RIGHT, 8)
+        novidades = "\n\n".join("Versão %s\n%s" % par for par in lancamento.historico)
+        self.texto = wx.TextCtrl(self, value=novidades or "Sem novidades descritas.",
+                                 name="Novidades",
+                                 style=wx.TE_MULTILINE | wx.TE_READONLY)
+        caixa.Add(self.texto, 1, wx.EXPAND | wx.ALL, 8)
+        self.nao_avisar = wx.CheckBox(self, label="Não avisar mais nesta versão")
+        caixa.Add(self.nao_avisar, 0, wx.LEFT | wx.RIGHT, 8)
+        botoes = wx.BoxSizer(wx.HORIZONTAL)
+        if pode_atualizar:
+            baixar = wx.Button(self, wx.ID_OK, "Baixar e instalar")
+            baixar.SetDefault()
+            botoes.Add(baixar, 0, wx.RIGHT, 8)
+        botoes.Add(wx.Button(self, wx.ID_CANCEL, "Agora não"))
+        caixa.Add(botoes, 0, wx.ALL | wx.ALIGN_RIGHT, 8)
+        self.SetSizer(caixa)
+        self.Layout()
+        self.CentreOnParent()
+        self.texto.SetFocus()
 
 
 class Detalhes(JanelaDeTexto):
