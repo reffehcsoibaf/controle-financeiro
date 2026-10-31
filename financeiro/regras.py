@@ -5,6 +5,7 @@ atualizarContas do index.html. Mudou lá, tem de mudar aqui.
 """
 import calendar
 from dataclasses import dataclass, field
+import datetime
 import math
 import re
 import unicodedata
@@ -175,6 +176,50 @@ def lancamento_espelho_fatura(dados, cartao):
         forma=dados.get("forma"), parcela=None, descricao=descricao,
         categoria=dados.get("categoria"), credor=dados.get("credor"),
         devedor=dados.get("devedor"), pago=dados["pago"])
+
+
+MESES = ("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
+         "agosto", "setembro", "outubro", "novembro", "dezembro")
+DIAS_DA_SEMANA = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira",
+                  "sexta-feira", "sábado", "domingo")
+
+
+def ler_data(texto):
+    """Aceita 25/10/2026, 25/10/26, 25102026 e 251026. Vazio vale None; data que
+    não existe levanta ValueError."""
+    numeros = re.sub(r"\D", "", texto or "")
+    if not (texto or "").strip():
+        return None
+    if len(numeros) == 6:
+        numeros = numeros[:4] + "20" + numeros[4:]
+    if len(numeros) != 8:
+        raise ValueError(texto)
+    return datetime.datetime.strptime(numeros, "%d%m%Y").date().isoformat()
+
+
+def data_por_extenso(iso):
+    data = datetime.date.fromisoformat(iso)
+    return "%d de %s de %d, %s" % (data.day, MESES[data.month - 1], data.year,
+                                   DIAS_DA_SEMANA[data.weekday()])
+
+
+def formatar_digitacao(texto):
+    """O que está sendo digitado, com as barras nos lugares: "2510" vira "25/10/"."""
+    numeros = re.sub(r"\D", "", texto)[:8]
+    saida = numeros[:2]
+    if len(numeros) >= 2:
+        saida += "/" + numeros[2:4]
+    if len(numeros) >= 4:
+        saida += "/" + numeros[4:]
+    return saida
+
+
+def rolar_data(iso, parte, passo):
+    """Parte 0 é o dia, 1 é o mês e 2 é o ano."""
+    if parte == 0:
+        return (datetime.date.fromisoformat(iso)
+                + datetime.timedelta(days=passo)).isoformat()
+    return avancar_meses(iso, passo if parte == 1 else passo * 12)
 
 
 def avancar_meses(iso, meses):

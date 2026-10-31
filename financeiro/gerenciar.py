@@ -7,8 +7,8 @@ import shutil
 import wx
 
 from financeiro import documentos, regras
-from financeiro.formulario import (_botoes_ok, _grade, _texto, executar_com_espera,
-                                   ligar_colar, mensagem_de_erro)
+from financeiro.formulario import (_botoes_ok, _campo_data, _grade, _texto,
+                                   executar_com_espera, ligar_colar, mensagem_de_erro)
 from financeiro.navegacao import NavegacaoDeColunas
 
 log = logging.getLogger("financeiro.gerenciar")
@@ -194,8 +194,8 @@ class Documentos(wx.Dialog):
         self.ir_para_lancamento = None
         grade = _grade()
         self.busca = _texto(self, grade, "Buscar pelo nome")
-        self.de = _texto(self, grade, "Guardado de (dia/mês/ano)")
-        self.ate = _texto(self, grade, "Guardado até (dia/mês/ano)")
+        self.de = _campo_data(self, grade, "Guardado de")
+        self.ate = _campo_data(self, grade, "Guardado até")
         for campo in (self.busca, self.de, self.ate):
             campo.Bind(wx.EVT_TEXT, lambda e: self.atualizar())
         texto, self.lista = _lista(self, "Documentos guardados", (
@@ -263,8 +263,7 @@ class Documentos(wx.Dialog):
     @staticmethod
     def _data(campo):
         try:
-            return datetime.datetime.strptime(
-                campo.GetValue().strip(), "%d/%m/%Y").date().isoformat()
+            return regras.ler_data(campo.GetValue()) or ""
         except ValueError:
             return ""
 

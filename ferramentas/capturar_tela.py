@@ -305,6 +305,72 @@ def exercitar_completo(janela, banco):
     wx.MessageBox = original
 
 
+def exercitar_datas(janela, banco):
+    falas = []
+    janela.fala.falar = lambda t, i=False: falas.append(t)
+    wx.GetApp().SetTopWindow(janela)
+    form = formulario.Formulario(janela, banco, todos=janela.todos)
+    campo = form.vencimento
+    print("tipo:", type(campo).__name__, type(form.data_origem).__name__,
+          "hoje:", form.data_origem.GetValue())
+
+    def tecla(codigo):
+        evt = wx.KeyEvent(wx.wxEVT_KEY_DOWN)
+        evt.SetKeyCode(codigo)
+        evt.SetEventObject(campo)
+        campo.GetEventHandler().ProcessEvent(evt)
+
+    for nome, codigo in (("cima, vazio", wx.WXK_UP), ("cima", wx.WXK_UP),
+                         ("baixo", wx.WXK_DOWN), ("direita", wx.WXK_RIGHT),
+                         ("cima no mês", wx.WXK_UP), ("direita", wx.WXK_RIGHT),
+                         ("direita de novo", wx.WXK_RIGHT), ("cima no ano", wx.WXK_UP),
+                         ("esquerda", wx.WXK_LEFT)):
+        falas.clear()
+        tecla(codigo)
+        print(nome, "->", campo.GetValue(), "parte", campo.parte,
+              "seleção", campo.GetSelection(), falas)
+    # Digitação, número por número
+    campo.ChangeValue("")
+    campo._tamanho = 0
+    falas.clear()
+    for n in "25102026":
+        campo.AppendText(n)
+    print("digitou:", campo.GetValue(), falas, "lê:", regras.ler_data(campo.GetValue()))
+    # Apagar não briga com a barra
+    campo.ChangeValue("25/")
+    campo._tamanho = 3
+    campo.SetValue("25")
+    print("apagou a barra:", campo.GetValue())
+    campo.AppendText("1")
+    print("seguiu:", campo.GetValue())
+    # Data que não existe
+    campo.ChangeValue("")
+    campo._tamanho = 0
+    falas.clear()
+    for n in "31022026":
+        campo.AppendText(n)
+    print("inválida:", campo.GetValue(), falas)
+    campo.ChangeValue("")
+    campo._tamanho = 0
+    falas.clear()
+    tecla(wx.WXK_RIGHT)
+    print("seta para o lado, vazio:", falas)
+    form.Destroy()
+    # Filtros reagem à seta
+    form = formulario.Formulario(janela, banco, todos=janela.todos)
+    dlg = formulario.ImportarLancamentos(form, janela.todos, set())
+    antes = dlg.lista.GetItemCount()
+    dlg.origem_de.SetValue("27/10/2026")
+    print("filtro:", antes, "->", dlg.lista.GetItemCount())
+    dlg.Destroy()
+    crit = dialogos.BuscaPorCriterios(janela, banco, regras.Filtros())
+    print("critérios:", type(crit.datas["origem_de"]).__name__)
+    crit.Destroy()
+    docs = gerenciar.Documentos(janela, banco, None, janela.todos)
+    print("documentos:", type(docs.de).__name__)
+    docs.Destroy()
+
+
 def exercitar_restante(janela, banco):
     avisos, falas = [], []
     original = wx.MessageBox
@@ -323,8 +389,44 @@ def exercitar_restante(janela, banco):
             return dict(valor=25, descricao="Lido")
 
     janela.nuvem = NuvemFalsa()
-    janela._falar_conta(None)
-    print("conta:", falas[-1])
+    print("menu:", [(i.GetItemLabelText(), i.IsSubMenu())
+                    for i in janela.GetMenuBar().GetMenu(0).GetMenuItems()
+                    if not i.IsSeparator()])
+    for item in janela.GetMenuBar().GetMenu(0).GetMenuItems():
+        if item.IsSubMenu():
+            print(" ", item.GetItemLabelText(), [
+                i.GetItemLabelText() for i in item.GetSubMenu().GetMenuItems()])
+    # Janelas de valores, sem exibir e sem mexer na área de transferência
+    mostrados = []
+    janela._mostrar_texto = lambda t, x: mostrados.append((t, x))
+    janela._ver_resumo(None)
+    janela._ver_ultima(None)
+    janela._sobre(None)
+    print("janelas de texto:", mostrados)
+    del janela._mostrar_texto
+    copiado = []
+    dialogos.copiar_para_area_de_transferencia = lambda t: (copiado.append(t), True)[1]
+    wx.GetApp().SetTopWindow(janela)
+    falas.clear()
+    dlg_texto = dialogos.JanelaDeTexto(janela, "Resumo", "linha 1\nlinha 2")
+    dlg_texto._copiar(None)
+    print("copiar:", copiado, falas, "somente leitura:", not dlg_texto.texto.IsEditable(),
+          "botões:", [f.GetLabel() for f in dlg_texto.GetChildren()
+                      if isinstance(f, wx.Button)])
+    dlg_texto.Destroy()
+    det = dialogos.Detalhes(janela, janela.visiveis[0], janela.todos)
+    print("detalhes:", type(det).__mro__[1].__name__, det.texto.GetValue()[:30])
+    det.Destroy()
+    print("desconectar:", janela.texto_desconectar())
+    avisos.clear()
+    # Fala vinda do menu espera; fora do menu é na hora
+    falas.clear()
+    janela._falar("agora")
+    janela._ao_fechar_menu(wx.MenuEvent())
+    janela._falar("depois")
+    print("na hora:", falas)
+    wx.CallLater(800, lambda: print("após a espera:", falas))
+    janela._menu_fechou_em = -9
 
     # Parcelar com pagamento dividido e itens
     form = formulario.Formulario(janela, banco, nuvem=janela.nuvem, todos=janela.todos)
@@ -539,6 +641,8 @@ def main():
                 exercitar_permissoes(janela, banco)
             if modo == "restante":
                 exercitar_restante(janela, banco)
+            if modo == "datas":
+                exercitar_datas(janela, banco)
             if modo == "formulario":
                 # Lançamento de 3 itens: valor calculado, campos desligados
                 print("form valor:", alvo.valor.GetValue(),

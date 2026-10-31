@@ -18,6 +18,38 @@ def test_avancar_meses(inicio, meses, esperado):
     assert regras.avancar_meses(inicio, meses) == esperado
 
 
+@pytest.mark.parametrize("texto,esperado", [
+    ("25/10/2026", "2026-10-25"), ("25102026", "2026-10-25"), ("251026", "2026-10-25"),
+    ("25/10/26", "2026-10-25"), ("", None), ("   ", None)])
+def test_ler_data(texto, esperado):
+    assert regras.ler_data(texto) == esperado
+
+
+@pytest.mark.parametrize("texto", ["31022026", "25", "25/10", "abc"])
+def test_ler_data_invalida(texto):
+    with pytest.raises(ValueError):
+        regras.ler_data(texto)
+
+
+@pytest.mark.parametrize("texto,esperado", [
+    ("2", "2"), ("25", "25/"), ("25/1", "25/1"), ("2510", "25/10/"),
+    ("25/10/2", "25/10/2"), ("25102026", "25/10/2026"), ("251020269", "25/10/2026")])
+def test_barras_entram_sozinhas(texto, esperado):
+    assert regras.formatar_digitacao(texto) == esperado
+
+
+@pytest.mark.parametrize("iso,parte,passo,esperado", [
+    ("2026-10-31", 0, 1, "2026-11-01"), ("2026-01-01", 0, -1, "2025-12-31"),
+    ("2026-01-31", 1, 1, "2026-02-28"), ("2026-12-15", 1, 1, "2027-01-15"),
+    ("2028-02-29", 2, 1, "2029-02-28"), ("2026-10-25", 2, -1, "2025-10-25")])
+def test_rolar_data(iso, parte, passo, esperado):
+    assert regras.rolar_data(iso, parte, passo) == esperado
+
+
+def test_data_por_extenso():
+    assert regras.data_por_extenso("2026-10-31") == "31 de outubro de 2026, sábado"
+
+
 def test_centavos_vao_na_ultima_por_padrao():
     assert regras.calcular_parcelas(100.0, 3) == [33.33, 33.33, 33.34]
 

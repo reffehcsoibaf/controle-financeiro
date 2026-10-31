@@ -26,6 +26,11 @@ def test_atalhos_do_guia_existem_no_menu():
         assert "\\t" + atalho + '"' in janela, atalho
 
 
+def test_guia_nao_cita_menus_que_sairam():
+    _, texto = assuntos("guia.txt")
+    assert "Minha conta" not in texto and "Falar resumo" not in texto
+
+
 def test_novidades_tem_assunto():
     titulos, _ = assuntos("novidades.txt")
     assert titulos

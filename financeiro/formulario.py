@@ -9,6 +9,7 @@ import threading
 import wx
 
 from financeiro import config, documentos, nuvem as nuvem_mod, regras
+from financeiro.campo_data import CampoData
 from financeiro.navegacao import NavegacaoDeColunas
 
 log = logging.getLogger("financeiro.formulario")
@@ -125,16 +126,19 @@ def _botoes_ok(dlg, rotulo, acao):
     return botoes
 
 
+def _campo_data(pai, grade, rotulo, valor=""):
+    grade.Add(wx.StaticText(pai, label=rotulo), 0, wx.ALIGN_CENTER_VERTICAL)
+    campo = CampoData(pai, rotulo, valor)
+    grade.Add(campo, 1, wx.EXPAND)
+    return campo
+
+
 def _data_ou_vazio(iso):
     texto = regras.fmt_data(iso)
     return "" if texto == SEM_DATA else texto
 
 
-def _ler_data(texto):
-    texto = texto.strip()
-    if not texto:
-        return None
-    return datetime.datetime.strptime(texto, "%d/%m/%Y").date().isoformat()
+_ler_data = regras.ler_data
 
 
 class DialogoItem(wx.Dialog):
@@ -368,10 +372,10 @@ class ImportarLancamentos(wx.Dialog):
         self._preenchendo = False
         grade = _grade()
         self.busca = _texto(self, grade, "Buscar")
-        self.origem_de = _texto(self, grade, "Data de origem, de (dia/mês/ano)")
-        self.origem_ate = _texto(self, grade, "Data de origem, até (dia/mês/ano)")
-        self.venc_de = _texto(self, grade, "Vencimento, de (dia/mês/ano)")
-        self.venc_ate = _texto(self, grade, "Vencimento, até (dia/mês/ano)")
+        self.origem_de = _campo_data(self, grade, "Data de origem, de")
+        self.origem_ate = _campo_data(self, grade, "Data de origem, até")
+        self.venc_de = _campo_data(self, grade, "Vencimento, de")
+        self.venc_ate = _campo_data(self, grade, "Vencimento, até")
         self.credor = _texto(self, grade, "Credor")
         self.devedor = _texto(self, grade, "Devedor")
         grade.AddSpacer(0)
@@ -588,11 +592,11 @@ class Formulario(wx.Dialog):
         self.valor = _texto(p, grade, "Valor", regras.fmt_valor(
             abs(l["valor"])) if l else "")
         hoje = datetime.date.today().strftime("%d/%m/%Y")
-        self.data_origem = _texto(
-            p, grade, "Data de origem (dia/mês/ano)",
+        self.data_origem = _campo_data(
+            p, grade, "Data de origem",
             _data_ou_vazio(l.get("data_origem")) if l else hoje)
-        self.vencimento = _texto(p, grade, "Vencimento (dia/mês/ano)",
-                                 _data_ou_vazio(l.get("data_vencimento")))
+        self.vencimento = _campo_data(p, grade, "Vencimento",
+                                      _data_ou_vazio(l.get("data_vencimento")))
         self.campo_banco = _combo(p, grade, "Banco ou cartão", banco.opcoes("banco"),
                                   l.get("banco", ""))
         self.forma = _combo(p, grade, "Forma de pagamento", banco.opcoes("forma"),
@@ -1118,13 +1122,14 @@ class Formulario(wx.Dialog):
         except ValueError:
             origem = ""
         if not origem:
-            self._erro("Preencha a data de origem no formato dia/mês/ano, por "
-                       "exemplo 25/10/2026.", self.data_origem, 0)
+            self._erro("Preencha a data de origem: digite os números, por exemplo "
+                       "25102026, ou use as setas.", self.data_origem, 0)
             return None
         try:
             vencimento = _ler_data(self.vencimento.GetValue())
         except ValueError:
-            self._erro("Vencimento inválido. Use dia/mês/ano ou deixe em branco.",
+            self._erro("Vencimento inválido. Digite os números, use as setas ou "
+                       "deixe em branco.",
                        self.vencimento, 0)
             return None
         return origem, vencimento

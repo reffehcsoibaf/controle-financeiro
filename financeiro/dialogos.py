@@ -5,6 +5,7 @@ import datetime
 import wx
 
 from financeiro import colunas, icones, regras
+from financeiro.campo_data import CampoData
 from financeiro.navegacao import NavegacaoDeColunas
 
 CAMPOS_LISTA = (("banco", "Banco ou cartão"), ("forma", "Forma de pagamento"),
@@ -20,10 +21,7 @@ TODOS = "Todos"
 
 def data_para_iso(texto):
     """dd/mm/aaaa -> aaaa-mm-dd; vazio vale vazio; inválida levanta ValueError."""
-    texto = texto.strip()
-    if not texto:
-        return ""
-    return datetime.datetime.strptime(texto, "%d/%m/%Y").date().isoformat()
+    return regras.ler_data(texto) or ""
 
 
 class Login(wx.Dialog):
@@ -60,21 +58,50 @@ class Aguardando(wx.Dialog):
         cancelar.SetFocus()
 
 
-class Detalhes(wx.Dialog):
-    def __init__(self, pai, lanc, todos):
-        super().__init__(pai, title="Detalhes: " + regras.descricao_de(lanc),
-                         size=(560, 460),
+def copiar_para_area_de_transferencia(texto):
+    if not wx.TheClipboard.Open():
+        return False
+    try:
+        return wx.TheClipboard.SetData(wx.TextDataObject(texto))
+    finally:
+        wx.TheClipboard.Close()
+
+
+class JanelaDeTexto(wx.Dialog):
+    """Valores para ler com calma: texto somente leitura, Copiar e Fechar."""
+
+    def __init__(self, pai, titulo, texto, rotulo=None, tamanho=(520, 320)):
+        super().__init__(pai, title=titulo, size=tamanho,
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
+        self.conteudo = texto
         caixa = wx.BoxSizer(wx.VERTICAL)
-        texto = wx.TextCtrl(self, value=texto_de_detalhes(lanc, todos),
-                            name="Detalhes do lançamento",
-                            style=wx.TE_MULTILINE | wx.TE_READONLY)
-        caixa.Add(texto, 1, wx.EXPAND | wx.ALL, 8)
-        fechar = wx.Button(self, wx.ID_CANCEL, "Fechar")
-        caixa.Add(fechar, 0, wx.ALL | wx.ALIGN_RIGHT, 8)
+        caixa.Add(wx.StaticText(self, label=rotulo or titulo), 0,
+                  wx.LEFT | wx.TOP | wx.RIGHT, 8)
+        self.texto = wx.TextCtrl(self, value=texto, name=rotulo or titulo,
+                                 style=wx.TE_MULTILINE | wx.TE_READONLY)
+        caixa.Add(self.texto, 1, wx.EXPAND | wx.ALL, 8)
+        botoes = wx.BoxSizer(wx.HORIZONTAL)
+        copiar = wx.Button(self, label="Copiar")
+        copiar.Bind(wx.EVT_BUTTON, self._copiar)
+        botoes.Add(copiar, 0, wx.RIGHT, 8)
+        botoes.Add(wx.Button(self, wx.ID_CANCEL, "Fechar"))
+        caixa.Add(botoes, 0, wx.ALL | wx.ALIGN_RIGHT, 8)
         self.SetSizer(caixa)
         self.Layout()
-        texto.SetFocus()
+        self.texto.SetFocus()
+
+    def _copiar(self, _evt):
+        copiou = copiar_para_area_de_transferencia(self.conteudo)
+        fala = getattr(wx.GetApp().GetTopWindow(), "fala", None)
+        if fala:
+            fala.falar("Copiado." if copiou else "Não consegui copiar.", True)
+
+
+class Detalhes(JanelaDeTexto):
+    def __init__(self, pai, lanc, todos):
+        super().__init__(pai, "Detalhes: " + regras.descricao_de(lanc),
+                         texto_de_detalhes(lanc, todos),
+                         "Detalhes do lançamento", (560, 460))
 
 
 def texto_de_detalhes(lanc, todos):
@@ -318,11 +345,10 @@ class BuscaPorCriterios(wx.Dialog):
         grade.AddGrowableCol(1)
         self.datas, self.listas = {}, {}
         for chave, rotulo in CAMPOS_DATA:
-            grade.Add(wx.StaticText(self, label=rotulo + " (dia/mês/ano)"),
+            grade.Add(wx.StaticText(self, label=rotulo),
                       0, wx.ALIGN_CENTER_VERTICAL)
             valor = regras.fmt_data(getattr(filtros, chave))
-            campo = wx.TextCtrl(self, name=rotulo + " (dia/mês/ano)",
-                                value="" if valor == "—" else valor)
+            campo = CampoData(self, rotulo, "" if valor == "—" else valor)
             grade.Add(campo, 1, wx.EXPAND)
             self.datas[chave] = campo
         grade.Add(wx.StaticText(self, label="Situação"), 0,
@@ -372,8 +398,8 @@ class BuscaPorCriterios(wx.Dialog):
             try:
                 novos[chave] = data_para_iso(campo.GetValue())
             except ValueError:
-                wx.MessageBox("Data inválida. Use dia/mês/ano, por exemplo "
-                              "25/10/2026.", "Busca por critérios",
+                wx.MessageBox("Data inválida. Digite os números, por exemplo "
+                              "25102026, ou use as setas.", "Busca por critérios",
                               wx.OK | wx.ICON_ERROR, self)
                 campo.SetFocus()
                 return

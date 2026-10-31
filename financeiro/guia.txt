@@ -19,7 +19,7 @@ Busca por critérios: período, vencimento, forma, categoria e outros.
 Sair: fecha o programa.
 Tabela de lançamentos.
 
-Acima da tabela fica o resumo: quantidade, entradas, saídas, saldo e pendente. Ctrl+T fala o resumo. Ctrl+L limpa os filtros.
+Acima da tabela fica o resumo: quantidade, entradas, saídas, saldo e pendente. Ctrl+T abre o resumo em uma janela com o texto para ler com as setas e os botões Copiar e Fechar. Ctrl+L limpa os filtros.
 
 As datas mais recentes vêm primeiro. No mesmo dia, os lançamentos ficam na ordem em que foram criados.
 
@@ -44,15 +44,15 @@ Ctrl+E: editar.
 Delete, na tabela: excluir.
 Ctrl+O ou Enter: abrir.
 Ctrl+I: ver itens.
-Ctrl+D: ver detalhes.
+Ctrl+D: ver detalhes, com os botões Copiar e Fechar.
 Ctrl+P ou barra de espaço: marcar como pago ou pendente.
 Ctrl+Shift+V: ir ao lançamento vinculado.
 Ctrl+Shift+O: ver o documento vinculado.
 Ctrl+F: buscar.
 Ctrl+Shift+F: busca por critérios.
 Ctrl+L: limpar filtros.
-Ctrl+T: falar o resumo.
-Ctrl+B: contas e cartões.
+Ctrl+T: ver o resumo.
+Ctrl+B: saldos e limites.
 Ctrl+Shift+D: documentos.
 Ctrl+Shift+L: gerenciar listas.
 Ctrl+Shift+E: exportar para Excel.
@@ -67,7 +67,9 @@ Ctrl+N abre o formulário, com três abas. Ctrl+Tab passa de uma para outra.
 
 Na aba Dados ficam tipo (saída ou entrada), valor, data de origem, vencimento, banco ou cartão, forma de pagamento, estabelecimento, categoria, cartão a quitar, credor, devedor, descrição e a caixa Pago.
 
-Digite o valor sem sinal: quem define entrada ou saída é o campo Tipo. Valores como 1.234,50 ou 12,5 são aceitos. Datas são no formato dia/mês/ano.
+Digite o valor sem sinal: quem define entrada ou saída é o campo Tipo. Valores como 1.234,50 ou 12,5 são aceitos.
+
+Nos campos de data, digite só os números, como 25102026 ou 251026: as barras entram sozinhas. Ou use as setas: para cima e para baixo rolam a data, e para os lados escolhem entre dia, mês e ano. Em um campo vazio, a primeira seta começa no dia de hoje. Ao apagar tudo, o campo fica sem data.
 
 Banco, forma, estabelecimento, categoria, credor e devedor mostram as opções cadastradas, e também aceitam um texto digitado. Esse texto vale só para este lançamento, a menos que você use o botão Cadastrar textos novos nas listas.
 
@@ -116,8 +118,8 @@ Busque, filtre e marque os lançamentos com a barra de espaço. Por padrão, só
 
 Cada lançamento marcado vira item deste, guardando a data original. Ao salvar, o programa pede confirmação, passa os documentos para o novo lançamento e exclui os originais.
 
-# Contas e cartões
-Ctrl+B mostra cada banco ou cartão, com o saldo ou o limite calculado. Em vermelho, com o valor negativo, está o que passou do saldo ou do limite.
+# Saldos e limites
+Em Menu, Ferramentas, ou com Ctrl+B. Mostra cada banco ou cartão, com o saldo ou o limite calculado. Em vermelho, com o valor negativo, está o que passou do saldo ou do limite.
 
 Use Configurar para definir o tipo e o saldo inicial ou o limite total. Remover configuração mantém o nome nas listas, só deixa de calcular.
 
@@ -127,7 +129,7 @@ Cartão de crédito: o limite conta também o que está pendente, porque costuma
 Enter ou Ver lançamentos desta conta mostra na tabela principal os lançamentos usados no cálculo.
 
 # Documentos
-Ctrl+Shift+D abre a lista de documentos guardados, a mesma do site, com busca pelo nome e por datas.
+Em Menu, Ferramentas, ou com Ctrl+Shift+D. Abre a lista de documentos guardados, a mesma do site, com busca pelo nome e por datas.
 
 Guardar arquivo: envia um arquivo novo. Sem internet, ele fica guardado aqui e sobe depois.
 Colar: com um arquivo ou uma imagem copiados, Ctrl+V guarda direto, em qualquer lugar desta janela.
@@ -177,7 +179,7 @@ Quase tudo funciona sem internet: consultar, filtrar, criar, editar, excluir, pa
 
 Precisam de internet: entrar na conta, a leitura por IA e abrir um documento ainda não baixado.
 
-O programa sincroniza ao abrir, a cada 5 minutos e depois de cada alteração. F5 sincroniza na hora.
+O programa sincroniza ao abrir, a cada 5 minutos e depois de cada alteração. F5 sincroniza na hora. Em Menu, Sincronização, Última sincronização mostra a data e a hora em uma janela com os botões Copiar e Fechar, e também quantas alterações aguardam envio.
 
 Quando o mesmo lançamento muda aqui e no site, vale a alteração mais recente, e o programa avisa. Antes, ele compara o relógio do computador com o do servidor. Se a diferença passar de 2 minutos, ele avisa e não decide pela hora: a escolha fica em Menu, Sincronização, Resolver conflitos. O mesmo vale para alterações quase simultâneas e para lançamentos excluídos no site.
 
@@ -196,8 +198,8 @@ Colunas da tabela: marque com a barra de espaço as colunas que quer ver e mude 
 Filtros: escolha se o programa fala a quantidade de lançamentos e o total em valores ao aplicar um filtro. Os dois continuam na barra de status, que o leitor de tela consegue ler, e no resumo.
 
 # Sua conta e seus dados
-Em Menu, Minha conta, Conta conectada fala o e-mail em uso.
+Em Menu, Desconectar abre uma pergunta que mostra a conta em uso e pede confirmação.
 
-Sair da conta apaga deste computador a cópia dos dados e os documentos baixados. Os dados online continuam guardados. Se houver alterações ainda não enviadas, o programa avisa antes, porque elas seriam perdidas.
+Desconectar apaga deste computador a cópia dos dados e os documentos baixados. Os dados online continuam guardados. Se houver alterações ainda não enviadas, o programa avisa nessa pergunta, porque elas seriam perdidas.
 
 Os dados ficam na pasta do seu usuário do Windows, sem cifragem própria do banco. A sessão de login é cifrada e presa à sua conta do Windows. Para proteger os dados, use senha no Windows e, se possível, a criptografia de disco.

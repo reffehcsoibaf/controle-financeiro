@@ -8,6 +8,7 @@ import functools
 import logging
 import os
 import threading
+import time
 import uuid
 
 import wx
@@ -22,6 +23,8 @@ log = logging.getLogger("financeiro.janela")
 
 INTERVALO_SYNC_MS = 5 * 60 * 1000
 ATRASO_BUSCA_MS = 300
+ESPERA_MENU_MS = 600
+JANELA_MENU_S = 1.0
 TODAS_CONTAS = "Todas as contas"
 SITUACOES = (("", "Todos"), ("pendente", "Pendentes"), ("pago", "Pagos"))
 
@@ -54,6 +57,8 @@ class Janela(wx.Frame):
         self._sincronizando = False
         self._sincronizar_de_novo = False
         self._avisou_relogio = False
+        self._menu_aberto = False
+        self._menu_fechou_em = -JANELA_MENU_S
         self._preenchendo = False
         self.colunas = colunas.visiveis(preferencias.ler_colunas())
         self.falar_quantidade = preferencias.ler_falar_quantidade()
@@ -67,6 +72,8 @@ class Janela(wx.Frame):
         self._atraso_busca = wx.CallLater(ATRASO_BUSCA_MS, self._busca_pronta)
         self._atraso_busca.Stop()
         self.Bind(wx.EVT_CLOSE, self._ao_fechar)
+        self.Bind(wx.EVT_MENU_OPEN, self._ao_abrir_menu)
+        self.Bind(wx.EVT_MENU_CLOSE, self._ao_fechar_menu)
         self.recarregar()
         self.lista.SetFocus()
 
@@ -94,26 +101,17 @@ class Janela(wx.Frame):
         self._item(lanc, "Buscar\tCtrl+F", self._focar_busca)
         self._item(lanc, "Busca por critérios\tCtrl+Shift+F", self._criterios)
         self._item(lanc, "Limpar filtros\tCtrl+L", self._limpar_filtros)
-        self._item(lanc, "Falar resumo\tCtrl+T", self._falar_resumo)
+        self._item(lanc, "Ver resumo\tCtrl+T", self._ver_resumo)
         principal.AppendSubMenu(lanc, "Lançamentos")
-        contas = wx.Menu()
-        self._item(contas, "Saldos e limites\tCtrl+B", self._contas)
-        principal.AppendSubMenu(contas, "Contas e cartões")
-        docs = wx.Menu()
-        self._item(docs, "Documentos guardados\tCtrl+Shift+D", self._documentos)
-        principal.AppendSubMenu(docs, "Documentos")
         sinc = wx.Menu()
         self._item(sinc, "Sincronizar agora\tF5", self._sincronizar_agora)
-        self._item(sinc, "Última sincronização", self._falar_ultima)
+        self._item(sinc, "Última sincronização", self._ver_ultima)
         self._item(sinc, "Resolver conflitos", self._resolver_conflitos)
         self._item(sinc, "Operações pendentes", self._pendencias)
         principal.AppendSubMenu(sinc, "Sincronização")
-        conta = wx.Menu()
-        self._item(conta, "Conta conectada", self._falar_conta)
-        self._item(conta, "Sair da conta e apagar a cópia local",
-                   self._sair_da_conta)
-        principal.AppendSubMenu(conta, "Minha conta")
         ferramentas = wx.Menu()
+        self._item(ferramentas, "Saldos e limites\tCtrl+B", self._contas)
+        self._item(ferramentas, "Documentos\tCtrl+Shift+D", self._documentos)
         self._item(ferramentas, "Configurações\tCtrl+,", self._configuracoes)
         self._item(ferramentas, "Gerenciar listas\tCtrl+Shift+L", self._listas)
         self._item(ferramentas, "Correções aprendidas pela IA", self._correcoes)
@@ -128,6 +126,7 @@ class Janela(wx.Frame):
         self._item(ajuda, "Sobre", self._sobre)
         principal.AppendSubMenu(ajuda, "Ajuda")
         principal.AppendSeparator()
+        self._item(principal, "Desconectar", self._desconectar)
         self._item(principal, "Sair\tCtrl+Q", lambda e: self.Close())
         barra = wx.MenuBar()
         barra.Append(principal, "Menu")
@@ -251,7 +250,25 @@ class Janela(wx.Frame):
     # ---- dados na tela ----
     def avisar(self, texto, interromper=False):
         self.SetStatusText(texto)
-        self.fala.falar(texto, interromper)
+        self._falar(texto, interromper)
+
+    def _ao_abrir_menu(self, evt):
+        self._menu_aberto = True
+        evt.Skip()
+
+    def _ao_fechar_menu(self, evt):
+        self._menu_aberto = False
+        self._menu_fechou_em = time.monotonic()
+        evt.Skip()
+
+    def _falar(self, texto, interromper=False):
+        """Quando o menu fecha, o leitor de tela anuncia o foco que volta à tabela
+        e corta o que estiver sendo falado. A fala que vem do menu espera isso."""
+        recente = time.monotonic() - self._menu_fechou_em < JANELA_MENU_S
+        if self._menu_aberto or recente:
+            wx.CallLater(ESPERA_MENU_MS, self.fala.falar, texto, interromper)
+        else:
+            self.fala.falar(texto, interromper)
 
     def recarregar(self):
         """Lê a cópia local e redesenha só se algo mudou, para não tirar a
@@ -354,7 +371,7 @@ class Janela(wx.Frame):
             partes.append(quantidade)
         if self.falar_total:
             partes.append(total)
-        self.fala.falar(" ".join(partes), interromper)
+        self._falar(" ".join(partes), interromper)
 
     def _ao_digitar(self, _evt):
         self._atraso_busca.Start(ATRASO_BUSCA_MS)
@@ -398,8 +415,15 @@ class Janela(wx.Frame):
         self.aplicar_filtros()
         self._avisar_quantidade("Filtros limpos. ")
 
-    def _falar_resumo(self, _evt):
-        self.avisar(self.resumo.GetLabel(), True)
+    def _ver_resumo(self, _evt):
+        """Em janela própria: fica aberta até fechar, e nada corta a leitura."""
+        self._mostrar_texto("Resumo", self.resumo.GetLabel().replace(". ", ".\n"))
+
+    def _mostrar_texto(self, titulo, texto):
+        dlg = dialogos.JanelaDeTexto(self, titulo, texto)
+        dlg.ShowModal()
+        dlg.Destroy()
+        self.lista.SetFocus()
 
     # ---- ações ----
     def _selecionado(self):
@@ -628,11 +652,6 @@ class Janela(wx.Frame):
             self._documentos(None, l["id"])
         else:
             self.avisar("Este lançamento não tem documento vinculado.", True)
-
-    def _falar_conta(self, _evt):
-        email = self.nuvem.email if self.nuvem else ""
-        self.avisar("Conta conectada: %s." % email if email
-                    else "Nenhuma conta conectada.", True)
 
     @seguro
     def _guia(self, _evt):
@@ -895,11 +914,16 @@ class Janela(wx.Frame):
         dlg.Destroy()
 
     def _sobre(self, _evt):
-        wx.MessageBox("Controle Financeiro para Windows\nVersão %s"
-                      % __version__, "Sobre", wx.OK | wx.ICON_INFORMATION, self)
+        self._mostrar_texto("Sobre", "Controle Financeiro para Windows\nVersão %s"
+                            % __version__)
 
-    def _falar_ultima(self, _evt):
-        self.avisar(self._texto_ultima(), True)
+    def _ver_ultima(self, _evt):
+        texto = self._texto_ultima()
+        pendentes = self.banco.qtd_pendentes()
+        if pendentes:
+            texto += "\n%d alteração%s aguardando envio." % (
+                pendentes, "" if pendentes == 1 else "ões")
+        self._mostrar_texto("Última sincronização", texto)
 
     def _texto_ultima(self):
         quando = self.banco.ultima_sincronizacao()
@@ -1138,7 +1162,7 @@ class Janela(wx.Frame):
                     pendentes, "" if pendentes == 1 else "ões")
             self.SetStatusText(texto)
             if manual:
-                self.fala.falar(texto, True)
+                self._falar(texto, True)
             return
         if isinstance(erro, nuvem_mod.AcessoNegado):
             self.banco.apagar_tudo()
@@ -1159,7 +1183,7 @@ class Janela(wx.Frame):
             texto = "Não consegui sincronizar. Mostrando a cópia local."
             self.SetStatusText(texto)
             if manual:
-                self.fala.falar(texto, True)
+                self._falar(texto, True)
             return
         antes = {l["id"]: sincro.assinatura(l) for l in self.banco.lancamentos()}
         agora = datetime.datetime.now().strftime("%d/%m/%Y às %H:%M")
@@ -1202,17 +1226,24 @@ class Janela(wx.Frame):
                  else "Sincronizado, nada mudou. ") + self._qtd_texto()
         self.SetStatusText(texto)
         if manual or mudou:
-            self.fala.falar(texto, manual)
+            self._falar(texto, manual)
 
-    def _sair_da_conta(self, _evt):
+    def texto_desconectar(self):
+        email = self.nuvem.email if self.nuvem else ""
         pendentes = self.banco.qtd_pendentes()
-        aviso = (" Atenção: %d alteração%s ainda não enviada%s será perdida."
-                 % (pendentes, "" if pendentes == 1 else "ões",
-                    "" if pendentes == 1 else "s")) if pendentes else ""
+        partes = ["Desconectar a conta %s?" % email if email else "Desconectar?",
+                  "Os dados locais serão apagados deste computador, inclusive os "
+                  "documentos baixados. Os dados online continuam guardados."]
+        if pendentes:
+            partes.append("Atenção: %d alteração%s ainda não enviada%s será perdida%s." % (
+                pendentes, "" if pendentes == 1 else "ões",
+                "" if pendentes == 1 else "s", "" if pendentes == 1 else "s"))
+        return "\n".join(partes)
+
+    def _desconectar(self, _evt):
         resposta = wx.MessageBox(
-            "Sair da conta apaga a cópia local dos dados deste computador. "
-            "Os dados online continuam guardados." + aviso + " Continuar?",
-            "Sair da conta", wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION, self)
+            self.texto_desconectar(), "Desconectar",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION, self)
         if resposta != wx.YES:
             return
         self._relogio.Stop()

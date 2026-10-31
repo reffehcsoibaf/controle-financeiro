@@ -1,6 +1,13 @@
 # Versão 0.1.0
 Primeira versão do Controle Financeiro para Windows.
 
+Menu:
+Saldos e limites e Documentos ficam em Ferramentas. Desconectar fica direto no Menu e pede confirmação.
+Resumo, Última sincronização, Detalhes e Sobre abrem em uma janela com o texto para ler, e os botões Copiar e Fechar.
+
+Datas:
+Basta digitar os números, sem as barras, ou rolar com as setas.
+
 Consulta e organização:
 Tabela navegável como planilha, filtros, busca, resumo e colunas configuráveis.
 Contas e cartões com saldo e limite calculados.
