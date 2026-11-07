@@ -425,10 +425,18 @@ class Nuvem:
         if any(i < 0 for i in ids):
             raise ErroServidor("lançamento ainda não enviado")
         if tipo == "opcao_add":
-            self._inserir_ignorando(
+            # Sem restrição única no servidor (on_conflict dá erro 42P10):
+            # confere antes para não repetir
+            achadas = self._rest(
                 "financeiro_opcoes_listas",
-                {"campo": d["campo"], "valor": d["valor"]}, token,
-                "user_id,campo,valor")
+                {"campo": "eq." + d["campo"], "valor": "eq." + d["valor"],
+                 "select": "id"}, token, metodo="GET")
+            if not achadas:
+                _pedir("%s/rest/v1/financeiro_opcoes_listas" % config.SUPABASE_URL,
+                       corpo={"user_id": self.sessao["user_id"],
+                              "campo": d["campo"], "valor": d["valor"]},
+                       cabecalhos={"Authorization": "Bearer " + token,
+                                   "Prefer": "return=minimal"}, metodo="POST")
         elif tipo == "opcao_del":
             self._rest("financeiro_opcoes_listas",
                        {"campo": "eq." + d["campo"], "valor": "eq." + d["valor"]},

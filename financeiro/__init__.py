@@ -2,4 +2,4 @@
 NOME = "Controle Financeiro"
 DESENVOLVEDOR = "Fábio Scheffer Moraes"
 # ano.mes.dia.dígito; é também a tag da Release
-__version__ = "2026.10.31.0"
+__version__ = "2026.11.07.0"

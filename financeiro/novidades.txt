@@ -1,3 +1,6 @@
+# Versão 2026.11.07.0
+Corrige a sincronização: adicionar uma opção às listas (banco, categoria etc.) era recusada pelo servidor e travava as demais alterações na fila de pendentes.
+
 # Versão 2026.10.31.0
 Primeira versão do Controle Financeiro para Windows.
 
