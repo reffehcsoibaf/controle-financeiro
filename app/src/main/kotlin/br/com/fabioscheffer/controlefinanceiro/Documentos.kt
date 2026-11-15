@@ -3,6 +3,8 @@ package br.com.fabioscheffer.controlefinanceiro
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Base64
@@ -13,7 +15,8 @@ data class DocumentoPronto(val tipo: String, val conteudo: String, val mime: Str
 
 object Documentos {
     const val LIMITE_BYTES = 15 * 1024 * 1024
-    private const val LADO_MAXIMO = 2200
+    /** Cerca de 12 megapixels: o que uma câmera comum faz, e letra miúda de nota ainda se lê. */
+    const val PIXELS_MAXIMOS = 12_000_000L
     private const val IMAGEM_GRANDE = 1_500_000
 
     const val FORMATOS = "Use imagem, PDF, TXT ou XML."
@@ -70,24 +73,60 @@ object Documentos {
     }
 
     /**
+     * Quanto reduzir uma imagem de [largura] x [altura] para ter no máximo [maximo] pixels no total:
+     * 1.0 se já cabe. O limite é pela área, e não por lado, para uma nota fiscal comprida (muito
+     * mais alta que larga) não perder a letra.
+     */
+    fun escalaParaLimite(largura: Int, altura: Int, maximo: Long = PIXELS_MAXIMOS): Double {
+        val area = largura.toLong() * altura.toLong()
+        if (area <= maximo || area <= 0) return 1.0
+        return Math.sqrt(maximo.toDouble() / area.toDouble())
+    }
+
+    /**
      * Foto de celular tem vários megabytes: reduz para um tamanho que a IA lê bem e que sobe rápido
-     * na rede móvel. Imagem pequena segue como está.
+     * na rede móvel. Imagem pequena segue como está. Ao refazer a imagem, a orientação que a câmera
+     * gravou é aplicada, senão uma foto tirada em pé chegaria deitada.
      */
     private fun reduzirImagem(bytes: ByteArray, mime: String): Pair<ByteArray, String> {
         if (bytes.size <= IMAGEM_GRANDE) return bytes to mime
         val medidas = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, medidas)
-        val maior = maxOf(medidas.outWidth, medidas.outHeight)
-        if (maior <= 0) return bytes to mime
+        if (medidas.outWidth <= 0 || medidas.outHeight <= 0) return bytes to mime
+        val escala = escalaParaLimite(medidas.outWidth, medidas.outHeight)
+        // Lê já em tamanho menor (potência de 2) para não gastar memória com a foto inteira.
         var amostra = 1
-        while (maior / (amostra * 2) >= LADO_MAXIMO) amostra *= 2
+        while (escala * amostra <= 0.5) amostra *= 2
         val opcoes = BitmapFactory.Options().apply { inSampleSize = amostra }
-        val figura = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opcoes) ?: return bytes to mime
+        var figura = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opcoes) ?: return bytes to mime
+        val restante = escala * amostra
+        val graus = grausDaOrientacao(bytes)
+        if (restante < 0.99 || graus != 0f) {
+            val matriz = Matrix().apply {
+                if (restante < 0.99) postScale(restante.toFloat(), restante.toFloat())
+                if (graus != 0f) postRotate(graus)
+            }
+            val nova = Bitmap.createBitmap(figura, 0, 0, figura.width, figura.height, matriz, true)
+            if (nova !== figura) figura.recycle()
+            figura = nova
+        }
         val saida = ByteArrayOutputStream()
         figura.compress(Bitmap.CompressFormat.JPEG, 85, saida)
         figura.recycle()
         return saida.toByteArray() to "image/jpeg"
     }
+
+    private fun grausDaOrientacao(bytes: ByteArray): Float = try {
+        when (ExifInterface(bytes.inputStream()).getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+    } catch (e: Exception) {
+        0f
+    }
+
 
     private fun nomeDe(resolver: ContentResolver, uri: Uri): String =
         try {

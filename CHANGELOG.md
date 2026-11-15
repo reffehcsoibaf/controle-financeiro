@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## 0.12.2
+- Foto de nota fiscal comprida: o limite de redução passou a ser pela área da imagem (cerca de 12
+  megapixels, o que uma câmera comum faz) e não por lado. Antes, uma nota alta e estreita era
+  reduzida demais e a letra se perdia.
+- Ao reduzir uma foto, a orientação gravada pela câmera é aplicada: uma foto tirada em pé não chega
+  mais deitada à IA.
+
 ## 0.12.1
 - Novo botão "Fotografar documento" no Novo lançamento: abre a câmera do celular, sem pedir
   permissão de câmera, e lê a foto tirada. A foto fica só no armazenamento temporário do app e é

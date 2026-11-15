@@ -161,6 +161,19 @@ class LeituraIATest {
         )
     }
 
+    @Test fun imagemQueJaCabeNaoEReduzida() {
+        assertEquals(1.0, Documentos.escalaParaLimite(4000, 3000), 0.0)
+    }
+
+    @Test fun limiteEPorAreaEntaoNotaComprimidaNaoPerdeALetra() {
+        // 50 megapixels cai para 12; a razão dos lados se mantém.
+        val e = Documentos.escalaParaLimite(5000, 10000)
+        assertEquals(12_000_000.0, 5000 * e * 10000 * e, 1000.0)
+        // Uma nota 1:6 em 2000 x 12000 (24 MP) fica com altura 8.485, e não com os 2.200 de antes.
+        val nota = Documentos.escalaParaLimite(2000, 12000)
+        assertTrue(12000 * nota > 8000)
+    }
+
     @Test fun tipoDoArquivo() {
         assertEquals("imagem", Documentos.tipoDe("foto.JPG", null))
         assertEquals("imagem", Documentos.tipoDe("x", "image/png"))
