@@ -1,5 +1,20 @@
 # Histórico de versões
 
+## 0.13.0
+- Saldos e limites (Mais, Saldos e limites): cada banco ou cartão com o saldo ou o limite, calculados
+  com as mesmas regras do Windows. Conta corrente: o saldo conta só o que está pago. Cartão de
+  crédito: o limite conta também o pendente. Pagamento dividido conta só a parte de cada conta.
+  Quem passou do saldo ou do limite diz "Atenção" no texto, não só na cor.
+- Em cada conta: Ver lançamentos desta conta (filtra a lista por ela), Configurar (tipo e saldo
+  inicial ou limite total) e Remover configuração (com confirmação; o nome continua nas listas).
+- Pagamento de fatura: ao escolher a categoria Cartão de crédito num lançamento novo, aparece
+  "Cartão a quitar", com os cartões configurados e a opção Não vincular. Com um só cartão, ele já
+  vem escolhido. Ao salvar, o app cria também uma entrada no cartão, para recuperar o limite, e
+  liga os dois lançamentos. Não pode ser parcelado.
+- Nos Detalhes, "Ir ao lançamento vinculado" abre o outro lançamento do par.
+- O app agora segue as permissões do painel: se a leitura por IA estiver desligada para a conta, os
+  botões de ler documento somem, e o app avisa quando isso muda.
+
 ## 0.12.3
 - Nota fiscal comprida, que não cabe numa foto: depois da primeira leitura, os botões "Fotografar
   mais itens" e "Escolher mais itens de um arquivo" leem outra parte da nota e SOMAM os itens aos que

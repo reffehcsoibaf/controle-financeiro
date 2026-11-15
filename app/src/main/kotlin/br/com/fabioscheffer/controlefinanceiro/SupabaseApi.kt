@@ -44,17 +44,20 @@ class SupabaseApi(
         )
 
     /** Como no site e no Windows: só entra quem está habilitado no módulo. */
-    fun conferirAcesso(sessao: Sessao) {
+    fun conferirAcesso(sessao: Sessao): Permissoes {
         val linhas = JSONArray(
             pedir(
                 "/rest/v1/profiles_modulos?" + consulta(
-                    "select" to "habilitado", "user_id" to "eq." + sessao.userId,
+                    "select" to "habilitado,ai_enabled,documents_enabled", "user_id" to "eq." + sessao.userId,
                     "modulo" to "eq." + Config.MODULO,
                 ),
                 token = sessao.accessToken,
             )
         )
         if (linhas.length() == 0 || linhas.getJSONObject(0).opt("habilitado") != true) throw AcessoNegado()
+        val o = linhas.getJSONObject(0)
+        // Só "false" desliga: sem valor, a função está liberada (como no programa Windows).
+        return Permissoes(ia = o.opt("ai_enabled") != false, documentos = o.opt("documents_enabled") != false)
     }
 
     /** Todos os lançamentos da pessoa, cada um com seus itens e pagamentos. */
@@ -259,6 +262,57 @@ class SupabaseApi(
         return JSONObject(
             pedir("/rest/v1/rpc/financeiro_salvar_lancamento", "POST", corpo, sessao.accessToken)
         )
+    }
+
+    /** O tipo, o saldo inicial e o limite de cada banco ou cartão configurado. */
+    fun baixarContas(sessao: Sessao): List<ContaConfig> =
+        tabela("financeiro_contas_config", sessao).mapNotNull {
+            if (it.isNull("nome_banco") || it.isNull("tipo")) null
+            else ContaConfig(
+                it.getString("nome_banco"), it.getString("tipo"),
+                if (it.isNull("saldo_inicial")) null else it.optDouble("saldo_inicial"),
+                if (it.isNull("limite_total")) null else it.optDouble("limite_total"),
+            )
+        }
+
+    /** Cria ou troca a configuração de um banco (uma por nome). */
+    fun salvarConta(sessao: Sessao, c: ContaConfig) {
+        val corpo = JSONObject().put("user_id", sessao.userId).put("nome_banco", c.nome).put("tipo", c.tipo)
+            .put("saldo_inicial", c.saldoInicial ?: JSONObject.NULL)
+            .put("limite_total", c.limiteTotal ?: JSONObject.NULL)
+        pedir(
+            "/rest/v1/financeiro_contas_config?" + consulta("on_conflict" to "user_id,nome_banco"),
+            "POST", corpo, sessao.accessToken,
+            mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"),
+        )
+    }
+
+    /** Remove só a configuração; o nome continua nas listas. */
+    fun removerConta(sessao: Sessao, nome: String) {
+        pedir(
+            "/rest/v1/financeiro_contas_config?" + consulta("nome_banco" to "eq.$nome", "user_id" to "eq." + sessao.userId),
+            "DELETE", null, sessao.accessToken,
+        )
+    }
+
+    /**
+     * Liga dois lançamentos um ao outro (pagamento de fatura e a entrada no cartão). Devolve o novo
+     * updated_at de cada um, na ordem em que vieram, pois ligar muda a versão no servidor.
+     */
+    fun vincular(sessao: Sessao, a: Long, b: Long): Pair<String?, String?> {
+        fun ligar(origem: Long, destino: Long): String? {
+            val linhas = JSONArray(
+                pedir(
+                    "/rest/v1/financeiro_lancamentos?" + consulta(
+                        "id" to "eq.$origem", "user_id" to "eq." + sessao.userId, "select" to "updated_at",
+                    ),
+                    "PATCH", JSONObject().put("lancamento_vinculado_id", destino), sessao.accessToken,
+                    mapOf("Prefer" to "return=representation"),
+                )
+            )
+            return if (linhas.length() == 0) null else linhas.getJSONObject(0).getString("updated_at")
+        }
+        return ligar(a, b) to ligar(b, a)
     }
 
     /** Lê a tabela inteira, de TAMANHO_PAGINA em TAMANHO_PAGINA, pois o servidor limita cada resposta. */

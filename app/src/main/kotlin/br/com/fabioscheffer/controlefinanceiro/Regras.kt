@@ -186,6 +186,21 @@ object Regras {
         }
     }
 
+    /**
+     * O segundo lançamento do pagamento de fatura: uma entrada no cartão, para recuperar o limite
+     * (lancamento_espelho_fatura do Windows).
+     */
+    fun espelhoDeFatura(d: DadosNovo, cartao: String): DadosNovo {
+        var descricao = "Pagamento de fatura"
+        if (!d.banco.isNullOrBlank()) descricao += " — via " + d.banco
+        if (!d.descricao.isNullOrBlank()) descricao += " (${d.descricao})"
+        return DadosNovo(
+            dataOrigem = d.dataOrigem, dataVencimento = d.dataVencimento, valor = abs(d.valor),
+            banco = cartao, forma = d.forma, estabelecimento = null, categoria = d.categoria,
+            credor = d.credor, devedor = d.devedor, descricao = descricao, pago = d.pago,
+        )
+    }
+
     /** Positivo é entrada, negativo é saída (valor_com_tipo do Windows). */
     fun valorComTipo(valor: Double, entrada: Boolean): Double = if (entrada) abs(valor) else -abs(valor)
 

@@ -46,6 +46,10 @@ data class Estado(
     /** Mensagem para a região ativa: o leitor de tela fala quando ela muda. */
     val aviso: String = "",
     val ocupado: Boolean = false,
+    /** O que o painel liberou para esta conta: leitura por IA e documentos. */
+    val permissoes: Permissoes = Permissoes(),
+    /** Tipo, saldo inicial e limite de cada banco ou cartão configurado. */
+    val contas: List<ContaConfig> = emptyList(),
 ) {
     /** Diz quando a lista não mostra tudo; null se nada está escondido. */
     val avisoDeFiltro: String?
@@ -169,6 +173,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun lerComIA(acrescentar: Boolean = false, preparar: () -> DocumentoPronto) {
+        if (!_estado.value.permissoes.ia) return avisar("A leitura por IA está desligada para a sua conta.")
         if (_estado.value.ocupado) return avisar("Aguarde terminar o que está em andamento e tente de novo.")
         trabalhar("Lendo o documento com IA. Isso pode levar alguns segundos.") {
             val documento = preparar()
@@ -213,6 +218,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
         }
+    }
+
+    // ---- saldos e limites ----
+
+    /** Configura (ou troca a configuração de) um banco ou cartão. */
+    fun salvarConta(conta: ContaConfig) {
+        trabalhar("Salvando a configuração.") {
+            api.salvarConta(tokenValido(), conta)
+            _estado.update { e ->
+                e.copy(
+                    contas = e.contas.filter { it.nome != conta.nome } + conta,
+                    aviso = "${conta.nome} configurada.",
+                )
+            }
+        }
+    }
+
+    /** Remove só a configuração: o nome continua nas listas, só deixa de ter saldo ou limite calculado. */
+    fun removerConta(nome: String) {
+        trabalhar("Removendo a configuração.") {
+            api.removerConta(tokenValido(), nome)
+            _estado.update { e -> e.copy(contas = e.contas.filter { it.nome != nome }, aviso = "Configuração removida.") }
+        }
+    }
+
+    /** Mostra na lista só os lançamentos desta conta: tudo volta ao início, menos a ordem (como no Windows). */
+    fun verLancamentosDaConta(nome: String) {
+        preferencias.salvarTipo("")
+        preferencias.salvarSituacao("")
+        mudarFiltros { Filtros(ordem = it.ordem, banco = nome) }
     }
 
     fun abrirEdicao(id: Long) {
@@ -308,10 +343,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun criarLancamento(entrada: EntradaNovo) {
         _estado.value.editandoId?.let { return salvarEdicao(it, entrada) }
-        val todos = when (val r = NovoLancamento.validar(entrada)) {
+        val pronto = when (val r = NovoLancamento.validar(entrada)) {
             is ResultadoNovo.Erro -> return avisar(r.mensagem)
-            is ResultadoNovo.Ok -> r.todos
+            is ResultadoNovo.Ok -> r
         }
+        val todos = pronto.todos
+        val espelho = pronto.espelho
         val uuid = _estado.value.uuidNovo.ifEmpty { UUID.randomUUID().toString() }
         trabalhar(if (todos.size > 1) "Salvando as ${todos.size} parcelas." else "Salvando o lançamento.") {
             val sessao = tokenValido()
@@ -330,6 +367,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     updatedAt = atualizadoEm,
                 )
             }
+            // Pagamento de fatura: cria a entrada no cartão e liga os dois, como no programa Windows.
+            // O espelho tem o seu próprio código de envio, então tentar de novo não o duplica.
+            if (espelho != null) {
+                val codigo = UUID.nameUUIDFromBytes("$uuid#fatura".toByteArray()).toString()
+                val (idEspelho, versaoEspelho) = api.criarLancamento(sessao, espelho, codigo)
+                val principal = criados[0]
+                val (versaoPrincipal, versaoLigada) = api.vincular(sessao, principal.id, idEspelho)
+                criados[0] = principal.copy(vinculadoId = idEspelho, updatedAt = versaoPrincipal ?: principal.updatedAt)
+                criados += Lancamento(
+                    id = idEspelho, dataOrigem = espelho.dataOrigem, dataVencimento = espelho.dataVencimento,
+                    valor = espelho.valor, banco = espelho.banco, estabelecimento = null, forma = espelho.forma,
+                    parcela = null, descricao = espelho.descricao, categoria = espelho.categoria,
+                    pago = espelho.pago, credor = espelho.credor, devedor = espelho.devedor,
+                    updatedAt = versaoLigada ?: versaoEspelho, vinculadoId = principal.id,
+                )
+            }
             // O que a pessoa mudou do que a IA sugeriu vira exemplo para as próximas leituras. Se falhar,
             // o lançamento já está salvo e isto não vale um erro.
             _estado.value.extracaoIA?.let { ia ->
@@ -346,7 +399,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val lista = e.todos.filter { it.id !in ids } + criados
                 val depois = recalcular(e.copy(todos = lista, novoAberto = false, uuidNovo = "", leitura = null, extracaoIA = null))
                 val aparecem = depois.lancamentos.count { it.id in ids }
-                val resumo = if (criados.size == 1) {
+                val resumo = if (espelho != null) {
+                    "Lançamento criado: ${Formatacao.fala(criados[0], e.config.campos)}. " +
+                        "Entrada criada no cartão ${espelho.banco} para recuperar o limite."
+                } else if (criados.size == 1) {
                     "Lançamento criado: ${Formatacao.fala(criados[0], e.config.campos)}."
                 } else {
                     "${criados.size} parcelas criadas, total ${Formatacao.reaisFalado(Regras.somar(criados.map { it.valor }))}."
@@ -513,12 +569,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- dados ----
 
     private fun baixar(sessao: Sessao) {
-        api.conferirAcesso(sessao)
+        val permissoes = api.conferirAcesso(sessao)
+        val contas = api.baixarContas(sessao)
         val todos = api.baixarLancamentos(sessao)
         val opcoes = api.baixarOpcoes(sessao)
         _estado.update {
-            recalcular(it.copy(todos = todos, opcoes = opcoes)).let { e -> e.copy(aviso = mensagemDaLista(e)) }
+            recalcular(it.copy(todos = todos, opcoes = opcoes, permissoes = permissoes, contas = contas))
+                .let { e -> e.copy(aviso = mensagemDaLista(e) + (if (it.todos.isEmpty()) "" else avisoDePermissoes(it.permissoes, permissoes))) }
         }
+    }
+
+    /** Diz quando o painel ligou ou desligou uma função da conta desde a última leitura. */
+    private fun avisoDePermissoes(antes: Permissoes, agora: Permissoes): String {
+        if (antes == agora) return ""
+        val frases = mutableListOf<String>()
+        if (antes.ia != agora.ia) frases += if (agora.ia) "A leitura por IA foi liberada." else "A leitura por IA foi desligada para a sua conta."
+        if (antes.documentos != agora.documentos) frases += if (agora.documentos) "Os documentos foram liberados." else "O envio de documentos foi desligado para a sua conta."
+        return " " + frases.joinToString(" ")
     }
 
     private fun tokenValido(): Sessao {

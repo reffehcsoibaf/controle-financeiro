@@ -127,6 +127,10 @@ class Acoes(
     val lerDocumento: (Uri) -> Unit = {},
     /** Outra foto da mesma nota: os itens lidos são somados aos que já estão no formulário. */
     val acrescentarDocumento: (Uri) -> Unit = {},
+    // Saldos e limites
+    val salvarConta: (ContaConfig) -> Unit = {},
+    val removerConta: (String) -> Unit = {},
+    val verLancamentosDaConta: (String) -> Unit = {},
     val lerTexto: (String) -> Unit = {},
     /** O formulário já usou o que a IA leu. */
     val leituraAplicada: () -> Unit = {},
@@ -151,9 +155,21 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var filtrando by rememberSaveable { mutableStateOf(false) }
     var detalheId by rememberSaveable { mutableStateOf<Long?>(null) }
     var configurando by rememberSaveable { mutableStateOf(false) }
+    var contasAberto by rememberSaveable { mutableStateOf(false) }
     var excluindoId by rememberSaveable { mutableStateOf<Long?>(null) }
     if (estado.novoAberto) {
         TelaNovo(estado, acoes)
+        return
+    }
+    if (contasAberto) {
+        TelaContas(
+            estado, acoes, aoVoltar = { contasAberto = false },
+            aoVerLancamentos = { nome ->
+                acoes.verLancamentosDaConta(nome)
+                contasAberto = false
+                aba = Aba.LANCAMENTOS
+            },
+        )
         return
     }
     if (configurando) {
@@ -173,7 +189,8 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
         return
     }
     if (detalhe != null) {
-        TelaDetalhe(estado, detalhe, acoes, aoVoltar = { detalheId = null }, aoExcluir = { excluindoId = detalhe.id })
+        TelaDetalhe(estado, detalhe, acoes, aoVoltar = { detalheId = null }, aoExcluir = { excluindoId = detalhe.id },
+            aoIrPara = { detalheId = it })
         return
     }
     Scaffold(
@@ -198,7 +215,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
             Aba.LANCAMENTOS -> TelaLancamentos(
                 estado, acoes.atualizar, { filtrando = true }, { detalheId = it }, acoes.abrirNovo, modificador,
             )
-            Aba.MAIS -> TelaMais(estado, versao, acoes.sair, { configurando = true }, modificador)
+            Aba.MAIS -> TelaMais(estado, versao, acoes.sair, { configurando = true }, { contasAberto = true }, modificador)
         }
     }
 }
@@ -398,6 +415,7 @@ private fun TelaDetalhe(
     acoes: Acoes,
     aoVoltar: () -> Unit,
     aoExcluir: () -> Unit = {},
+    aoIrPara: (Long) -> Unit = {},
 ) {
     BackHandler(onBack = aoVoltar)
     Column(
@@ -423,6 +441,8 @@ private fun TelaDetalhe(
             }
             item { BotaoSecundario("Editar lançamento", { acoes.abrirEdicao(l.id) }, habilitado = !estado.ocupado) }
             item { BotaoSecundario("Excluir lançamento", aoExcluir, habilitado = !estado.ocupado) }
+            val par = l.vinculadoId?.takeIf { v -> estado.todos.any { it.id == v } }
+            if (par != null) item { BotaoSecundario("Ir ao lançamento vinculado", { aoIrPara(par) }) }
             items(Formatacao.camposDoDetalhe(l, estado.config.campos)) { (rotulo, valor) -> Text("$rotulo: $valor") }
             if (l.itens.isNotEmpty()) {
                 item { Titulo("Itens") }
@@ -498,6 +518,7 @@ private fun TelaMais(
     versao: String,
     aoSair: () -> Unit,
     aoConfigurar: () -> Unit,
+    aoContas: () -> Unit,
     modificador: Modifier,
 ) {
     Column(modificador) {
@@ -509,6 +530,7 @@ private fun TelaMais(
         ) {
             item { Titulo("Mais", grande = true) }
             item { Titulo("Preferências") }
+            item { Botao("Saldos e limites", aoContas) }
             item { Botao("Configurações", aoConfigurar) }
             item { Titulo("Conta") }
             item { Text("Conectado como ${estado.email}") }
@@ -541,7 +563,7 @@ private fun lerArquivoPequeno(contexto: Context, uri: Uri): String? = try {
 private fun dataDigitada(iso: String): String = if (iso.isEmpty()) "" else Formatacao.dataCurta(iso)
 
 @Composable
-private fun Titulo(texto: String, grande: Boolean = false) {
+internal fun Titulo(texto: String, grande: Boolean = false) {
     Text(
         texto,
         style = if (grande) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
@@ -551,7 +573,7 @@ private fun Titulo(texto: String, grande: Boolean = false) {
 
 /** Região ativa: o TalkBack fala o texto novo sempre que ele muda. */
 @Composable
-private fun Aviso(texto: String) {
+internal fun Aviso(texto: String) {
     Text(
         texto,
         modifier = Modifier
@@ -562,7 +584,7 @@ private fun Aviso(texto: String) {
 }
 
 @Composable
-private fun Botao(
+internal fun Botao(
     texto: String,
     aoClicar: () -> Unit,
     habilitado: Boolean = true,
@@ -576,7 +598,7 @@ private fun Botao(
 }
 
 @Composable
-private fun BotaoSecundario(
+internal fun BotaoSecundario(
     texto: String,
     aoClicar: () -> Unit,
     habilitado: Boolean = true,
@@ -591,7 +613,7 @@ private fun BotaoSecundario(
 
 /** Opções em lista, na própria tela: cada uma é lida como "botão de opção, selecionado". */
 @Composable
-private fun GrupoOpcoes(
+internal fun GrupoOpcoes(
     titulo: String,
     opcoes: List<Pair<String, String>>,
     selecionada: String,
@@ -619,7 +641,7 @@ private fun GrupoOpcoes(
 }
 
 @Composable
-private fun Campo(
+internal fun Campo(
     rotulo: String,
     valor: String,
     aoMudar: (String) -> Unit,
@@ -771,10 +793,19 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
     var centavosNaPrimeira by rememberSaveable { mutableStateOf(false) }
     // O que acontece só aqui (item adicionado, pagamento removido...) é falado por este aviso.
     var avisoLocal by rememberSaveable { mutableStateOf("") }
+    // Pagamento de fatura: a categoria Cartão de crédito oferece o cartão que recebe a entrada. Com um
+    // só cartão configurado, ele já vem escolhido; "Não vincular" cria só este lançamento.
+    var cartaoAQuitar by rememberSaveable { mutableStateOf("") }
+    val ehFatura = !emEdicao && itens.isEmpty() && Regras.categoriaEFatura(categoria)
+    val cartoes = if (ehFatura) Contas.cartoesParaQuitar(estado.contas, if (dividir) "" else banco) else emptyList()
+    LaunchedEffect(cartoes) {
+        if (cartaoAQuitar !in cartoes) cartaoAQuitar = if (cartoes.size == 1) cartoes[0] else ""
+    }
 
     val atual = EntradaNovo(
         entrada, valor, origem, vencimento, banco, forma, estabelecimento, categoria,
         credor, devedor, descricao, pago, itens, dividir, pagamentos, parcelas, centavosNaPrimeira,
+        cartaoAQuitar = if (cartoes.isNotEmpty()) cartaoAQuitar else "",
     )
     val salvar = {
         avisoLocal = ""
@@ -952,7 +983,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item { Titulo(if (emEdicao) "Editar lançamento" else "Novo lançamento", grande = true) }
-            if (!emEdicao) {
+            if (!emEdicao && estado.permissoes.ia) {
                 item { Titulo("Ler documento com IA") }
                 item {
                     BotaoSecundario(
@@ -1058,6 +1089,19 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
             }
             if (itens.isEmpty()) {
                 item { ComboCampo("Categoria", categoria, estado.opcoes["categoria"].orEmpty()) { categoria = it } }
+                if (ehFatura) {
+                    item {
+                        if (cartoes.isEmpty()) {
+                            Text("Para quitar um cartão, configure o cartão em Mais, Saldos e limites.")
+                        } else {
+                            GrupoOpcoes(
+                                "Cartão a quitar",
+                                listOf("" to "Não vincular") + cartoes.map { it to it },
+                                cartaoAQuitar,
+                            ) { cartaoAQuitar = it }
+                        }
+                    }
+                }
             }
             item { ComboCampo("Credor", credor, estado.opcoes["credor"].orEmpty()) { credor = it } }
             item { ComboCampo("Devedor", devedor, estado.opcoes["devedor"].orEmpty()) { devedor = it } }

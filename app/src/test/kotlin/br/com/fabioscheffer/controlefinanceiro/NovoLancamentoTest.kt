@@ -81,12 +81,41 @@ class NovoLancamentoTest {
         assertTrue(erro(entrada(valor = "doze")).startsWith("Informe o valor"))
     }
 
-    @Test fun pagamentoDeFaturaEBloqueadoPoisPrecisaDoCartaoAQuitar() {
+    @Test fun faturaSemCartaoAQuitarGravaUmLancamentoSo() {
         for (cat in listOf("Cartão de crédito", "cartão de crédito", "  CARTÃO DE CRÉDITO ")) {
-            assertTrue(erro(entrada(categoria = cat)).contains("cartão a quitar"))
+            val r = NovoLancamento.validar(entrada(categoria = cat)) as ResultadoNovo.Ok
+            assertNull(r.espelho)
         }
         // Outra categoria que só contém a palavra cartão não é fatura.
         assertEquals("Cartão de débito", ok(entrada(categoria = "Cartão de débito")).categoria)
+    }
+
+    @Test fun faturaComCartaoAQuitarCriaAEntradaNoCartao() {
+        val e = entrada(valor = "300,00", categoria = "Cartão de crédito", vencimento = "10112026").copy(
+            banco = "Nubank", cartaoAQuitar = "Visa", descricao = "Fatura de outubro", pago = true, credor = "Banco X",
+        )
+        val r = NovoLancamento.validar(e) as ResultadoNovo.Ok
+        assertEquals(-300.0, r.dados.valor, 0.0)
+        val esp = r.espelho!!
+        assertEquals(300.0, esp.valor, 0.0)
+        assertEquals("Visa", esp.banco)
+        assertEquals("Pagamento de fatura — via Nubank (Fatura de outubro)", esp.descricao)
+        assertEquals("Cartão de crédito", esp.categoria)
+        assertEquals("Banco X", esp.credor)
+        assertTrue(esp.pago)
+        assertEquals("2026-11-10", esp.dataVencimento)
+        assertNull(esp.estabelecimento)
+        assertNull(esp.parcela)
+    }
+
+    @Test fun cartaoAQuitarSoValeParaCategoriaDeFatura() {
+        val e = entrada(categoria = "Casa").copy(cartaoAQuitar = "Visa")
+        assertNull((NovoLancamento.validar(e) as ResultadoNovo.Ok).espelho)
+    }
+
+    @Test fun faturaNaoPodeSerParcelada() {
+        val e = entrada(categoria = "Cartão de crédito").copy(cartaoAQuitar = "Visa", parcelas = "3")
+        assertTrue(erro(e).contains("não pode ser parcelado"))
     }
 
     @Test fun aOrdemDosErrosEAdoWindowsDatasDepoisValor() {

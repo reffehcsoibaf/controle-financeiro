@@ -18,3 +18,6 @@ object Config {
     /** O endereço do site que lê documentos com IA (o mesmo do programa Windows). */
     const val URL_LEITURA_IA = "https://controle-financeiro.fabioscheffer.workers.dev/api/ler-documento"
 }
+
+/** O que o painel de administração liberou para esta conta (leitura por IA e documentos). */
+data class Permissoes(val ia: Boolean = true, val documentos: Boolean = true)

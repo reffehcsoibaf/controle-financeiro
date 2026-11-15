@@ -37,6 +37,8 @@ data class EntradaNovo(
     /** Número de parcelas; vazio é um lançamento só. */
     val parcelas: String = "",
     val diferencaNaPrimeira: Boolean = false,
+    /** Só no pagamento de fatura (categoria Cartão de crédito): o cartão que recebe a entrada; vazio não vincula. */
+    val cartaoAQuitar: String = "",
 )
 
 /** O lançamento pronto para gravar: datas em ISO, valor com sinal, textos vazios viram null. */
@@ -61,7 +63,12 @@ data class DadosNovo(
 
 sealed interface ResultadoNovo {
     /** [todos] tem uma entrada por parcela, ou só [dados] num lançamento único. */
-    data class Ok(val dados: DadosNovo, val todos: List<DadosNovo> = listOf(dados)) : ResultadoNovo
+    data class Ok(
+        val dados: DadosNovo,
+        val todos: List<DadosNovo> = listOf(dados),
+        /** A entrada no cartão quitado, criada junto e ligada a [dados]; null se não é pagamento de fatura. */
+        val espelho: DadosNovo? = null,
+    ) : ResultadoNovo
     data class Erro(val mensagem: String) : ResultadoNovo
 }
 
@@ -147,13 +154,6 @@ object NovoLancamento {
         val erroPagamentos = if (e.dividir) erroDePagamentos(e.pagamentos, valor) else ""
         if (erroPagamentos.isNotEmpty()) return ResultadoNovo.Erro(erroPagamentos)
         fun texto(t: String) = t.trim().ifEmpty { null }
-        if (!comItens && Regras.categoriaEFatura(e.categoria)) {
-            return ResultadoNovo.Erro(
-                "A categoria Cartão de crédito é pagamento de fatura e exige escolher o cartão a " +
-                    "quitar, o que ainda não existe no celular. Escolha outra categoria, ou crie " +
-                    "este lançamento no programa do Windows."
-            )
-        }
         val itens = e.itens.map { Item(Regras.lerValor(it.valor), texto(it.categoria), texto(it.descricao), texto(it.dataOriginal)) }
         val pagamentos = if (e.dividir) {
             e.pagamentos.map { Pagamento(it.banco.trim(), texto(it.forma), Regras.lerValor(it.valor)) }
@@ -174,7 +174,14 @@ object NovoLancamento {
             itens = itens,
             pagamentos = pagamentos,
         )
-        if (e.parcelas.isBlank()) return ResultadoNovo.Ok(unico)
+        val cartao = e.cartaoAQuitar.trim()
+        val fatura = !comItens && cartao.isNotEmpty() && Regras.categoriaEFatura(e.categoria)
+        if (fatura && e.parcelas.isNotBlank()) {
+            return ResultadoNovo.Erro("Pagamento de fatura não pode ser parcelado. Escolha Não vincular em Cartão a quitar, ou tire as parcelas.")
+        }
+        if (e.parcelas.isBlank()) {
+            return ResultadoNovo.Ok(unico, espelho = if (fatura) Regras.espelhoDeFatura(unico, cartao) else null)
+        }
         val (parcelas, erro) = previa(e, hoje)
         if (parcelas == null) return ResultadoNovo.Erro(erro)
         return ResultadoNovo.Ok(unico, dividirEmParcelas(unico, parcelas))
