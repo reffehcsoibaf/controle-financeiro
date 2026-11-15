@@ -178,6 +178,8 @@ class TelaTest {
         abrirConfiguracoes()
         regra.onNodeWithText("Voltar").performClick()
         regra.waitForIdle()
+        regra.onNode(androidx.compose.ui.test.hasScrollAction())
+            .performScrollToNode(androidx.compose.ui.test.hasText("Sair da conta"))
         regra.onNodeWithText("Sair da conta").assertExists()
     }
 

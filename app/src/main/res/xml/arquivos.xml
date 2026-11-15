@@ -2,4 +2,6 @@
 <paths>
     <!-- Fotos de documentos tiradas pelo app: ficam só até a próxima foto. -->
     <cache-path name="fotos" path="fotos/" />
+    <!-- Documentos baixados para abrir em outro app: limpos quando o app é aberto. -->
+    <cache-path name="documentos" path="documentos/" />
 </paths>

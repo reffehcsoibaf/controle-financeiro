@@ -17,7 +17,10 @@ import java.util.UUID
 enum class Etapa { INICIO, CONECTADO }
 
 /** O que a IA leu de um documento, esperando o formulário aplicar. O [id] muda a cada leitura. */
-data class Leitura(val id: Int, val dados: DadosIA, val acrescentar: Boolean = false)
+data class Leitura(val id: Int, val dados: DadosIA, val acrescentar: Boolean = false, val aviso: String = "")
+
+/** Um documento baixado, esperando a tela abri-lo em outro app. O [id] muda a cada pedido. */
+data class ArquivoParaAbrir(val id: Int, val caminho: String, val mime: String)
 
 data class Estado(
     val etapa: Etapa = Etapa.INICIO,
@@ -50,6 +53,11 @@ data class Estado(
     val permissoes: Permissoes = Permissoes(),
     /** Tipo, saldo inicial e limite de cada banco ou cartão configurado. */
     val contas: List<ContaConfig> = emptyList(),
+    /** Os arquivos guardados na nuvem; vazio se a conta não tem documentos liberados. */
+    val documentos: List<DocumentoGuardado> = emptyList(),
+    /** Arquivos já guardados que o lançamento em andamento vai ligar a si ao ser salvo. */
+    val documentosLidos: List<DocumentoGuardado> = emptyList(),
+    val paraAbrir: ArquivoParaAbrir? = null,
 ) {
     /** Diz quando a lista não mostra tudo; null se nada está escondido. */
     val avisoDeFiltro: String?
@@ -137,7 +145,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _estado.update {
             it.copy(
                 novoAberto = true, uuidNovo = UUID.randomUUID().toString(), aviso = "",
-                leitura = null, extracaoIA = null,
+                leitura = null, extracaoIA = null, documentosLidos = emptyList(),
             )
         }
     }
@@ -172,7 +180,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun lerComIA(acrescentar: Boolean = false, preparar: () -> DocumentoPronto) {
+    private fun lerComIA(acrescentar: Boolean = false, guardar: Boolean = true, preparar: () -> DocumentoPronto) {
         if (!_estado.value.permissoes.ia) return avisar("A leitura por IA está desligada para a sua conta.")
         if (_estado.value.ocupado) return avisar("Aguarde terminar o que está em andamento e tente de novo.")
         trabalhar("Lendo o documento com IA. Isso pode levar alguns segundos.") {
@@ -185,14 +193,124 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 emptyList()
             }
             val dados = api.lerDocumento(sessao, documento, correcoes)
+            // Como no Windows, o arquivo lido também é guardado e ligado ao lançamento, a menos que a
+            // pessoa diga o contrário. Se guardar falhar, a leitura vale do mesmo jeito.
+            var guardado: DocumentoGuardado? = null
+            var falhou = false
+            if (guardar && _estado.value.permissoes.documentos && documento.arquivo != null) {
+                try {
+                    guardado = api.guardarDocumento(sessao, documento.nome, documento.mime, documento.arquivo)
+                } catch (e: SessaoExpirada) {
+                    throw e
+                } catch (e: Exception) {
+                    falhou = true
+                }
+            }
             _estado.update {
                 it.copy(
-                    leitura = Leitura(++sequenciaDeLeitura, dados, acrescentar),
+                    leitura = Leitura(
+                        ++sequenciaDeLeitura, dados, acrescentar,
+                        when {
+                            guardado != null -> "O arquivo foi guardado e será vinculado a este lançamento."
+                            falhou -> "Não foi possível guardar o arquivo; só a leitura foi feita."
+                            !guardar -> "O documento guardado será vinculado a este lançamento."
+                            else -> ""
+                        },
+                    ),
                     // Ao acrescentar, vale o que a primeira leitura sugeriu: é com ela que se aprende.
                     extracaoIA = if (acrescentar) it.extracaoIA ?: dados else dados,
+                    documentos = if (guardado != null) it.documentos + guardado else it.documentos,
+                    documentosLidos = if (guardado != null) it.documentosLidos + guardado else it.documentosLidos,
                     aviso = "Documento lido.",
                 )
             }
+        }
+    }
+
+    /** O arquivo continua guardado, só não fica ligado a este lançamento. */
+    fun naoVincularDocumentos() {
+        _estado.update { it.copy(documentosLidos = emptyList(), aviso = "Este lançamento será salvo sem vínculo com o documento.") }
+    }
+
+    // ---- documentos guardados ----
+
+    /** Guarda na nuvem um arquivo qualquer do celular. */
+    fun guardarArquivo(uri: Uri) {
+        if (!_estado.value.permissoes.documentos) return avisar("O envio de documentos está desligado para a sua conta.")
+        trabalhar("Guardando o arquivo.") {
+            val lido = Documentos.lerParaGuardar(getApplication<Application>().contentResolver, uri)
+            val guardado = api.guardarDocumento(tokenValido(), lido.nome, lido.mime, lido.bytes)
+            _estado.update { it.copy(documentos = it.documentos + guardado, aviso = "Arquivo guardado: ${lido.nome}.") }
+        }
+    }
+
+    private fun arquivoLocal(sessao: Sessao, d: DocumentoGuardado): java.io.File {
+        val pasta = java.io.File(getApplication<Application>().cacheDir, "documentos/${d.id}").apply { mkdirs() }
+        val arquivo = java.io.File(pasta, d.nome.replace(Regex("[\\\\/:*?\"<>|]"), "_"))
+        if (!arquivo.exists() || arquivo.length() == 0L) arquivo.writeBytes(api.baixarArquivo(sessao, d.caminho))
+        return arquivo
+    }
+
+    private fun documentoPorId(id: String) = _estado.value.documentos.firstOrNull { it.id == id }
+
+    /** Baixa o documento e pede à tela para abri-lo em outro app. */
+    fun abrirDocumento(id: String) {
+        val d = documentoPorId(id) ?: return
+        trabalhar("Baixando o documento, aguarde.") {
+            val arquivo = arquivoLocal(tokenValido(), d)
+            val mime = d.mime ?: "application/octet-stream"
+            _estado.update { it.copy(paraAbrir = ArquivoParaAbrir(++sequenciaDeLeitura, arquivo.absolutePath, mime), aviso = "Abrindo ${d.nome}.") }
+        }
+    }
+
+    fun arquivoAberto() {
+        _estado.update { it.copy(paraAbrir = null) }
+    }
+
+    /** Grava uma cópia do documento no lugar escolhido pela pessoa. */
+    fun salvarCopia(id: String, destino: Uri) {
+        val d = documentoPorId(id) ?: return
+        trabalhar("Salvando a cópia.") {
+            val arquivo = arquivoLocal(tokenValido(), d)
+            getApplication<Application>().contentResolver.openOutputStream(destino)?.use { it.write(arquivo.readBytes()) }
+                ?: throw ErroDocumento("Não foi possível gravar a cópia.")
+            avisar("Cópia salva.")
+        }
+    }
+
+    /** Liga o documento a um lançamento, ou desliga se [lancamentoId] for null. */
+    fun vincularDocumento(id: String, lancamentoId: Long?) {
+        val d = documentoPorId(id) ?: return
+        trabalhar(if (lancamentoId == null) "Desvinculando." else "Vinculando.") {
+            api.vincularDocumento(tokenValido(), id, lancamentoId)
+            _estado.update { e ->
+                e.copy(
+                    documentos = e.documentos.map { if (it.id == id) it.copy(lancamentoId = lancamentoId) else it },
+                    aviso = if (lancamentoId == null) "Documento desvinculado." else "Documento vinculado.",
+                )
+            }
+        }
+    }
+
+    fun excluirDocumento(id: String) {
+        val d = documentoPorId(id) ?: return
+        trabalhar("Excluindo o documento.") {
+            api.excluirDocumento(tokenValido(), d)
+            java.io.File(getApplication<Application>().cacheDir, "documentos/${d.id}").deleteRecursively()
+            _estado.update { e -> e.copy(documentos = e.documentos.filter { it.id != id }, aviso = "Documento excluído.") }
+        }
+    }
+
+    /** Lê com a IA um documento já guardado e abre o Novo lançamento ligado a ele, como no Windows. */
+    fun analisarDocumento(id: String) {
+        val d = documentoPorId(id) ?: return
+        if (!_estado.value.permissoes.ia) return avisar("A leitura por IA está desligada para a sua conta.")
+        if (_estado.value.ocupado) return avisar("Aguarde terminar o que está em andamento e tente de novo.")
+        abrirNovo()
+        _estado.update { it.copy(documentosLidos = listOf(d)) }
+        lerComIA(guardar = false) {
+            val sessao = tokenValido()
+            Documentos.preparar(getApplication<Application>().contentResolver, android.net.Uri.fromFile(arquivoLocal(sessao, d)))
         }
     }
 
@@ -274,7 +392,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Apagar um desliga o vínculo do outro no servidor, e isso muda a versão dele: recarrega.
             if (!completo || (par != null && !comVinculado)) baixar(sessao)
             _estado.update { e ->
-                val depois = recalcular(e.copy(todos = e.todos.filter { it.id !in apagados }))
+                // Os documentos do lançamento apagado ficam guardados, sem lançamento (o servidor desliga).
+                val soltos = e.documentos.map { if (it.lancamentoId in apagados) it.copy(lancamentoId = null) else it }
+                val depois = recalcular(e.copy(todos = e.todos.filter { it.id !in apagados }, documentos = soltos))
                 depois.copy(
                     aviso = when {
                         !completo -> (if (apagados.isEmpty()) "" else "Só o primeiro foi excluído. ") +
@@ -289,7 +409,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun fecharNovo() {
-        _estado.update { it.copy(novoAberto = false, editandoId = null, aviso = "", leitura = null, extracaoIA = null) }
+        _estado.update {
+            it.copy(
+                novoAberto = false, editandoId = null, aviso = "", leitura = null, extracaoIA = null,
+                documentosLidos = emptyList(),
+            )
+        }
     }
 
     /**
@@ -383,6 +508,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     updatedAt = versaoLigada ?: versaoEspelho, vinculadoId = principal.id,
                 )
             }
+            // Os arquivos lidos ficam ligados ao lançamento (à primeira parcela, se for parcelado), como no
+            // Windows. Se ligar falhar, o lançamento já está salvo e o arquivo continua guardado.
+            val lidos = _estado.value.documentosLidos
+            var ligados = emptyList<DocumentoGuardado>()
+            var naoLigou = false
+            for (doc in lidos) {
+                try {
+                    api.vincularDocumento(sessao, doc.id, criados[0].id)
+                    ligados = ligados + doc
+                } catch (e: SessaoExpirada) {
+                    throw e
+                } catch (e: Exception) {
+                    naoLigou = true
+                }
+            }
             // O que a pessoa mudou do que a IA sugeriu vira exemplo para as próximas leituras. Se falhar,
             // o lançamento já está salvo e isto não vale um erro.
             _estado.value.extracaoIA?.let { ia ->
@@ -397,7 +537,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // O reenvio de um lançamento que já tinha chegado devolve o mesmo id: não duplica na lista.
                 val ids = criados.map { it.id }.toSet()
                 val lista = e.todos.filter { it.id !in ids } + criados
-                val depois = recalcular(e.copy(todos = lista, novoAberto = false, uuidNovo = "", leitura = null, extracaoIA = null))
+                val depois = recalcular(
+                    e.copy(
+                        todos = lista, novoAberto = false, uuidNovo = "", leitura = null, extracaoIA = null,
+                        documentosLidos = emptyList(),
+                        documentos = e.documentos.map { d ->
+                            if (ligados.any { it.id == d.id }) d.copy(lancamentoId = criados[0].id) else d
+                        },
+                    )
+                )
                 val aparecem = depois.lancamentos.count { it.id in ids }
                 val resumo = if (espelho != null) {
                     "Lançamento criado: ${Formatacao.fala(criados[0], e.config.campos)}. " +
@@ -408,7 +556,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     "${criados.size} parcelas criadas, total ${Formatacao.reaisFalado(Regras.somar(criados.map { it.valor }))}."
                 }
                 depois.copy(
-                    aviso = resumo + when {
+                    aviso = resumo + (if (naoLigou) " Não foi possível vincular o arquivo ao lançamento; ele continua em Documentos." else "") + when {
                         aparecem == criados.size -> ""
                         aparecem == 0 -> if (criados.size == 1) " Ele não aparece na lista por causa dos filtros." else " Elas não aparecem na lista por causa dos filtros."
                         else -> " Algumas não aparecem na lista por causa dos filtros."
@@ -573,8 +721,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val contas = api.baixarContas(sessao)
         val todos = api.baixarLancamentos(sessao)
         val opcoes = api.baixarOpcoes(sessao)
+        // Os documentos são um extra: se não vierem, o resto do app segue funcionando.
+        val documentos = if (permissoes.documentos) {
+            try {
+                api.baixarDocumentos(sessao)
+            } catch (e: ErroServidor) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
         _estado.update {
-            recalcular(it.copy(todos = todos, opcoes = opcoes, permissoes = permissoes, contas = contas))
+            recalcular(it.copy(todos = todos, opcoes = opcoes, permissoes = permissoes, contas = contas, documentos = documentos))
                 .let { e -> e.copy(aviso = mensagemDaLista(e) + (if (it.todos.isEmpty()) "" else avisoDePermissoes(it.permissoes, permissoes))) }
         }
     }

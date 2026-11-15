@@ -49,6 +49,14 @@ class MainActivity : ComponentActivity() {
             lerTexto = modelo::lerTexto,
             leituraAplicada = modelo::leituraAplicada,
             cadastrarTextos = modelo::cadastrarTextos,
+            guardarArquivo = modelo::guardarArquivo,
+            abrirDocumento = modelo::abrirDocumento,
+            arquivoAberto = modelo::arquivoAberto,
+            salvarCopia = modelo::salvarCopia,
+            vincularDocumento = modelo::vincularDocumento,
+            excluirDocumento = modelo::excluirDocumento,
+            analisarDocumento = modelo::analisarDocumento,
+            naoVincularDocumentos = modelo::naoVincularDocumentos,
         )
         setContent {
             val estado by modelo.estado.collectAsStateWithLifecycle()

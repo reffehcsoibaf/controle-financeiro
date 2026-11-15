@@ -136,6 +136,19 @@ class Acoes(
     val leituraAplicada: () -> Unit = {},
     /** Acrescenta às listas os textos novos (campo, texto). */
     val cadastrarTextos: (List<Pair<String, String>>) -> Unit = {},
+    // Documentos guardados
+    val guardarArquivo: (Uri) -> Unit = {},
+    val abrirDocumento: (String) -> Unit = {},
+    /** A tela já entregou o documento baixado ao outro app. */
+    val arquivoAberto: () -> Unit = {},
+    val salvarCopia: (id: String, destino: Uri) -> Unit = { _, _ -> },
+    /** Liga o documento ao lançamento, ou desliga se o lançamento for null. */
+    val vincularDocumento: (id: String, lancamentoId: Long?) -> Unit = { _, _ -> },
+    val excluirDocumento: (String) -> Unit = {},
+    /** Lê com a IA um documento já guardado e abre o Novo lançamento ligado a ele. */
+    val analisarDocumento: (String) -> Unit = {},
+    /** O arquivo lido continua guardado, mas não fica ligado ao lançamento em andamento. */
+    val naoVincularDocumentos: () -> Unit = {},
 )
 
 /** As áreas do app. Só entram na barra as que já existem. */
@@ -157,8 +170,23 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var configurando by rememberSaveable { mutableStateOf(false) }
     var contasAberto by rememberSaveable { mutableStateOf(false) }
     var excluindoId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var documentosAberto by rememberSaveable { mutableStateOf(false) }
+    // Se a tela de documentos foi aberta a partir de um lançamento, é ele; senão, nenhum.
+    var documentosDoLancamento by rememberSaveable { mutableStateOf<Long?>(null) }
     if (estado.novoAberto) {
         TelaNovo(estado, acoes)
+        return
+    }
+    if (documentosAberto) {
+        TelaDocumentos(
+            estado, acoes, documentosDoLancamento,
+            aoVoltar = { documentosAberto = false },
+            aoIrAoLancamento = { id ->
+                documentosAberto = false
+                aba = Aba.LANCAMENTOS
+                detalheId = id
+            },
+        )
         return
     }
     if (contasAberto) {
@@ -190,7 +218,11 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     }
     if (detalhe != null) {
         TelaDetalhe(estado, detalhe, acoes, aoVoltar = { detalheId = null }, aoExcluir = { excluindoId = detalhe.id },
-            aoIrPara = { detalheId = it })
+            aoIrPara = { detalheId = it },
+            aoVerDocumentos = {
+                documentosDoLancamento = detalhe.id
+                documentosAberto = true
+            })
         return
     }
     Scaffold(
@@ -215,7 +247,14 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
             Aba.LANCAMENTOS -> TelaLancamentos(
                 estado, acoes.atualizar, { filtrando = true }, { detalheId = it }, acoes.abrirNovo, modificador,
             )
-            Aba.MAIS -> TelaMais(estado, versao, acoes.sair, { configurando = true }, { contasAberto = true }, modificador)
+            Aba.MAIS -> TelaMais(
+                estado, versao, acoes.sair, { configurando = true }, { contasAberto = true },
+                {
+                    documentosDoLancamento = null
+                    documentosAberto = true
+                },
+                modificador,
+            )
         }
     }
 }
@@ -416,6 +455,7 @@ private fun TelaDetalhe(
     aoVoltar: () -> Unit,
     aoExcluir: () -> Unit = {},
     aoIrPara: (Long) -> Unit = {},
+    aoVerDocumentos: () -> Unit = {},
 ) {
     BackHandler(onBack = aoVoltar)
     Column(
@@ -443,6 +483,19 @@ private fun TelaDetalhe(
             item { BotaoSecundario("Excluir lançamento", aoExcluir, habilitado = !estado.ocupado) }
             val par = l.vinculadoId?.takeIf { v -> estado.todos.any { it.id == v } }
             if (par != null) item { BotaoSecundario("Ir ao lançamento vinculado", { aoIrPara(par) }) }
+            if (estado.permissoes.documentos) {
+                val quantos = estado.documentos.count { it.lancamentoId == l.id }
+                item {
+                    BotaoSecundario(
+                        when (quantos) {
+                            0 -> "Vincular um documento"
+                            1 -> "Ver documento vinculado"
+                            else -> "Ver os $quantos documentos vinculados"
+                        },
+                        aoVerDocumentos,
+                    )
+                }
+            }
             items(Formatacao.camposDoDetalhe(l, estado.config.campos)) { (rotulo, valor) -> Text("$rotulo: $valor") }
             if (l.itens.isNotEmpty()) {
                 item { Titulo("Itens") }
@@ -519,6 +572,7 @@ private fun TelaMais(
     aoSair: () -> Unit,
     aoConfigurar: () -> Unit,
     aoContas: () -> Unit,
+    aoDocumentos: () -> Unit,
     modificador: Modifier,
 ) {
     Column(modificador) {
@@ -531,6 +585,7 @@ private fun TelaMais(
             item { Titulo("Mais", grande = true) }
             item { Titulo("Preferências") }
             item { Botao("Saldos e limites", aoContas) }
+            if (estado.permissoes.documentos) item { Botao("Documentos", aoDocumentos) }
             item { Botao("Configurações", aoConfigurar) }
             item { Titulo("Conta") }
             item { Text("Conectado como ${estado.email}") }
@@ -836,7 +891,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
             itensAbertos = r.entrada.itens.isNotEmpty()
             dividir = r.entrada.dividir
             pagamentos = r.entrada.pagamentos
-            avisoLocal = r.texto
+            avisoLocal = listOf(r.texto, leitura.aviso).filter { it.isNotEmpty() }.joinToString(" ")
             acoes.leituraAplicada()
         }
     }
@@ -1055,6 +1110,16 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                         },
                         habilitado = !estado.ocupado,
                     )
+                }
+                // O arquivo lido já foi guardado e será ligado ao lançamento; isto desfaz só o vínculo.
+                if (estado.documentosLidos.isNotEmpty()) {
+                    item {
+                        BotaoSecundario(
+                            "Não vincular o documento",
+                            { acoes.naoVincularDocumentos() },
+                            habilitado = !estado.ocupado,
+                        )
+                    }
                 }
             }
             item {
@@ -1286,7 +1351,7 @@ private fun resumoDaPrevia(linhas: List<Triple<String, String, Double>>, itens: 
 }
 
 @Composable
-private fun CampoData(rotulo: String, valor: String, aoMudar: (String) -> Unit) {
+internal fun CampoData(rotulo: String, valor: String, aoMudar: (String) -> Unit) {
     OutlinedTextField(
         value = valor,
         onValueChange = aoMudar,

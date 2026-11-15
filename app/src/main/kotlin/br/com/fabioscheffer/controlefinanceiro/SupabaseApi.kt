@@ -315,6 +315,101 @@ class SupabaseApi(
         return ligar(a, b) to ligar(b, a)
     }
 
+    // ---- documentos guardados ----
+
+    fun baixarDocumentos(sessao: Sessao): List<DocumentoGuardado> =
+        tabela("financeiro_documentos_armazenados", sessao).mapNotNull {
+            if (it.isNull("id") || it.isNull("nome_arquivo") || it.isNull("caminho")) null
+            else DocumentoGuardado(
+                id = it.getString("id"), nome = it.getString("nome_arquivo"), caminho = it.getString("caminho"),
+                mime = if (it.isNull("mime_type")) null else it.getString("mime_type"),
+                tamanho = if (it.isNull("tamanho_bytes")) null else it.optLong("tamanho_bytes"),
+                criadoEm = it.optString("criado_em"),
+                lancamentoId = if (it.isNull("lancamento_id")) null else it.getLong("lancamento_id"),
+            )
+        }
+
+    private fun urlDoArquivo(caminho: String) =
+        "/storage/v1/object/${Config.BUCKET_DOCUMENTOS}/" +
+            caminho.split("/").joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
+
+    /**
+     * Sobe o arquivo para a nuvem e anota na tabela, como o programa Windows. O [id] é decidido aqui
+     * para repetir o envio não criar um segundo registro.
+     */
+    fun guardarDocumento(sessao: Sessao, nome: String, mime: String?, bytes: ByteArray): DocumentoGuardado {
+        val id = java.util.UUID.randomUUID().toString()
+        val caminho = Guardados.caminhoNovo(sessao.userId, nome)
+        val tipo = mime ?: "application/octet-stream"
+        val envio = Request.Builder()
+            .url(base + urlDoArquivo(caminho))
+            .header("apikey", chave).header("User-Agent", Config.IDENTIFICACAO)
+            .header("Authorization", "Bearer " + sessao.accessToken)
+            .post(bytes.toRequestBody(tipo.toMediaType()))
+            .build()
+        executar(clienteIA, envio, aceitar = { it == 409 })
+        val corpo = JSONObject().put("id", id).put("user_id", sessao.userId).put("nome_arquivo", nome)
+            .put("caminho", caminho).put("mime_type", mime ?: JSONObject.NULL).put("tamanho_bytes", bytes.size)
+        val linhas = JSONArray(
+            pedir(
+                "/rest/v1/financeiro_documentos_armazenados?" + consulta("on_conflict" to "id"),
+                "POST", corpo, sessao.accessToken,
+                mapOf("Prefer" to "resolution=ignore-duplicates,return=representation"),
+            )
+        )
+        val criado = if (linhas.length() > 0) linhas.getJSONObject(0).optString("criado_em") else ""
+        return DocumentoGuardado(id, nome, caminho, mime, bytes.size.toLong(), criado)
+    }
+
+    /** Baixa o conteúdo de um documento guardado. */
+    fun baixarArquivo(sessao: Sessao, caminho: String): ByteArray {
+        val pedido = Request.Builder()
+            .url(base + urlDoArquivo(caminho))
+            .header("apikey", chave).header("User-Agent", Config.IDENTIFICACAO)
+            .header("Authorization", "Bearer " + sessao.accessToken)
+            .build()
+        return executar(clienteIA, pedido)
+    }
+
+    /** Liga o documento a um lançamento, ou desliga se [lancamentoId] for null. */
+    fun vincularDocumento(sessao: Sessao, docId: String, lancamentoId: Long?) {
+        pedir(
+            "/rest/v1/financeiro_documentos_armazenados?" + consulta("id" to "eq.$docId", "user_id" to "eq." + sessao.userId),
+            "PATCH", JSONObject().put("lancamento_id", lancamentoId ?: JSONObject.NULL), sessao.accessToken,
+        )
+    }
+
+    /** Apaga o arquivo da nuvem (se já não existir, tudo bem) e depois o registro. */
+    fun excluirDocumento(sessao: Sessao, d: DocumentoGuardado) {
+        val apagar = Request.Builder()
+            .url(base + urlDoArquivo(d.caminho))
+            .header("apikey", chave).header("User-Agent", Config.IDENTIFICACAO)
+            .header("Authorization", "Bearer " + sessao.accessToken)
+            .delete()
+            .build()
+        executar(cliente, apagar, aceitar = { it == 404 || it == 400 })
+        pedir(
+            "/rest/v1/financeiro_documentos_armazenados?" + consulta("id" to "eq.${d.id}", "user_id" to "eq." + sessao.userId),
+            "DELETE", null, sessao.accessToken,
+        )
+    }
+
+    /** Faz o pedido e devolve o corpo. Códigos em [aceitar] não são erro (o corpo vem vazio, se for o caso). */
+    private fun executar(
+        http: OkHttpClient, requisicao: Request, aceitar: (Int) -> Boolean = { false },
+    ): ByteArray {
+        try {
+            http.newCall(requisicao).execute().use { resposta ->
+                val corpo = resposta.body?.bytes() ?: ByteArray(0)
+                if (resposta.isSuccessful || aceitar(resposta.code)) return corpo
+                if (resposta.code == 401) throw SessaoExpirada(String(corpo).take(300))
+                throw ErroServidor("O servidor respondeu ${resposta.code}.")
+            }
+        } catch (e: IOException) {
+            throw SemConexao(e.message.orEmpty())
+        }
+    }
+
     /** Lê a tabela inteira, de TAMANHO_PAGINA em TAMANHO_PAGINA, pois o servidor limita cada resposta. */
     private fun tabela(nome: String, sessao: Sessao): List<JSONObject> {
         val todas = ArrayList<JSONObject>()

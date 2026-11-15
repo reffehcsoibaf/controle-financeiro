@@ -1,5 +1,20 @@
 # Histórico de versões
 
+## 0.14.0
+- Documentos (Mais, Documentos; só aparece se o painel liberou documentos para a conta): lista dos
+  arquivos guardados, do mais novo ao mais antigo, com busca pelo nome (sem contar acento) e por
+  "Guardado de" e "Guardado até". Cada linha é lida como uma frase: nome, data, tamanho e lançamento.
+- Em cada documento: Abrir (baixa e abre em outro app), Salvar cópia, Analisar com IA (abre o Novo
+  lançamento já lido e ligado ao documento), Ir ao lançamento, Vincular ao lançamento, Desvincular e
+  Excluir (com confirmação, foco em Cancelar).
+- Guardar arquivo: guarda qualquer arquivo do celular (até 25 MB) na nuvem, a mesma do site e do Windows.
+- Nos Detalhes do lançamento: "Vincular um documento" ou "Ver documento vinculado".
+- Ao ler um documento com IA, o arquivo também é guardado e ligado ao lançamento quando ele for salvo,
+  como no Windows. "Não vincular o documento" desfaz só o vínculo; o arquivo continua guardado. Se
+  guardar falhar, a leitura vale do mesmo jeito e o app avisa. Cada foto de "Fotografar mais itens"
+  também é guardada e ligada.
+- Excluir um lançamento deixa os documentos dele guardados, sem lançamento.
+
 ## 0.13.0
 - Saldos e limites (Mais, Saldos e limites): cada banco ou cartão com o saldo ou o limite, calculados
   com as mesmas regras do Windows. Conta corrente: o saldo conta só o que está pago. Cartão de

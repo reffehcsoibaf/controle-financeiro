@@ -11,7 +11,14 @@ import android.util.Base64
 import java.io.ByteArrayOutputStream
 
 /** O documento já no formato que o servidor de leitura espera. */
-data class DocumentoPronto(val tipo: String, val conteudo: String, val mime: String, val nome: String)
+data class DocumentoPronto(
+    val tipo: String,
+    val conteudo: String,
+    val mime: String,
+    val nome: String,
+    /** O arquivo em si (a imagem já reduzida, se foi o caso), para guardar na nuvem; null se foi só texto copiado. */
+    val arquivo: ByteArray? = null,
+)
 
 object Documentos {
     const val LIMITE_BYTES = 15 * 1024 * 1024
@@ -64,12 +71,30 @@ object Documentos {
         return when (tipo) {
             "imagem" -> {
                 val (dados, mimeFinal) = reduzirImagem(bytes, mime ?: "image/jpeg")
-                DocumentoPronto("imagem", Base64.encodeToString(dados, Base64.NO_WRAP), mimeFinal, nome)
+                DocumentoPronto("imagem", Base64.encodeToString(dados, Base64.NO_WRAP), mimeFinal, nome, dados)
             }
-            "pdf" -> DocumentoPronto("pdf", Base64.encodeToString(bytes, Base64.NO_WRAP), "application/pdf", nome)
-            "xml" -> DocumentoPronto("xml", String(bytes, Charsets.UTF_8), mime ?: "text/xml", nome)
-            else -> DocumentoPronto("texto", String(bytes, Charsets.UTF_8), mime ?: "text/plain", nome)
+            "pdf" -> DocumentoPronto("pdf", Base64.encodeToString(bytes, Base64.NO_WRAP), "application/pdf", nome, bytes)
+            "xml" -> DocumentoPronto("xml", String(bytes, Charsets.UTF_8), mime ?: "text/xml", nome, bytes)
+            else -> DocumentoPronto("texto", String(bytes, Charsets.UTF_8), mime ?: "text/plain", nome, bytes)
         }
+    }
+
+    const val LIMITE_GUARDAR_BYTES = 25 * 1024 * 1024
+
+    /** Um arquivo qualquer, lido para ser guardado como está. */
+    class ArquivoLido(val nome: String, val mime: String?, val bytes: ByteArray)
+
+    /** Lê o arquivo escolhido, de qualquer formato, para guardar na nuvem. Levanta [ErroDocumento]. */
+    fun lerParaGuardar(resolver: ContentResolver, uri: Uri): ArquivoLido {
+        val nome = nomeDe(resolver, uri)
+        val bytes = try {
+            resolver.openInputStream(uri)?.use { it.readNBytesAte(LIMITE_GUARDAR_BYTES + 1) }
+        } catch (e: Exception) {
+            null
+        } ?: throw ErroDocumento("Não foi possível abrir o arquivo.")
+        if (bytes.size > LIMITE_GUARDAR_BYTES) throw ErroDocumento("O arquivo é grande demais. O limite é 25 MB.")
+        if (bytes.isEmpty()) throw ErroDocumento("O arquivo está vazio.")
+        return ArquivoLido(nome, resolver.getType(uri), bytes)
     }
 
     /**

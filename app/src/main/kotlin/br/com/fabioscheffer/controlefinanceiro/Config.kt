@@ -6,6 +6,9 @@ object Config {
     const val SUPABASE_KEY = "sb_publishable_o5Rn3Qp_C3boiYCRqQ5Ykw_2sNd3KiQ"
     const val MODULO = "financeiro"
 
+    /** Onde ficam os arquivos guardados (o mesmo bucket do site e do Windows). */
+    const val BUCKET_DOCUMENTOS = "documentos"
+
     /** Endereço para onde o Supabase devolve o login. Precisa estar na lista de Redirect URLs. */
     const val ESQUEMA = "br.com.fabioscheffer.controlefinanceiro"
     const val URL_RETORNO = "$ESQUEMA://login"
