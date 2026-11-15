@@ -161,6 +161,102 @@ class LeituraIATest {
         )
     }
 
+    private fun comItens() = EntradaNovo(
+        itens = listOf(EntradaItem("10,00", "Casa", "Arroz"), EntradaItem("5,50", "", "Feijão")),
+        estabelecimento = "Mercado Central",
+    )
+
+    @Test fun acrescentarSomaOsItensEConfereComOTotalDaNota() {
+        val d = json("""{"valor":30,"itens":[{"valor":10,"descricao":"Leite"},{"valor":4.5,"descricao":"Pão"}]}""")
+        val r = LeituraIA.acrescentar(d, comItens(), opcoes)
+        assertEquals(4, r.entrada.itens.size)
+        assertEquals(listOf("Arroz", "Feijão", "Leite", "Pão"), r.entrada.itens.map { it.descricao })
+        assertTrue(r.texto.startsWith("Acrescentados 2 itens. Agora são 4 itens"))
+        // 10 + 5,50 + 10 + 4,50 = 30: bate com o total lido na foto.
+        assertTrue(r.texto.contains("Bate com o total da nota"))
+    }
+
+    @Test fun acrescentarAvisaQuandoOTotalNaoBate() {
+        val d = json("""{"valor":99,"itens":[{"valor":1,"descricao":"Sal"}]}""")
+        val r = LeituraIA.acrescentar(d, comItens(), opcoes)
+        assertTrue(r.texto.startsWith("Acrescentado 1 item."))
+        assertTrue(r.texto.contains("diferente da soma"))
+    }
+
+    @Test fun acrescentarSemTotalPedeParaConferirComANota() {
+        val r = LeituraIA.acrescentar(json("""{"itens":[{"valor":1,"descricao":"Sal"}]}"""), comItens(), opcoes)
+        assertTrue(r.texto.contains("Confira a soma com o total impresso"))
+    }
+
+    @Test fun acrescentarAvisaDeLinhaQuePodeTerSidoLidaNasDuasFotos() {
+        val d = json("""{"itens":[{"valor":5.5,"descricao":"feijão"},{"valor":2,"descricao":"Sal"}]}""")
+        val r = LeituraIA.acrescentar(d, comItens(), opcoes)
+        assertEquals(4, r.entrada.itens.size) // não remove sozinho
+        assertTrue(r.texto.contains("possível repetição entre as fotos"))
+        assertTrue(r.texto.contains("feijão"))
+    }
+
+    @Test fun acrescentarNaoMexeNoQueJaEstavaPreenchidoMasCompletaOQueFaltava() {
+        val d = json(
+            """{"estabelecimento":"Outro","credor":"Zé","banco":"Nubank","forma_pagamento":"Pix",
+            "itens":[{"valor":1,"descricao":"Sal"}]}"""
+        )
+        val e = LeituraIA.acrescentar(d, comItens(), opcoes).entrada
+        assertEquals("Mercado Central", e.estabelecimento)
+        assertEquals("Zé", e.credor)
+        assertEquals("Nubank", e.banco)
+        assertEquals("Pix", e.forma)
+    }
+
+    @Test fun acrescentarComPagamentosDaFotoDoFimDivideOPagamento() {
+        val d = json(
+            """{"itens":[{"valor":1,"descricao":"Sal"}],"pagamentos":[
+            {"banco":"Nubank","forma_pagamento":"Crédito","valor":10},{"banco":"Next","forma_pagamento":"Pix","valor":6.5}]}"""
+        )
+        val e = LeituraIA.acrescentar(d, comItens(), opcoes).entrada
+        assertTrue(e.dividir)
+        assertEquals(2, e.pagamentos.size)
+    }
+
+    @Test fun acrescentarSemItensNaFotoNaoMudaNada() {
+        val r = LeituraIA.acrescentar(json("""{"valor":5}"""), comItens(), opcoes)
+        assertEquals(comItens(), r.entrada)
+        assertTrue(r.texto.startsWith("Não encontrei itens"))
+    }
+
+    @Test fun acrescentarSemItensNoFormularioVaiComoPrimeiraLeitura() {
+        val d = json("""{"itens":[{"valor":1,"descricao":"A"},{"valor":2,"descricao":"B"}]}""")
+        val r = LeituraIA.acrescentar(d, EntradaNovo(), opcoes)
+        assertEquals(2, r.entrada.itens.size)
+        assertTrue(r.texto.startsWith("Documento lido."))
+    }
+
+    @Test fun botoesDeMaisItensSoAparecemQuandoHaItens() {
+        regra.setContent {
+            TemaApp { Tela(Estado(etapa = Etapa.CONECTADO, email = "a@b.c", novoAberto = true), "0.0.0", acoes()) }
+        }
+        regra.onAllNodesWithText("Fotografar mais itens").assertCountEquals(0)
+    }
+
+    @Test fun depoisDeLerItensOsBotoesDeMaisItensAparecem() {
+        val dados = DadosIA(itens = listOf(ItemIA(1.0, "A", null), ItemIA(2.0, "B", null)))
+        regra.setContent {
+            TemaApp {
+                Tela(
+                    Estado(
+                        etapa = Etapa.CONECTADO, email = "a@b.c", novoAberto = true,
+                        leitura = Leitura(1, dados), extracaoIA = dados,
+                    ),
+                    "0.0.0", acoes(),
+                )
+            }
+        }
+        regra.waitForIdle()
+        regra.onNode(hasScrollAction()).performScrollToNode(hasText("Fotografar mais itens"))
+        regra.onNodeWithText("Fotografar mais itens").assertExists()
+        regra.onNodeWithText("Escolher mais itens de um arquivo").assertExists()
+    }
+
     @Test fun imagemQueJaCabeNaoEReduzida() {
         assertEquals(1.0, Documentos.escalaParaLimite(4000, 3000), 0.0)
     }

@@ -125,6 +125,8 @@ class Acoes(
     val aplicarListas: (String, String, String, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
     // Leitura de documentos pela IA e listas
     val lerDocumento: (Uri) -> Unit = {},
+    /** Outra foto da mesma nota: os itens lidos são somados aos que já estão no formulário. */
+    val acrescentarDocumento: (Uri) -> Unit = {},
     val lerTexto: (String) -> Unit = {},
     /** O formulário já usou o que a IA leu. */
     val leituraAplicada: () -> Unit = {},
@@ -783,7 +785,11 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
     val leitura = estado.leitura
     LaunchedEffect(leitura?.id) {
         if (leitura != null) {
-            val r = LeituraIA.aplicar(leitura.dados, atual, estado.opcoes)
+            val r = if (leitura.acrescentar) {
+                LeituraIA.acrescentar(leitura.dados, atual, estado.opcoes)
+            } else {
+                LeituraIA.aplicar(leitura.dados, atual, estado.opcoes)
+            }
             entrada = r.entrada.entrada
             valor = r.entrada.valor
             origem = r.entrada.origem
@@ -804,15 +810,18 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
         }
     }
     val contexto = LocalContext.current
+    // Se a próxima leitura soma itens aos que já estão no formulário, em vez de começar de novo.
+    var maisItens by rememberSaveable { mutableStateOf(false) }
+    val lerUri = { uri: Uri -> if (maisItens) acoes.acrescentarDocumento(uri) else acoes.lerDocumento(uri) }
     val escolherDocumento = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) acoes.lerDocumento(uri)
+        if (uri != null) lerUri(uri)
     }
     val textosNovos = NovoLancamento.textosNovos(atual, estado.opcoes)
     // A foto do documento: quem tira é a câmera do sistema, por isso o app não pede permissão de
     // câmera. O endereço do arquivo fica guardado, pois a tela pode ser recriada com a câmera aberta.
     var fotoUri by rememberSaveable { mutableStateOf("") }
     val fotografar = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { tirou ->
-        if (tirou && fotoUri.isNotEmpty()) acoes.lerDocumento(Uri.parse(fotoUri))
+        if (tirou && fotoUri.isNotEmpty()) lerUri(Uri.parse(fotoUri))
         else avisoLocal = "Nenhuma foto foi tirada."
     }
 
@@ -949,6 +958,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                     BotaoSecundario(
                         "Fotografar documento",
                         {
+                            maisItens = false
                             try {
                                 val uri = Documentos.novaFoto(contexto)
                                 fotoUri = uri.toString()
@@ -964,12 +974,44 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                     BotaoSecundario(
                         "Escolher documento",
                         {
+                            maisItens = false
                             escolherDocumento.launch(
                                 arrayOf("image/*", "application/pdf", "text/*", "application/xml")
                             )
                         },
                         habilitado = !estado.ocupado,
                     )
+                }
+                // Para uma nota que não coube numa foto só: cada foto nova soma os itens aos já lidos.
+                if (itens.isNotEmpty()) {
+                    item {
+                        BotaoSecundario(
+                            "Fotografar mais itens",
+                            {
+                                maisItens = true
+                                try {
+                                    val uri = Documentos.novaFoto(contexto)
+                                    fotoUri = uri.toString()
+                                    fotografar.launch(uri)
+                                } catch (e: Exception) {
+                                    avisoLocal = "Não foi possível abrir a câmera."
+                                }
+                            },
+                            habilitado = !estado.ocupado,
+                        )
+                    }
+                    item {
+                        BotaoSecundario(
+                            "Escolher mais itens de um arquivo",
+                            {
+                                maisItens = true
+                                escolherDocumento.launch(
+                                    arrayOf("image/*", "application/pdf", "text/*", "application/xml")
+                                )
+                            },
+                            habilitado = !estado.ocupado,
+                        )
+                    }
                 }
                 item {
                     BotaoSecundario(

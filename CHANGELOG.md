@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 0.12.3
+- Nota fiscal comprida, que não cabe numa foto: depois da primeira leitura, os botões "Fotografar
+  mais itens" e "Escolher mais itens de um arquivo" leem outra parte da nota e SOMAM os itens aos que
+  já estão no formulário, sem apagar nada. Fotografe cada parte sem repetir linhas.
+- O aviso falado diz quantos itens foram acrescentados e a soma, e compara com o total da nota quando
+  a foto o traz (a parte de baixo da nota). Avisa também se algum item parece repetido entre as
+  fotos, sem removê-lo. O que já estava preenchido não é trocado; só se completa o que estava vazio,
+  e a foto do fim da nota pode trazer o pagamento dividido.
+
 ## 0.12.2
 - Foto de nota fiscal comprida: o limite de redução passou a ser pela área da imagem (cerca de 12
   megapixels, o que uma câmera comum faz) e não por lado. Antes, uma nota alta e estreita era

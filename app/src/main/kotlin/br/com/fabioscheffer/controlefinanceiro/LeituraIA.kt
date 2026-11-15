@@ -195,6 +195,82 @@ object LeituraIA {
         return Resultado(e, texto, fora)
     }
 
+    /**
+     * Uma segunda (terceira...) foto da mesma nota: os itens lidos são SOMADOS aos que já estão no
+     * formulário. O resto só entra onde ainda está vazio, para não desfazer o que a pessoa já
+     * conferiu. O aviso compara a soma com o total que a foto trouxe e avisa de itens que podem ter
+     * aparecido nas duas fotos. Sem itens no formulário, vale como uma primeira leitura.
+     */
+    fun acrescentar(d: DadosIA, atual: EntradaNovo, opcoes: Map<String, List<String>>): Resultado {
+        if (atual.itens.isEmpty()) return aplicar(d, atual, opcoes)
+        val fora = mutableListOf<Pair<String, String>>()
+        fun escolher(campo: String, lido: String): String {
+            val achada = opcaoEquivalente(campo, lido, opcoes[campo].orEmpty())
+            if (achada != null) return achada
+            if (fora.none { it.first == campo && it.second == lido }) fora += campo to lido
+            return lido
+        }
+        if (d.itens.isEmpty()) {
+            return Resultado(atual, "Não encontrei itens nesta foto. Nada foi acrescentado.", fora)
+        }
+        val novos = d.itens.map {
+            EntradaItem(
+                Formatacao.numero(Regras.somar(listOf(abs(it.valor)))),
+                it.categoria?.let { c -> escolher("categoria", c) }.orEmpty(),
+                it.descricao.orEmpty(),
+            )
+        }
+        var e = atual.copy(itens = atual.itens + novos)
+        if (e.estabelecimento.isBlank() && d.estabelecimento != null) e = e.copy(estabelecimento = escolher("estabelecimento", d.estabelecimento))
+        if (e.credor.isBlank() && d.credor != null) e = e.copy(credor = escolher("credor", d.credor))
+        if (e.devedor.isBlank() && d.devedor != null) e = e.copy(devedor = escolher("devedor", d.devedor))
+        var pagamento = ""
+        if (d.pagamentos.size >= 2 && !e.dividir) {
+            e = e.copy(
+                dividir = true, banco = "", forma = "",
+                pagamentos = d.pagamentos.map {
+                    EntradaPagamento(
+                        it.banco?.let { b -> escolher("banco", b) }.orEmpty(),
+                        it.forma?.let { f -> escolher("forma", f) }.orEmpty(),
+                        Formatacao.numero(abs(it.valor)),
+                    )
+                },
+            )
+            pagamento = " Pagamento dividido em ${d.pagamentos.size} formas."
+        } else if (!e.dividir) {
+            if (e.banco.isBlank() && d.banco != null) e = e.copy(banco = escolher("banco", d.banco))
+            if (e.forma.isBlank() && d.forma != null) e = e.copy(forma = escolher("forma", d.forma))
+        }
+        val soma = NovoLancamento.somaDosItens(e.itens) ?: 0.0
+        var texto = (if (novos.size == 1) "Acrescentado 1 item." else "Acrescentados ${novos.size} itens.") +
+            " Agora são ${e.itens.size} itens, soma ${Formatacao.reaisFalado(soma)}.$pagamento"
+        if (d.valor != null) {
+            val nota = abs(d.valor)
+            texto += if (abs(soma - nota) < 0.005) {
+                " Bate com o total da nota, ${Formatacao.reaisFalado(nota)}."
+            } else {
+                " O total lido nesta foto é ${Formatacao.reaisFalado(nota)}, diferente da soma: confira os itens."
+            }
+        } else {
+            texto += " Confira a soma com o total impresso na nota."
+        }
+        // Linha que aparece no fim de uma foto e no começo da outra: igual ao que já estava.
+        val repetidos = novos.filter { n ->
+            atual.itens.any { Regras.semAcentos(it.descricao) == Regras.semAcentos(n.descricao) && it.valor == n.valor }
+        }
+        if (repetidos.isNotEmpty()) {
+            texto += " Atenção, possível repetição entre as fotos: " +
+                repetidos.take(3).joinToString("; ") { "${it.descricao.ifBlank { "item sem descrição" }}, ${it.valor}" } +
+                (if (repetidos.size > 3) " e mais ${repetidos.size - 3}" else "") +
+                ". Remova o item repetido, se for o caso."
+        }
+        if (fora.isNotEmpty()) {
+            texto += " Fora das suas listas, preenchido como texto novo: " +
+                fora.joinToString("; ") { (c, v) -> "$c $v" } + "."
+        }
+        return Resultado(e, texto, fora)
+    }
+
     /** O que a pessoa mudou do que a IA sugeriu (correcoes_aprendidas do Windows). */
     fun correcoes(extracao: DadosIA, salvo: DadosNovo, usouItens: Boolean): List<Correcao> {
         val contexto = salvo.estabelecimento?.trim()?.ifEmpty { null }

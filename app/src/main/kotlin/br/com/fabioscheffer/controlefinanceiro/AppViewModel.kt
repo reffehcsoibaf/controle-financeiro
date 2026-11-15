@@ -17,7 +17,7 @@ import java.util.UUID
 enum class Etapa { INICIO, CONECTADO }
 
 /** O que a IA leu de um documento, esperando o formulário aplicar. O [id] muda a cada leitura. */
-data class Leitura(val id: Int, val dados: DadosIA)
+data class Leitura(val id: Int, val dados: DadosIA, val acrescentar: Boolean = false)
 
 data class Estado(
     val etapa: Etapa = Etapa.INICIO,
@@ -143,8 +143,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var sequenciaDeLeitura = 0
 
     /** Lê uma foto, PDF, TXT ou XML escolhido no celular e entrega o resultado ao formulário. */
-    fun lerDocumento(uri: Uri) =
-        lerComIA { Documentos.preparar(getApplication<Application>().contentResolver, uri) }
+    fun lerDocumento(uri: Uri, acrescentar: Boolean = false) =
+        lerComIA(acrescentar) { Documentos.preparar(getApplication<Application>().contentResolver, uri) }
+
+    /** Outra foto da mesma nota: os itens lidos são somados aos que já estão no formulário. */
+    fun acrescentarDocumento(uri: Uri) = lerDocumento(uri, acrescentar = true)
 
     /** Lê um texto copiado (por exemplo a mensagem de um comprovante). */
     fun lerTexto(texto: String) {
@@ -165,7 +168,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun lerComIA(preparar: () -> DocumentoPronto) {
+    private fun lerComIA(acrescentar: Boolean = false, preparar: () -> DocumentoPronto) {
         if (_estado.value.ocupado) return avisar("Aguarde terminar o que está em andamento e tente de novo.")
         trabalhar("Lendo o documento com IA. Isso pode levar alguns segundos.") {
             val documento = preparar()
@@ -179,7 +182,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val dados = api.lerDocumento(sessao, documento, correcoes)
             _estado.update {
                 it.copy(
-                    leitura = Leitura(++sequenciaDeLeitura, dados), extracaoIA = dados,
+                    leitura = Leitura(++sequenciaDeLeitura, dados, acrescentar),
+                    // Ao acrescentar, vale o que a primeira leitura sugeriu: é com ela que se aprende.
+                    extracaoIA = if (acrescentar) it.extracaoIA ?: dados else dados,
                     aviso = "Documento lido.",
                 )
             }

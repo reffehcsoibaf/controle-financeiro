@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
             excluir = modelo::excluirLancamento,
             aplicarListas = modelo::aplicarListas,
             lerDocumento = modelo::lerDocumento,
+            acrescentarDocumento = modelo::acrescentarDocumento,
             lerTexto = modelo::lerTexto,
             leituraAplicada = modelo::leituraAplicada,
             cadastrarTextos = modelo::cadastrarTextos,
