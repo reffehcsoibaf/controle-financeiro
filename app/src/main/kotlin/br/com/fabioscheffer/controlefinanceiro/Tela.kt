@@ -808,6 +808,13 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
         if (uri != null) acoes.lerDocumento(uri)
     }
     val textosNovos = NovoLancamento.textosNovos(atual, estado.opcoes)
+    // A foto do documento: quem tira é a câmera do sistema, por isso o app não pede permissão de
+    // câmera. O endereço do arquivo fica guardado, pois a tela pode ser recriada com a câmera aberta.
+    var fotoUri by rememberSaveable { mutableStateOf("") }
+    val fotografar = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { tirou ->
+        if (tirou && fotoUri.isNotEmpty()) acoes.lerDocumento(Uri.parse(fotoUri))
+        else avisoLocal = "Nenhuma foto foi tirada."
+    }
 
     fun limparFormularioDeItem() {
         itemEditando = -1
@@ -938,6 +945,21 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
             item { Titulo(if (emEdicao) "Editar lançamento" else "Novo lançamento", grande = true) }
             if (!emEdicao) {
                 item { Titulo("Ler documento com IA") }
+                item {
+                    BotaoSecundario(
+                        "Fotografar documento",
+                        {
+                            try {
+                                val uri = Documentos.novaFoto(contexto)
+                                fotoUri = uri.toString()
+                                fotografar.launch(uri)
+                            } catch (e: Exception) {
+                                avisoLocal = "Não foi possível abrir a câmera."
+                            }
+                        },
+                        habilitado = !estado.ocupado,
+                    )
+                }
                 item {
                     BotaoSecundario(
                         "Escolher documento",

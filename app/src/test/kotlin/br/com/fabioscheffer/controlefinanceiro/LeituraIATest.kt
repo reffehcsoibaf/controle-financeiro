@@ -193,8 +193,18 @@ class LeituraIATest {
         regra.setContent {
             TemaApp { Tela(Estado(etapa = Etapa.CONECTADO, email = "a@b.c", novoAberto = true), "0.0.0", acoes()) }
         }
+        regra.onNodeWithText("Fotografar documento").assertExists()
         regra.onNodeWithText("Escolher documento").assertExists()
         regra.onNodeWithText("Ler o texto copiado").assertExists()
+    }
+
+    @Test fun arquivoDeFotoApagaAsAnteriores() {
+        val app = org.robolectric.RuntimeEnvironment.getApplication()
+        val primeira = Documentos.arquivoDeFoto(app)
+        assertEquals("fotos", primeira.parentFile!!.name)
+        java.io.File(app.cacheDir, "fotos/velha.jpg").writeText("x")
+        Documentos.arquivoDeFoto(app)
+        assertFalse(java.io.File(app.cacheDir, "fotos/velha.jpg").exists())
     }
 
     @Test fun naEdicaoNaoHaLeituraDeDocumento() {
@@ -227,6 +237,7 @@ class LeituraIATest {
         assertEquals(1, aplicadas)
         regra.onNodeWithText("Documento lido. Preenchido:", substring = true).assertExists()
         regra.onNodeWithText("Fora das suas listas", substring = true).assertExists()
+        regra.onNode(hasScrollAction()).performScrollToNode(hasText("33,00"))
         regra.onNodeWithText("33,00").assertExists()
         // O texto novo do estabelecimento pode ser guardado nas listas.
         regra.onNode(hasScrollAction()).performScrollToNode(hasText("Cadastrar textos novos nas listas (1)"))

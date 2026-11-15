@@ -31,6 +31,19 @@ object Documentos {
         }
     }
 
+    /** O arquivo onde a câmera grava a foto, numa pasta que só guarda a foto atual. */
+    fun arquivoDeFoto(contexto: android.content.Context): java.io.File {
+        val pasta = java.io.File(contexto.cacheDir, "fotos").apply { mkdirs() }
+        pasta.listFiles()?.forEach { it.delete() }
+        return java.io.File(pasta, "documento-${System.currentTimeMillis()}.jpg")
+    }
+
+    /** O endereço do arquivo da foto para entregar à câmera. */
+    fun novaFoto(contexto: android.content.Context): Uri =
+        androidx.core.content.FileProvider.getUriForFile(
+            contexto, contexto.packageName + ".arquivos", arquivoDeFoto(contexto),
+        )
+
     fun doTexto(texto: String) = DocumentoPronto("texto", texto, "text/plain", "texto copiado")
 
     /** Lê o arquivo escolhido. Levanta [ErroDocumento] com a mensagem para a pessoa. */

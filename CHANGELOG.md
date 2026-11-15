@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## 0.12.1
+- Novo botão "Fotografar documento" no Novo lançamento: abre a câmera do celular, sem pedir
+  permissão de câmera, e lê a foto tirada. A foto fica só no armazenamento temporário do app e é
+  apagada na próxima.
+
 ## 0.12.0
 - Ler documento com IA, no Novo lançamento, como no programa Windows (mesmo servidor de leitura):
   - "Escolher documento": foto, PDF, TXT ou XML do celular. Fotos grandes são reduzidas antes de

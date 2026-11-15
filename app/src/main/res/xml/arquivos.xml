@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Fotos de documentos tiradas pelo app: ficam só até a próxima foto. -->
+    <cache-path name="fotos" path="fotos/" />
+</paths>
