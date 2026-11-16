@@ -83,8 +83,14 @@ object Guia {
         "Lançamentos duplicados" to listOf(
             "Em Mais, Limpar lançamentos duplicados: o app acha os lançamentos com tudo igual (datas, valor, banco, forma, estabelecimento, descrição, categoria, itens e pagamentos), mostra as cópias e, depois de você confirmar, exclui as cópias. O mais antigo de cada grupo fica.",
         ),
+        "Sem internet e sincronização" to listOf(
+            "Sem internet, o app abre com os dados guardados neste celular e avisa de quando eles são. Dá para consultar, filtrar, criar lançamentos, marcar como pago ou pendente, editar e excluir. As alterações ficam guardadas e são enviadas quando a conexão voltar.",
+            "Precisam de internet: entrar na conta, a leitura por IA, os documentos, pagamento de fatura, consolidar lançamentos antigos, excluir dois lançamentos vinculados, gerenciar listas e importar do Excel. Um lançamento criado sem internet só pode ser alterado depois de enviado.",
+            "O app envia o que está esperando ao abrir, a cada 5 minutos e quando você usa o botão Atualizar. Em Mais, Sincronização, você vê a última atualização, as alterações esperando, e pode Sincronizar agora ou descartar uma alteração.",
+            "Quando o mesmo lançamento mudou em outro lugar (no site ou no Windows) antes de a sua alteração chegar, o servidor não a aceita e ela vai para Alterações não aceitas, em Sincronização. Para cada uma, escolha Manter a minha alteração, que tenta de novo partindo do que está no servidor, ou Descartar.",
+        ),
         "Sua conta" to listOf(
-            "Em Mais, Sair da conta encerra a sessão neste celular. Os dados online continuam guardados.",
+            "Em Mais, Sair da conta pede confirmação, encerra a sessão e apaga deste celular a cópia dos dados, as alterações ainda não enviadas (o app avisa quantas) e os documentos baixados. Os dados online continuam guardados.",
         ),
         "Permissões" to listOf(
             "Quem administra o sistema pode ligar ou desligar a leitura por IA e o envio de documentos da sua conta. Desligada, a função some do app.",

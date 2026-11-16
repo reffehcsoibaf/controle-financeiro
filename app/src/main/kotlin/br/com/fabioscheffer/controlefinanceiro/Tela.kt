@@ -159,6 +159,11 @@ class Acoes(
     val editarCorrecao: (id: Long, errado: String, correto: String, contexto: String) -> String? = { _, _, _, _ -> null },
     val excluirCorrecao: (Long) -> Unit = {},
     val apagarCorrecoes: () -> Unit = {},
+    // Sem internet e sincronização
+    val sincronizar: () -> Unit = {},
+    val manterAlteracao: (String) -> Unit = {},
+    val descartarConflito: (String) -> Unit = {},
+    val descartarPendente: (String) -> Unit = {},
     val limparDuplicados: () -> Unit = {},
     val lerPlanilha: (nome: String, bytes: ByteArray?) -> Unit = { _, _ -> },
     val cancelarImportacao: () -> Unit = {},
@@ -188,6 +193,8 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var listasAberto by rememberSaveable { mutableStateOf(false) }
     var correcoesAberto by rememberSaveable { mutableStateOf(false) }
     var guiaAberto by rememberSaveable { mutableStateOf(false) }
+    var sincAberto by rememberSaveable { mutableStateOf(false) }
+    var saindo by rememberSaveable { mutableStateOf(false) }
     var excelAberto by rememberSaveable { mutableStateOf(false) }
     var duplicadosAberto by rememberSaveable { mutableStateOf(false) }
     // Se a tela de documentos foi aberta a partir de um lançamento, é ele; senão, nenhum.
@@ -202,6 +209,14 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     }
     if (excelAberto) {
         TelaExcel(estado, acoes, aoVoltar = { excelAberto = false })
+        return
+    }
+    if (saindo) {
+        TelaSair(estado, aoCancelar = { saindo = false }, aoSair = { saindo = false; acoes.sair() })
+        return
+    }
+    if (sincAberto) {
+        TelaSincronizacao(estado, acoes, aoVoltar = { sincAberto = false })
         return
     }
     if (guiaAberto) {
@@ -287,7 +302,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 estado, acoes.atualizar, { filtrando = true }, { detalheId = it }, acoes.abrirNovo, modificador,
             )
             Aba.MAIS -> TelaMais(
-                estado, versao, acoes.sair, { configurando = true }, { contasAberto = true },
+                estado, versao, { saindo = true }, { configurando = true }, { contasAberto = true },
                 {
                     documentosDoLancamento = null
                     documentosAberto = true
@@ -296,6 +311,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 { correcoesAberto = true },
                 { duplicadosAberto = true },
                 { excelAberto = true },
+                { sincAberto = true },
                 { guiaAberto = true },
                 modificador,
             )
@@ -354,6 +370,8 @@ private fun TelaLancamentos(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item { Titulo("Lançamentos", grande = true) }
+            val sincronizacao = avisoDeSincronizacao(estado)
+            if (sincronizacao.isNotEmpty()) item { Text(sincronizacao) }
             item { Titulo("Resumo") }
             item { BlocoResumo(estado.resumo, estado.avisoDeFiltro) }
             item { Titulo("Lista de lançamentos") }
@@ -634,6 +652,7 @@ private fun TelaMais(
     aoCorrecoes: () -> Unit,
     aoDuplicados: () -> Unit,
     aoExcel: () -> Unit,
+    aoSincronizar: () -> Unit,
     aoGuia: () -> Unit,
     modificador: Modifier,
 ) {
@@ -652,6 +671,7 @@ private fun TelaMais(
             if (estado.permissoes.ia) item { Botao("Correções aprendidas pela IA", aoCorrecoes) }
             item { Botao("Configurações", aoConfigurar) }
             item { Botao("Excel: exportar e importar", aoExcel) }
+            item { Botao("Sincronização", aoSincronizar) }
             item { Botao("Limpar lançamentos duplicados", aoDuplicados) }
             item { Botao("Guia de uso", aoGuia) }
             item { Titulo("Conta") }

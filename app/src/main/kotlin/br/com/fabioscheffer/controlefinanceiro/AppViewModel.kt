@@ -10,6 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -62,6 +67,14 @@ data class Estado(
     val correcoes: List<Correcao> = emptyList(),
     /** Planilha lida e à espera da confirmação para importar. */
     val importacao: Importacao? = null,
+    /** Sem conexão: a lista vem da cópia guardada no celular. */
+    val offline: Boolean = false,
+    /** Alterações feitas sem internet, esperando para serem enviadas, da mais antiga à mais nova. */
+    val fila: List<Operacao> = emptyList(),
+    /** Alterações que o servidor não aceitou e que a pessoa precisa decidir. */
+    val conflitos: List<Conflito> = emptyList(),
+    /** Quando a cópia do celular foi atualizada pela última vez (aaaa-mm-ddThh:mm:ss). */
+    val salvoEm: String = "",
 ) {
     /** Diz quando a lista não mostra tudo; null se nada está escondido. */
     val avisoDeFiltro: String?
@@ -75,10 +88,57 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _estado = MutableStateFlow(estadoInicial())
     val estado: StateFlow<Estado> = _estado.asStateFlow()
 
+    private val armazem = Armazem(app)
+
+    /** A cópia só é guardada depois de haver dados de verdade, para uma tela vazia não apagar a boa. */
+    private var copiaPronta = false
+
     init {
         loja.ler()?.let { sessao ->
-            _estado.update { it.copy(etapa = Etapa.CONECTADO, email = sessao.email) }
+            _estado.update {
+                it.copy(
+                    etapa = Etapa.CONECTADO, email = sessao.email,
+                    fila = armazem.lerFila(), conflitos = armazem.lerConflitos(),
+                )
+            }
             carregar()
+        }
+        guardarCopiaSempre()
+        sincronizarACadaCincoMinutos()
+    }
+
+    /** Toda mudança nos dados vai para a cópia do celular, um instante depois, sem travar a tela. */
+    @OptIn(FlowPreview::class)
+    private fun guardarCopiaSempre() {
+        viewModelScope.launch {
+            _estado
+                .map { listOf(it.todos, it.opcoes, it.contas, it.permissoes, it.documentos, it.salvoEm) }
+                .distinctUntilChanged()
+                .debounce(700)
+                .collect {
+                    val e = _estado.value
+                    val usuario = loja.ler()?.userId
+                    if (copiaPronta && e.etapa == Etapa.CONECTADO && usuario != null && e.salvoEm.isNotEmpty()) {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                armazem.salvarCopia(Copia(usuario, e.salvoEm, e.todos, e.opcoes, e.contas, e.permissoes, e.documentos))
+                            } catch (ex: Exception) {
+                                // A cópia é um extra: se não der para guardar agora, tenta na próxima mudança.
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+    /** Enquanto o app está aberto, tenta enviar o que ficou esperando e atualizar, sem atrapalhar a pessoa. */
+    private fun sincronizarACadaCincoMinutos() {
+        viewModelScope.launch {
+            while (true) {
+                delay(5 * 60 * 1000L)
+                val e = _estado.value
+                if (e.etapa == Etapa.CONECTADO && !e.ocupado && !e.novoAberto && (e.fila.isNotEmpty() || e.offline)) carregar()
+            }
         }
     }
 
@@ -116,17 +176,192 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Envia o que ficou esperando e atualiza a lista; sem internet, abre a cópia guardada no celular. */
     fun carregar() {
-        trabalhar("Carregando os lançamentos.") { baixar(tokenValido()) }
+        trabalhar("Carregando os lançamentos.") {
+            try {
+                val sessao = tokenValido()
+                enviarFila(sessao)
+                baixar(sessao)
+            } catch (e: SemConexao) {
+                abrirDaCopia()
+            }
+        }
+    }
+
+    private fun abrirDaCopia() {
+        val e = _estado.value
+        if (e.todos.isNotEmpty() || e.salvoEm.isNotEmpty()) {
+            // Já há dados nesta sessão: continua com eles.
+            _estado.update { it.copy(offline = true, aviso = avisoOffline(it)) }
+            return
+        }
+        val usuario = loja.ler()?.userId
+        val copia = armazem.lerCopia()?.takeIf { it.usuario == usuario }
+        if (copia == null) {
+            _estado.update { it.copy(offline = true, aviso = "Sem conexão com a internet, e ainda não há dados guardados neste celular.") }
+            return
+        }
+        copiaPronta = true
+        _estado.update {
+            recalcular(
+                it.copy(
+                    todos = copia.todos, opcoes = copia.opcoes, contas = copia.contas, permissoes = copia.permissoes,
+                    documentos = copia.documentos, salvoEm = copia.salvoEm, offline = true,
+                ),
+            ).let { novo -> novo.copy(aviso = avisoOffline(novo)) }
+        }
+    }
+
+    private fun avisoOffline(e: Estado): String =
+        "Sem conexão com a internet. Mostrando os dados guardados em ${Offline.dataFalada(e.salvoEm)}." +
+            (if (e.fila.isEmpty()) "" else if (e.fila.size == 1) " 1 alteração aguarda envio." else " ${e.fila.size} alterações aguardam envio.")
+
+    // ---- alterações sem internet ----
+
+    private fun novoTemporario(): Long = minOf(-1L, _estado.value.fila.flatMap { op ->
+        if (op is Operacao.Criar) op.idsTemporarios else emptyList()
+    }.minOrNull() ?: -1L) - 1
+
+    private fun mudarFila(nova: List<Operacao>) {
+        armazem.salvarFila(nova)
+        _estado.update { it.copy(fila = nova) }
+    }
+
+    private fun mudarConflitos(nova: List<Conflito>) {
+        armazem.salvarConflitos(nova)
+        _estado.update { it.copy(conflitos = nova) }
+    }
+
+    /** Guarda a alteração para enviar depois e já a mostra na lista. */
+    private fun enfileirar(op: Operacao) {
+        val nova = _estado.value.fila + op
+        armazem.salvarFila(nova)
+        _estado.update { e ->
+            recalcular(e.copy(fila = nova, todos = Offline.aplicar(e.todos, listOf(op)), offline = true)).copy(
+                aviso = "Sem conexão. A alteração foi guardada neste celular (${op.oQueFaz.lowercase()}) e será enviada quando a conexão voltar.",
+            )
+        }
+    }
+
+    private fun rotulo(l: Lancamento) = Formatacao.fala(l, _estado.value.config.campos)
+
+    private fun lancamentoDe(op: Operacao): Long? = when (op) {
+        is Operacao.Pago -> op.lancamentoId
+        is Operacao.Excluir -> op.lancamentoId
+        is Operacao.Editar -> op.lancamentoId
+        is Operacao.Criar -> null
+    }
+
+    /** Resultado de enviar uma alteração: [motivo] vazio se o servidor aceitou; [versao] é a nova versão do lançamento. */
+    private class Envio(val motivo: String?, val versao: String? = null)
+
+    private fun executar(sessao: Sessao, op: Operacao): Envio = when (op) {
+        is Operacao.Criar -> {
+            op.dados.forEachIndexed { n, d -> api.criarLancamento(sessao, d, Offline.codigoDaParcela(op.uuid, n)) }
+            Envio(null)
+        }
+        is Operacao.Pago -> api.marcarPago(sessao, op.lancamentoId, op.pago, op.base)
+            ?.let { Envio(null, it) } ?: Envio("O lançamento foi alterado ou excluído em outro lugar.")
+        is Operacao.Excluir -> if (api.excluirLancamento(sessao, op.lancamentoId, op.base)) Envio(null)
+        else Envio("O lançamento foi alterado ou excluído em outro lugar.")
+        is Operacao.Editar -> api.atualizarLancamento(sessao, op.lancamentoId, op.base, op.dados)
+            ?.let { Envio(null, it) } ?: Envio("O lançamento foi alterado ou excluído em outro lugar.")
+    }
+
+    /**
+     * Envia as alterações guardadas, na ordem. O que o servidor não aceita vira conflito, para a pessoa
+     * decidir. Sem internet, para onde parou e a fila fica como está (a exceção sobe).
+     */
+    private fun enviarFila(sessao: Sessao) {
+        var fila = _estado.value.fila
+        if (fila.isEmpty()) return
+        val conflitos = _estado.value.conflitos.toMutableList()
+        try {
+            while (fila.isNotEmpty()) {
+                val op = fila.first()
+                val envio = try {
+                    executar(sessao, op)
+                } catch (e: ErroServidor) {
+                    Envio("O servidor recusou: ${e.message}")
+                }
+                fila = fila.drop(1)
+                if (envio.motivo != null) {
+                    conflitos += Conflito(op, envio.motivo)
+                } else if (envio.versao != null) {
+                    // O envio mudou a versão do lançamento: as próximas alterações dele partem da nova.
+                    val id = lancamentoDe(op)
+                    fila = fila.map { if (lancamentoDe(it) == id) Offline.comBase(it, envio.versao) else it }
+                }
+                armazem.salvarFila(fila)
+                armazem.salvarConflitos(conflitos)
+            }
+        } finally {
+            _estado.update { it.copy(fila = fila, conflitos = conflitos.toList()) }
+        }
+    }
+
+    /** O botão Sincronizar agora. */
+    fun sincronizar() = carregar()
+
+    /** Manter a alteração: parte da versão que o servidor tem agora e tenta de novo. */
+    fun manterAlteracao(opId: String) {
+        val conflito = _estado.value.conflitos.firstOrNull { it.operacao.id == opId } ?: return
+        trabalhar("Enviando a sua alteração.") {
+            val sessao = tokenValido()
+            baixar(sessao)
+            val op = conflito.operacao
+            val id = lancamentoDe(op)
+            val atual = _estado.value.todos.firstOrNull { it.id == id }
+            val outros = _estado.value.conflitos.filter { it.operacao.id != opId }
+            if (atual == null) {
+                mudarConflitos(outros)
+                return@trabalhar avisar("O lançamento não existe mais no servidor, então a sua alteração foi descartada.")
+            }
+            val envio = try {
+                executar(sessao, Offline.comBase(op, atual.updatedAt))
+            } catch (e: ErroServidor) {
+                Envio("O servidor recusou: ${e.message}")
+            }
+            mudarConflitos(outros)
+            baixar(sessao)
+            avisar(if (envio.motivo == null) "A sua alteração foi enviada." else "Não foi possível enviar a sua alteração: ${envio.motivo}")
+        }
+    }
+
+    /** Fica com o que está no servidor: a alteração guardada neste celular é descartada. */
+    fun descartarConflito(opId: String) {
+        mudarConflitos(_estado.value.conflitos.filter { it.operacao.id != opId })
+        avisar("A alteração foi descartada. Vale o que está no servidor.")
+    }
+
+    /** Descarta uma alteração que ainda não foi enviada. Precisa de internet para a lista voltar ao que o servidor tem. */
+    fun descartarPendente(opId: String) {
+        val antes = _estado.value.fila
+        if (antes.none { it.id == opId }) return
+        trabalhar("Descartando a alteração.") {
+            val sessao = tokenValido()
+            mudarFila(antes.filter { it.id != opId })
+            try {
+                baixar(sessao)
+            } catch (e: SemConexao) {
+                mudarFila(antes)
+                throw e
+            }
+            avisar("A alteração foi descartada.")
+        }
     }
 
     /**
      * Grava no servidor e só então muda na tela. Se o lançamento mudou em outro lugar desde que foi
-     * lido, nada é gravado: o app recarrega a lista e avisa, em vez de sobrescrever.
+     * lido, nada é gravado: o app recarrega a lista e avisa, em vez de sobrescrever. Sem internet, a
+     * alteração fica guardada e é enviada depois.
      */
     fun marcarPago(id: Long, pago: Boolean) {
         val atual = _estado.value.todos.firstOrNull { it.id == id } ?: return
+        if (id < 0) return avisar("Este lançamento ainda não foi enviado. Espere a sincronização para alterá-lo.")
         trabalhar(if (pago) "Marcando como pago." else "Marcando como pendente.") {
+          try {
             val sessao = tokenValido()
             val novo = api.marcarPago(sessao, id, pago, atual.updatedAt)
             if (novo == null) {
@@ -142,6 +377,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         .copy(aviso = if (pago) "Marcado como pago." else "Marcado como pendente.")
                 }
             }
+          } catch (e: SemConexao) {
+              enfileirar(Operacao.Pago(UUID.randomUUID().toString(), rotulo(atual), id, pago, atual.updatedAt))
+          }
         }
     }
 
@@ -559,7 +797,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val atual = _estado.value.todos.firstOrNull { it.id == id } ?: return
         val par = atual.vinculadoId?.let { v -> _estado.value.todos.firstOrNull { it.id == v } }
         val alvos = if (comVinculado && par != null) listOf(atual, par) else listOf(atual)
-        trabalhar("Excluindo.") {
+        if (alvos.any { it.id < 0 }) return avisar("Este lançamento ainda não foi enviado. Espere a sincronização para alterá-lo.")
+        val aoFicarSemInternet = {
+            if (alvos.size == 1 && par == null) {
+                enfileirar(Operacao.Excluir(UUID.randomUUID().toString(), rotulo(atual), id, atual.updatedAt))
+            } else {
+                avisar("Sem conexão com a internet. Excluir dois lançamentos vinculados precisa de internet.")
+            }
+        }
+        trabalhar("Excluindo.", semInternet = aoFicarSemInternet) {
             val sessao = tokenValido()
             val apagados = ArrayList<Long>()
             for (a in alvos) {
@@ -636,11 +882,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun salvarEdicao(id: Long, entrada: EntradaNovo) {
         val original = _estado.value.todos.firstOrNull { it.id == id } ?: return fecharNovo()
+        if (id < 0) return avisar("Este lançamento ainda não foi enviado. Espere a sincronização para alterá-lo.")
         val dados = when (val r = NovoLancamento.validar(entrada)) {
             is ResultadoNovo.Erro -> return avisar(r.mensagem)
             is ResultadoNovo.Ok -> r.dados.copy(parcela = original.parcela)
         }
-        trabalhar("Salvando as alterações.") {
+        val aoFicarSemInternet = {
+            if (entrada.consolidar.isNotEmpty()) {
+                avisar("Sem conexão com a internet. Consolidar lançamentos antigos precisa de internet.")
+            } else {
+                enfileirar(Operacao.Editar(UUID.randomUUID().toString(), rotulo(original), id, original.updatedAt, dados))
+                _estado.update { it.copy(novoAberto = false, editandoId = null) }
+            }
+        }
+        trabalhar("Salvando as alterações.", semInternet = aoFicarSemInternet) {
             val sessao = tokenValido()
             val novo = api.atualizarLancamento(sessao, id, original.updatedAt, dados)
             if (novo == null) {
@@ -695,7 +950,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val todos = pronto.todos
         val espelho = pronto.espelho
         val uuid = _estado.value.uuidNovo.ifEmpty { UUID.randomUUID().toString() }
-        trabalhar(if (todos.size > 1) "Salvando as ${todos.size} parcelas." else "Salvando o lançamento.") {
+        val aoFicarSemInternet = {
+            if (espelho != null || entrada.consolidar.isNotEmpty() || _estado.value.documentosLidos.isNotEmpty()) {
+                avisar("Sem conexão com a internet. Pagamento de fatura, lançamento com documento e consolidação precisam de internet.")
+            } else {
+                val primeiro = novoTemporario()
+                val ids = List(todos.size) { primeiro - it }
+                val rotuloGuardado = if (todos.size == 1) "${Formatacao.reaisFalado(Math.abs(todos[0].valor))}${todos[0].descricao?.let { d -> ", $d" } ?: ""}" else "${todos.size} parcelas"
+                enfileirar(Operacao.Criar(UUID.randomUUID().toString(), rotuloGuardado, uuid, todos, ids))
+                _estado.update { it.copy(novoAberto = false, uuidNovo = "", leitura = null, extracaoIA = null, documentosLidos = emptyList()) }
+            }
+        }
+        trabalhar(if (todos.size > 1) "Salvando as ${todos.size} parcelas." else "Salvando o lançamento.", semInternet = aoFicarSemInternet) {
             val sessao = tokenValido()
             val criados = ArrayList<Lancamento>()
             for ((n, dados) in todos.withIndex()) {
@@ -787,9 +1053,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Sair apaga deste celular a cópia dos dados, as alterações não enviadas e os documentos baixados. */
     fun sair() {
+        copiaPronta = false
         loja.limpar()
-        _estado.value = estadoInicial("Você saiu da conta.")
+        try {
+            armazem.apagarTudo()
+            java.io.File(getApplication<Application>().cacheDir, "documentos").deleteRecursively()
+        } catch (e: Exception) {
+            // Se algo não puder ser apagado agora, o próximo login troca a cópia de qualquer jeito.
+        }
+        _estado.value = estadoInicial("Você saiu da conta. Os dados deste celular foram apagados.")
     }
 
     // ---- filtros e ordem ----
@@ -942,6 +1216,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val contas = api.baixarContas(sessao)
         val todos = api.baixarLancamentos(sessao)
         val opcoes = api.baixarOpcoes(sessao)
+        copiaPronta = true
         // Os documentos são um extra: se não vierem, o resto do app segue funcionando.
         val documentos = if (permissoes.documentos) {
             try {
@@ -953,7 +1228,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             emptyList()
         }
         _estado.update {
-            recalcular(it.copy(todos = todos, opcoes = opcoes, permissoes = permissoes, contas = contas, documentos = documentos))
+            recalcular(
+                it.copy(
+                    todos = Offline.aplicar(todos, it.fila), opcoes = opcoes, permissoes = permissoes, contas = contas,
+                    documentos = documentos, offline = false, salvoEm = Offline.agora(),
+                ),
+            )
                 .let { e -> e.copy(aviso = mensagemDaLista(e) + (if (it.todos.isEmpty()) "" else avisoDePermissoes(it.permissoes, permissoes))) }
         }
     }
@@ -978,7 +1258,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun avisar(texto: String) = _estado.update { it.copy(aviso = texto) }
 
-    private fun trabalhar(mensagem: String, bloco: () -> Unit) {
+    private fun trabalhar(mensagem: String, semInternet: (() -> Unit)? = null, bloco: () -> Unit) {
         if (_estado.value.ocupado) return
         _estado.update { it.copy(ocupado = true, aviso = mensagem) }
         viewModelScope.launch {
@@ -991,7 +1271,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 loja.limpar()
                 _estado.value = estadoInicial("Esta conta não tem acesso ao Controle Financeiro.")
             } catch (e: SemConexao) {
-                avisar("Sem conexão com a internet. Tente de novo mais tarde.")
+                if (semInternet != null) semInternet() else avisar("Sem conexão com a internet. Tente de novo mais tarde.")
             } catch (e: ErroLeituraIA) {
                 avisar(e.message ?: "Não foi possível ler o documento.")
             } catch (e: ErroDocumento) {

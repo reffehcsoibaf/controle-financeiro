@@ -1,5 +1,17 @@
 # Histórico de versões
 
+## 0.19.0
+- Funciona sem internet: o app guarda uma cópia dos dados no celular (atualizada a cada mudança) e, sem
+  conexão, abre com ela e avisa de quando ela é. Dá para consultar, filtrar, criar, marcar como pago,
+  editar e excluir; as alterações ficam guardadas e são enviadas quando a conexão voltar (ao abrir, a
+  cada 5 minutos e no botão Atualizar). Um lançamento criado sem internet só pode ser alterado depois de
+  enviado. Pagamento de fatura, documentos, IA, consolidar e listas continuam precisando de internet.
+- Mais, Sincronização: última atualização, alterações esperando (com Descartar), Sincronizar agora e
+  as alterações que o servidor não aceitou porque o lançamento mudou em outro lugar: Manter a minha
+  alteração (tenta de novo partindo da versão do servidor) ou Descartar.
+- Sair da conta agora pede confirmação, avisa de alterações não enviadas e apaga os dados deste celular
+  (cópia, fila e documentos baixados).
+
 ## 0.18.0
 - Mais, Excel: Exportar grava em XLSX os lançamentos que aparecem na lista (respeita os filtros), no
   mesmo formato do site e do Windows. Importar lê uma planilha XLSX nesse formato, diz quantos
