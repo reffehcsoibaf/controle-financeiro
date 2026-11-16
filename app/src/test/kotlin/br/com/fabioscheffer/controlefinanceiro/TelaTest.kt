@@ -100,6 +100,7 @@ class TelaTest {
         regra.waitForIdle()
 
         regra.onNodeWithText("Detalhes do lançamento").assertExists()
+        regra.onNode(hasScrollAction()).performScrollToNode(hasText("Tipo: Saída"))
         regra.onNodeWithText("Tipo: Saída").assertExists()
         rolarAte("Situação: Pendente")
         regra.onNodeWithText("Situação: Pendente").assertExists()
@@ -123,6 +124,7 @@ class TelaTest {
         mostrar(acoes(), estadoCom(um()))
         linha(um()).performClick()
         rolarAte("Itens")
+        regra.onNode(hasScrollAction()).performScrollToNode(hasText("Item 1: Arroz, Comida, R$ 100,00"))
         regra.onNodeWithText("Item 1: Arroz, Comida, R$ 100,00").assertExists()
         regra.onNodeWithText("Item 2: Desconto, Comida, desconto de R$ 5,00").assertExists()
     }

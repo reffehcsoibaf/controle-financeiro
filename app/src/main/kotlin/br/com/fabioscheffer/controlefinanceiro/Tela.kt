@@ -61,6 +61,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -181,10 +183,15 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var documentosAberto by rememberSaveable { mutableStateOf(false) }
     var listasAberto by rememberSaveable { mutableStateOf(false) }
     var correcoesAberto by rememberSaveable { mutableStateOf(false) }
+    var guiaAberto by rememberSaveable { mutableStateOf(false) }
     // Se a tela de documentos foi aberta a partir de um lançamento, é ele; senão, nenhum.
     var documentosDoLancamento by rememberSaveable { mutableStateOf<Long?>(null) }
     if (estado.novoAberto) {
         TelaNovo(estado, acoes)
+        return
+    }
+    if (guiaAberto) {
+        TelaGuia(aoVoltar = { guiaAberto = false })
         return
     }
     if (listasAberto) {
@@ -273,6 +280,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 },
                 { listasAberto = true },
                 { correcoesAberto = true },
+                { guiaAberto = true },
                 modificador,
             )
         }
@@ -478,12 +486,14 @@ private fun TelaDetalhe(
     aoVerDocumentos: () -> Unit = {},
 ) {
     BackHandler(onBack = aoVoltar)
+    val area = LocalClipboardManager.current
+    var copiado by remember(l.id) { mutableStateOf("") }
     Column(
         Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        Aviso(estado.aviso)
+        Aviso(copiado.ifEmpty { estado.aviso })
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(16.dp),
@@ -500,6 +510,17 @@ private fun TelaDetalhe(
                 )
             }
             item { BotaoSecundario("Editar lançamento", { acoes.abrirEdicao(l.id) }, habilitado = !estado.ocupado) }
+            item {
+                BotaoSecundario(
+                    "Copiar detalhes",
+                    {
+                        val linhas = Formatacao.camposDoDetalhe(l, estado.config.campos).map { (r, v) -> "$r: $v" } +
+                            Formatacao.itensDoDetalhe(l) + Formatacao.pagamentosDoDetalhe(l)
+                        area.setText(AnnotatedString(linhas.joinToString("\n")))
+                        copiado = "Detalhes copiados."
+                    },
+                )
+            }
             item { BotaoSecundario("Excluir lançamento", aoExcluir, habilitado = !estado.ocupado) }
             val par = l.vinculadoId?.takeIf { v -> estado.todos.any { it.id == v } }
             if (par != null) item { BotaoSecundario("Ir ao lançamento vinculado", { aoIrPara(par) }) }
@@ -595,6 +616,7 @@ private fun TelaMais(
     aoDocumentos: () -> Unit,
     aoListas: () -> Unit,
     aoCorrecoes: () -> Unit,
+    aoGuia: () -> Unit,
     modificador: Modifier,
 ) {
     Column(modificador) {
@@ -611,6 +633,7 @@ private fun TelaMais(
             item { Botao("Gerenciar listas", aoListas) }
             if (estado.permissoes.ia) item { Botao("Correções aprendidas pela IA", aoCorrecoes) }
             item { Botao("Configurações", aoConfigurar) }
+            item { Botao("Guia de uso", aoGuia) }
             item { Titulo("Conta") }
             item { Text("Conectado como ${estado.email}") }
             item { BotaoSecundario("Sair da conta", aoSair) }

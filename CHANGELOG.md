@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## 0.16.0
+- Mais, Guia de uso: o guia do app, com um título para cada assunto (lançamentos, filtros, novo
+  lançamento, itens, parcelas, fatura, leitura por IA, saldos, documentos, listas, configurações).
+- Nos Detalhes do lançamento: botão Copiar detalhes, que copia o texto todo para colar em outro app.
+
 ## 0.15.0
 - Mais, Gerenciar listas: escolha uma das seis listas (banco ou cartão, forma de pagamento,
   estabelecimento, categoria, credor, devedor), adicione opções, renomeie ou exclua. Renomear troca o
