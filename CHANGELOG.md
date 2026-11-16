@@ -1,5 +1,8 @@
 # Histórico de versões
 
+## 0.23.0
+- "Importar configurações do Windows" voltou para dentro de Elementos dos lançamentos.
+
 ## 0.22.0
 - Versão de teste da atualização própria: sem mudança de funcionamento.
 

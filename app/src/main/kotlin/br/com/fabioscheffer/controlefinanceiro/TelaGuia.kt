@@ -70,7 +70,7 @@ object Guia {
         ),
         "Configurações" to listOf(
             "Em Configurações, Elementos dos lançamentos: escolha quais campos aparecem em cada lançamento da lista, a ordem deles, e se o app fala a quantidade e o total ao aplicar um filtro.",
-            "Em Configurações, Importar configurações do Windows traz o arquivo de preferências do programa do Windows, para a lista ficar igual.",
+            "Em Elementos dos lançamentos, Importar configurações do Windows traz o arquivo de preferências do programa do Windows, para a lista ficar igual.",
         ),
         "Excel" to listOf(
             "Em Configurações, Excel: exportar e importar. Exportar grava em XLSX os lançamentos que aparecem na lista, respeitando os filtros, no mesmo formato do site. Importar lê uma planilha XLSX nesse formato, diz quantos lançamentos são novos e quantos já existem, e só grava depois de você confirmar.",

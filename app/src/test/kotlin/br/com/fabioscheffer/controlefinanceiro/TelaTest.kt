@@ -167,9 +167,10 @@ class TelaTest {
 
     @Test fun configuracoesTemOBotaoDeImportarDoWindowsEOTextoNaoFalaDeLeitor() {
         mostrar(acoes())
-        regra.onNodeWithText("Configurações").performClick()
+        abrirConfiguracoes()
         rolarAte("Importar configurações do Windows")
         regra.onNodeWithText("Importar configurações do Windows").assertHeightIsAtLeast(48.dp).assertIsEnabled()
+        regra.onNodeWithText("Escolha o arquivo de configurações copiado do programa do Windows.").assertExists()
         // O seletor de arquivos é do Android e não abre aqui; nada foi importado só por mostrar o botão.
         assertEquals(emptyList<String>(), importados)
     }

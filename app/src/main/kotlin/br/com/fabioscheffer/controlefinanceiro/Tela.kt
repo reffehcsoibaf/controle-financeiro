@@ -324,7 +324,6 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 { atualizandoApp = true },
                 { guiaAberto = true },
                 modificador,
-                acoes.importarConfiguracoes,
             )
         }
     }
@@ -667,13 +666,7 @@ private fun TelaMais(
     aoAtualizarApp: () -> Unit,
     aoGuia: () -> Unit,
     modificador: Modifier,
-    aoImportarConfiguracoes: (String) -> Unit = {},
 ) {
-    val contexto = LocalContext.current
-    // O seletor de arquivos é a tela do próprio Android; ao escolher, o app lê o arquivo.
-    val seletor = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) aoImportarConfiguracoes(lerArquivoPequeno(contexto, uri).orEmpty())
-    }
     Column(modificador) {
         Aviso(estado.aviso)
         LazyColumn(
@@ -684,7 +677,6 @@ private fun TelaMais(
             item { Titulo("Configurações", grande = true) }
             item { Titulo("Preferências") }
             item { Botao("Elementos dos lançamentos", aoConfigurar) }
-            item { BotaoSecundario("Importar configurações do Windows", { seletor.launch(arrayOf("*/*")) }) }
             item { Botao("Saldos e limites", aoContas) }
             if (estado.permissoes.documentos) item { Botao("Documentos", aoDocumentos) }
             item { Botao("Gerenciar listas", aoListas) }
@@ -1609,6 +1601,11 @@ private fun LinhaLancamento(l: Lancamento, campos: List<CampoConfig>, aoAbrir: (
 @Composable
 private fun TelaConfiguracoes(estado: Estado, acoes: Acoes, aoVoltar: () -> Unit) {
     BackHandler(onBack = aoVoltar)
+    val contexto = LocalContext.current
+    // O seletor de arquivos é a tela do próprio Android; ao escolher, o app lê o arquivo.
+    val seletor = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) acoes.importarConfiguracoes(lerArquivoPequeno(contexto, uri).orEmpty())
+    }
     val campos = estado.config.campos
     Column(
         Modifier
@@ -1645,6 +1642,9 @@ private fun TelaConfiguracoes(estado: Estado, acoes: Acoes, aoVoltar: () -> Unit
                     "Informar o saldo em valores", estado.config.falarTotal, acoes.definirFalarTotal,
                 )
             }
+            item { Titulo("Importar") }
+            item { Text("Escolha o arquivo de configurações copiado do programa do Windows.") }
+            item { BotaoSecundario("Importar configurações do Windows", { seletor.launch(arrayOf("*/*")) }) }
             item { Titulo("Padrão") }
             item { BotaoSecundario("Restaurar o padrão", acoes.restaurarPadrao) }
         }
