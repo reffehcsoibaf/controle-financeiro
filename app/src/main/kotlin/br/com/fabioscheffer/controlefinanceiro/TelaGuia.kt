@@ -72,6 +72,9 @@ object Guia {
             "Em Mais, Configurações: escolha quais campos aparecem em cada lançamento da lista, a ordem deles, e se o app fala a quantidade e o total ao aplicar um filtro.",
             "Importar configurações do Windows traz o arquivo de preferências do programa do Windows, para a lista ficar igual.",
         ),
+        "Lançamentos duplicados" to listOf(
+            "Em Mais, Limpar lançamentos duplicados: o app acha os lançamentos com tudo igual (datas, valor, banco, forma, estabelecimento, descrição, categoria, itens e pagamentos), mostra as cópias e, depois de você confirmar, exclui as cópias. O mais antigo de cada grupo fica.",
+        ),
         "Sua conta" to listOf(
             "Em Mais, Sair da conta encerra a sessão neste celular. Os dados online continuam guardados.",
         ),

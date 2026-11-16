@@ -159,6 +159,7 @@ class Acoes(
     val editarCorrecao: (id: Long, errado: String, correto: String, contexto: String) -> String? = { _, _, _, _ -> null },
     val excluirCorrecao: (Long) -> Unit = {},
     val apagarCorrecoes: () -> Unit = {},
+    val limparDuplicados: () -> Unit = {},
 )
 
 /** As áreas do app. Só entram na barra as que já existem. */
@@ -184,10 +185,15 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var listasAberto by rememberSaveable { mutableStateOf(false) }
     var correcoesAberto by rememberSaveable { mutableStateOf(false) }
     var guiaAberto by rememberSaveable { mutableStateOf(false) }
+    var duplicadosAberto by rememberSaveable { mutableStateOf(false) }
     // Se a tela de documentos foi aberta a partir de um lançamento, é ele; senão, nenhum.
     var documentosDoLancamento by rememberSaveable { mutableStateOf<Long?>(null) }
     if (estado.novoAberto) {
         TelaNovo(estado, acoes)
+        return
+    }
+    if (duplicadosAberto) {
+        TelaDuplicados(estado, acoes, aoVoltar = { duplicadosAberto = false })
         return
     }
     if (guiaAberto) {
@@ -280,6 +286,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 },
                 { listasAberto = true },
                 { correcoesAberto = true },
+                { duplicadosAberto = true },
                 { guiaAberto = true },
                 modificador,
             )
@@ -616,6 +623,7 @@ private fun TelaMais(
     aoDocumentos: () -> Unit,
     aoListas: () -> Unit,
     aoCorrecoes: () -> Unit,
+    aoDuplicados: () -> Unit,
     aoGuia: () -> Unit,
     modificador: Modifier,
 ) {
@@ -633,6 +641,7 @@ private fun TelaMais(
             item { Botao("Gerenciar listas", aoListas) }
             if (estado.permissoes.ia) item { Botao("Correções aprendidas pela IA", aoCorrecoes) }
             item { Botao("Configurações", aoConfigurar) }
+            item { Botao("Limpar lançamentos duplicados", aoDuplicados) }
             item { Botao("Guia de uso", aoGuia) }
             item { Titulo("Conta") }
             item { Text("Conectado como ${estado.email}") }

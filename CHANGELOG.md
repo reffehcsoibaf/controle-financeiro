@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 0.17.0
+- Mais, Limpar lançamentos duplicados: acha os lançamentos com tudo igual (mesma regra do site e do
+  Windows; com itens, a descrição e a categoria não contam), mostra as cópias e só exclui depois de
+  você confirmar, com o foco em Cancelar. O mais antigo de cada grupo fica.
+- O Guia de uso ganhou o assunto Lançamentos duplicados.
+
 ## 0.16.0
 - Mais, Guia de uso: o guia do app, com um título para cada assunto (lançamentos, filtros, novo
   lançamento, itens, parcelas, fatura, leitura por IA, saldos, documentos, listas, configurações).

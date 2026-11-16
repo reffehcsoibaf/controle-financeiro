@@ -340,6 +340,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- duplicados ----
+
+    /** Exclui as cópias (o mais antigo de cada grupo fica), uma a uma, com a checagem de versão. */
+    fun limparDuplicados() {
+        val copias = Duplicados.copias(_estado.value.todos)
+        if (copias.isEmpty()) return
+        trabalhar("Excluindo as cópias.") {
+            val sessao = tokenValido()
+            var apagados = 0
+            for (c in copias) {
+                if (api.excluirLancamento(sessao, c.id, c.updatedAt)) apagados++
+            }
+            // Excluir um lançamento pode mexer no vínculo de outro: recarrega para ficar certo.
+            baixar(sessao)
+            val faltou = copias.size - apagados
+            avisar(
+                (if (apagados == 1) "1 cópia excluída." else "$apagados cópias excluídas.") +
+                    if (faltou > 0) " $faltou não foram excluídas porque mudaram em outro lugar. Confira e tente de novo." else "",
+            )
+        }
+    }
+
     // ---- gerenciar listas ----
 
     private fun ordenar(valores: List<String>) = valores.distinct().sortedBy { Regras.semAcentos(it) }
