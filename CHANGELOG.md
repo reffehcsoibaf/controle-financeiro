@@ -1,5 +1,8 @@
 # Histórico de versões
 
+## 0.22.0
+- Versão de teste da atualização própria: sem mudança de funcionamento.
+
 ## 0.21.0
 - A aba "Mais" virou "Configurações". O botão "Configurações" antigo passou a se chamar "Elementos dos
   lançamentos" (campos, ordem e opções ao filtrar) e "Importar configurações do Windows" ficou solto na aba.
