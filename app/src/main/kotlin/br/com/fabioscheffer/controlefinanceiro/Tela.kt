@@ -149,6 +149,14 @@ class Acoes(
     val analisarDocumento: (String) -> Unit = {},
     /** O arquivo lido continua guardado, mas não fica ligado ao lançamento em andamento. */
     val naoVincularDocumentos: () -> Unit = {},
+    // Gerenciar listas e correções aprendidas (os que devolvem texto devolvem o erro, ou null)
+    val adicionarOpcao: (campo: String, texto: String) -> String? = { _, _ -> null },
+    val renomearOpcao: (campo: String, antigo: String, novo: String) -> String? = { _, _, _ -> null },
+    val excluirOpcao: (campo: String, valor: String) -> Unit = { _, _ -> },
+    val carregarCorrecoes: () -> Unit = {},
+    val editarCorrecao: (id: Long, errado: String, correto: String, contexto: String) -> String? = { _, _, _, _ -> null },
+    val excluirCorrecao: (Long) -> Unit = {},
+    val apagarCorrecoes: () -> Unit = {},
 )
 
 /** As áreas do app. Só entram na barra as que já existem. */
@@ -171,10 +179,20 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var contasAberto by rememberSaveable { mutableStateOf(false) }
     var excluindoId by rememberSaveable { mutableStateOf<Long?>(null) }
     var documentosAberto by rememberSaveable { mutableStateOf(false) }
+    var listasAberto by rememberSaveable { mutableStateOf(false) }
+    var correcoesAberto by rememberSaveable { mutableStateOf(false) }
     // Se a tela de documentos foi aberta a partir de um lançamento, é ele; senão, nenhum.
     var documentosDoLancamento by rememberSaveable { mutableStateOf<Long?>(null) }
     if (estado.novoAberto) {
         TelaNovo(estado, acoes)
+        return
+    }
+    if (listasAberto) {
+        TelaListas(estado, acoes, aoVoltar = { listasAberto = false })
+        return
+    }
+    if (correcoesAberto) {
+        TelaCorrecoes(estado, acoes, aoVoltar = { correcoesAberto = false })
         return
     }
     if (documentosAberto) {
@@ -253,6 +271,8 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                     documentosDoLancamento = null
                     documentosAberto = true
                 },
+                { listasAberto = true },
+                { correcoesAberto = true },
                 modificador,
             )
         }
@@ -573,6 +593,8 @@ private fun TelaMais(
     aoConfigurar: () -> Unit,
     aoContas: () -> Unit,
     aoDocumentos: () -> Unit,
+    aoListas: () -> Unit,
+    aoCorrecoes: () -> Unit,
     modificador: Modifier,
 ) {
     Column(modificador) {
@@ -586,6 +608,8 @@ private fun TelaMais(
             item { Titulo("Preferências") }
             item { Botao("Saldos e limites", aoContas) }
             if (estado.permissoes.documentos) item { Botao("Documentos", aoDocumentos) }
+            item { Botao("Gerenciar listas", aoListas) }
+            if (estado.permissoes.ia) item { Botao("Correções aprendidas pela IA", aoCorrecoes) }
             item { Botao("Configurações", aoConfigurar) }
             item { Titulo("Conta") }
             item { Text("Conectado como ${estado.email}") }

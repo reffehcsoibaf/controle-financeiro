@@ -58,6 +58,8 @@ data class Estado(
     /** Arquivos já guardados que o lançamento em andamento vai ligar a si ao ser salvo. */
     val documentosLidos: List<DocumentoGuardado> = emptyList(),
     val paraAbrir: ArquivoParaAbrir? = null,
+    /** O que a IA aprendeu com as correções (carregado ao abrir a tela delas), da mais nova à mais velha. */
+    val correcoes: List<Correcao> = emptyList(),
 ) {
     /** Diz quando a lista não mostra tudo; null se nada está escondido. */
     val avisoDeFiltro: String?
@@ -335,6 +337,94 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     aviso = if (textos.size == 1) "1 texto cadastrado nas listas." else "${textos.size} textos cadastrados nas listas.",
                 )
             }
+        }
+    }
+
+    // ---- gerenciar listas ----
+
+    private fun ordenar(valores: List<String>) = valores.distinct().sortedBy { Regras.semAcentos(it) }
+
+    /** Acrescenta uma opção à lista. Devolve o aviso de erro na hora, ou null se vai gravar. */
+    fun adicionarOpcao(campo: String, texto: String): String? {
+        val valor = texto.trim()
+        if (valor.isEmpty()) return "Digite a nova opção."
+        if (valor in _estado.value.opcoes[campo].orEmpty()) return "Essa opção já existe: $valor."
+        trabalhar("Adicionando a opção.") {
+            api.cadastrarOpcao(tokenValido(), campo, valor)
+            _estado.update { e ->
+                e.copy(
+                    opcoes = e.opcoes + (campo to ordenar(e.opcoes[campo].orEmpty() + valor)),
+                    aviso = "Opção $valor adicionada.",
+                )
+            }
+        }
+        return null
+    }
+
+    /** Renomear troca o texto em todos os lançamentos que usam a opção; por isso recarrega tudo. */
+    fun renomearOpcao(campo: String, antigo: String, novo: String): String? {
+        val valor = novo.trim()
+        if (valor.isEmpty() || valor == antigo) return "Digite um nome diferente."
+        if (valor in _estado.value.opcoes[campo].orEmpty()) return "Já existe uma opção chamada $valor."
+        trabalhar("Renomeando e atualizando os lançamentos. Pode demorar um pouco.") {
+            val sessao = tokenValido()
+            api.renomearOpcao(sessao, campo, antigo, valor)
+            baixar(sessao)
+            avisar("Renomeada para $valor. Lançamentos atualizados.")
+        }
+        return null
+    }
+
+    fun excluirOpcao(campo: String, valor: String) {
+        trabalhar("Removendo a opção.") {
+            api.excluirOpcao(tokenValido(), campo, valor)
+            _estado.update { e ->
+                e.copy(
+                    opcoes = e.opcoes + (campo to e.opcoes[campo].orEmpty().filter { it != valor }),
+                    contas = if (campo == "banco") e.contas.filter { it.nome != valor } else e.contas,
+                    aviso = "Opção $valor removida.",
+                )
+            }
+        }
+    }
+
+    // ---- correções aprendidas pela IA ----
+
+    fun carregarCorrecoes() {
+        trabalhar("Carregando as correções.") {
+            val lista = api.baixarCorrecoes(tokenValido())
+            _estado.update { it.copy(correcoes = lista, aviso = "") }
+        }
+    }
+
+    fun editarCorrecao(id: Long, errado: String, correto: String, contexto: String): String? {
+        val e = errado.trim()
+        val c = correto.trim()
+        if (e.isEmpty() || c.isEmpty() || e == c) return "Preencha o valor errado e o correto, diferentes entre si."
+        val ctx = contexto.trim().ifEmpty { null }
+        trabalhar("Salvando a correção.") {
+            api.editarCorrecao(tokenValido(), id, e, c, ctx)
+            _estado.update { s ->
+                s.copy(
+                    correcoes = s.correcoes.map { if (it.id == id) it.copy(valorErrado = e, valorCorreto = c, contexto = ctx) else it },
+                    aviso = "Correção atualizada.",
+                )
+            }
+        }
+        return null
+    }
+
+    fun excluirCorrecao(id: Long) {
+        trabalhar("Removendo a correção.") {
+            api.excluirCorrecao(tokenValido(), id)
+            _estado.update { s -> s.copy(correcoes = s.correcoes.filter { it.id != id }, aviso = "Correção removida.") }
+        }
+    }
+
+    fun apagarCorrecoes() {
+        trabalhar("Apagando as correções.") {
+            api.apagarCorrecoes(tokenValido())
+            _estado.update { it.copy(correcoes = emptyList(), aviso = "Correções apagadas.") }
         }
     }
 

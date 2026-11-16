@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## 0.15.0
+- Mais, Gerenciar listas: escolha uma das seis listas (banco ou cartão, forma de pagamento,
+  estabelecimento, categoria, credor, devedor), adicione opções, renomeie ou exclua. Renomear troca o
+  texto em todos os lançamentos que usam a opção (e nos itens e pagamentos); excluir um banco ou cartão
+  também remove a configuração de saldo e limite dele. Excluir pede confirmação, com foco em Cancelar.
+- Mais, Correções aprendidas pela IA (só com a IA liberada): lista, edição, exclusão e "Apagar todas"
+  (com confirmação). Cada correção é lida como uma frase só.
+
 ## 0.14.0
 - Documentos (Mais, Documentos; só aparece se o painel liberou documentos para a conta): lista dos
   arquivos guardados, do mais novo ao mais antigo, com busca pelo nome (sem contar acento) e por

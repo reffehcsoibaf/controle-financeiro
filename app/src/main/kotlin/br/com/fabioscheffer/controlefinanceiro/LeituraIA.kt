@@ -66,7 +66,22 @@ data class DadosIA(
 }
 
 /** O que a pessoa corrigiu do que a IA sugeriu; a IA usa isto como exemplo nas próximas leituras. */
-data class Correcao(val campo: String, val valorErrado: String, val valorCorreto: String, val contexto: String?)
+data class Correcao(
+    val campo: String,
+    val valorErrado: String,
+    val valorCorreto: String,
+    val contexto: String?,
+    /** O número no servidor; 0 para uma correção que ainda não foi gravada. */
+    val id: Long = 0,
+)
+
+/** As seis listas de opções, na ordem do programa Windows: chave no servidor e nome falado. */
+val LISTAS_DE_OPCOES = listOf(
+    "banco" to "Banco ou cartão", "forma" to "Forma de pagamento", "estabelecimento" to "Estabelecimento",
+    "categoria" to "Categoria", "credor" to "Credor", "devedor" to "Devedor",
+)
+
+fun nomeDoCampo(chave: String): String = LISTAS_DE_OPCOES.firstOrNull { it.first == chave }?.second ?: chave
 
 /**
  * Como o formulário usa o que a IA leu: as mesmas regras do programa Windows (formulario.py,

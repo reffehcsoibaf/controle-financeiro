@@ -175,8 +175,61 @@ class SupabaseApi(
             else Correcao(
                 it.getString("campo"), it.getString("valor_errado"), it.getString("valor_correto"),
                 if (it.isNull("contexto")) null else it.getString("contexto"),
+                it.optLong("id"),
             )
         }.reversed()
+
+    fun editarCorrecao(sessao: Sessao, id: Long, errado: String, correto: String, contexto: String?) {
+        pedir(
+            "/rest/v1/financeiro_correcoes_ia?" + consulta("id" to "eq.$id", "user_id" to "eq." + sessao.userId),
+            "PATCH",
+            JSONObject().put("valor_errado", errado).put("valor_correto", correto)
+                .put("contexto", contexto ?: JSONObject.NULL),
+            sessao.accessToken,
+        )
+    }
+
+    fun excluirCorrecao(sessao: Sessao, id: Long) {
+        pedir(
+            "/rest/v1/financeiro_correcoes_ia?" + consulta("id" to "eq.$id", "user_id" to "eq." + sessao.userId),
+            "DELETE", null, sessao.accessToken,
+        )
+    }
+
+    fun apagarCorrecoes(sessao: Sessao) {
+        pedir(
+            "/rest/v1/financeiro_correcoes_ia?" + consulta("user_id" to "eq." + sessao.userId),
+            "DELETE", null, sessao.accessToken,
+        )
+    }
+
+    /** Troca o texto da opção na lista e em tudo que a usa, como o programa Windows (_renomear). */
+    fun renomearOpcao(sessao: Sessao, campo: String, antigo: String, novo: String) {
+        fun trocar(tabela: String, coluna: String, extra: Pair<String, String>? = null) {
+            val filtro = mutableListOf(coluna to "eq.$antigo", "user_id" to "eq." + sessao.userId)
+            if (extra != null) filtro += extra
+            pedir(
+                "/rest/v1/$tabela?" + consulta(*filtro.toTypedArray()), "PATCH",
+                JSONObject().put(coluna, novo), sessao.accessToken,
+            )
+        }
+        trocar("financeiro_opcoes_listas", "valor", "campo" to "eq.$campo")
+        trocar("financeiro_lancamentos", campo)
+        if (campo == "categoria") trocar("financeiro_itens_lancamento", "categoria")
+        if (campo == "banco" || campo == "forma") trocar("financeiro_pagamentos_lancamento", campo)
+        if (campo == "banco") trocar("financeiro_contas_config", "nome_banco")
+    }
+
+    /** Tira a opção da lista; se for um banco, tira também a configuração da conta. */
+    fun excluirOpcao(sessao: Sessao, campo: String, valor: String) {
+        pedir(
+            "/rest/v1/financeiro_opcoes_listas?" + consulta(
+                "campo" to "eq.$campo", "valor" to "eq.$valor", "user_id" to "eq." + sessao.userId,
+            ),
+            "DELETE", null, sessao.accessToken,
+        )
+        if (campo == "banco") removerConta(sessao, valor)
+    }
 
     /** Guarda uma correção, sem repetir uma que já existe (o servidor não tem restrição única). */
     fun registrarCorrecao(sessao: Sessao, c: Correcao) {

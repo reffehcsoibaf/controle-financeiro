@@ -57,6 +57,13 @@ class MainActivity : ComponentActivity() {
             excluirDocumento = modelo::excluirDocumento,
             analisarDocumento = modelo::analisarDocumento,
             naoVincularDocumentos = modelo::naoVincularDocumentos,
+            adicionarOpcao = modelo::adicionarOpcao,
+            renomearOpcao = modelo::renomearOpcao,
+            excluirOpcao = modelo::excluirOpcao,
+            carregarCorrecoes = modelo::carregarCorrecoes,
+            editarCorrecao = modelo::editarCorrecao,
+            excluirCorrecao = modelo::excluirCorrecao,
+            apagarCorrecoes = modelo::apagarCorrecoes,
         )
         setContent {
             val estado by modelo.estado.collectAsStateWithLifecycle()
