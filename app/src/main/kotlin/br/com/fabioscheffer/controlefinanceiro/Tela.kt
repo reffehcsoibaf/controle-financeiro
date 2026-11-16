@@ -164,6 +164,10 @@ class Acoes(
     val manterAlteracao: (String) -> Unit = {},
     val descartarConflito: (String) -> Unit = {},
     val descartarPendente: (String) -> Unit = {},
+    // Atualização do app
+    val verificarAtualizacao: () -> Unit = {},
+    val baixarAtualizacao: () -> Unit = {},
+    val apkEntregue: () -> Unit = {},
     val limparDuplicados: () -> Unit = {},
     val lerPlanilha: (nome: String, bytes: ByteArray?) -> Unit = { _, _ -> },
     val cancelarImportacao: () -> Unit = {},
@@ -193,6 +197,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var listasAberto by rememberSaveable { mutableStateOf(false) }
     var correcoesAberto by rememberSaveable { mutableStateOf(false) }
     var guiaAberto by rememberSaveable { mutableStateOf(false) }
+    var atualizandoApp by rememberSaveable { mutableStateOf(false) }
     var sincAberto by rememberSaveable { mutableStateOf(false) }
     var saindo by rememberSaveable { mutableStateOf(false) }
     var excelAberto by rememberSaveable { mutableStateOf(false) }
@@ -217,6 +222,10 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     }
     if (sincAberto) {
         TelaSincronizacao(estado, acoes, aoVoltar = { sincAberto = false })
+        return
+    }
+    if (atualizandoApp || estado.instalarApk != null) {
+        TelaAtualizacao(estado, versao, acoes, aoVoltar = { atualizandoApp = false })
         return
     }
     if (guiaAberto) {
@@ -312,6 +321,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 { duplicadosAberto = true },
                 { excelAberto = true },
                 { sincAberto = true },
+                { atualizandoApp = true },
                 { guiaAberto = true },
                 modificador,
             )
@@ -653,6 +663,7 @@ private fun TelaMais(
     aoDuplicados: () -> Unit,
     aoExcel: () -> Unit,
     aoSincronizar: () -> Unit,
+    aoAtualizarApp: () -> Unit,
     aoGuia: () -> Unit,
     modificador: Modifier,
 ) {
@@ -673,6 +684,7 @@ private fun TelaMais(
             item { Botao("Excel: exportar e importar", aoExcel) }
             item { Botao("Sincronização", aoSincronizar) }
             item { Botao("Limpar lançamentos duplicados", aoDuplicados) }
+            item { Botao(if (estado.atualizacao != null) "Atualizar o app: há versão nova" else "Atualizar o app", aoAtualizarApp) }
             item { Botao("Guia de uso", aoGuia) }
             item { Titulo("Conta") }
             item { Text("Conectado como ${estado.email}") }

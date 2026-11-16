@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 0.20.0
+- Mais, Atualizar o app: procura no GitHub (Releases com tag android-vX.Y.Z) uma versão mais nova que a
+  instalada, mostra as novidades e o tamanho, baixa o APK (conferindo tamanho e SHA-256) e abre o
+  instalador do Android. Ao abrir o app, a verificação é automática e, se houver versão nova, o começo
+  da lista avisa. Na primeira vez, o Android pede para permitir que o app instale outros apps.
+
 ## 0.19.0
 - Funciona sem internet: o app guarda uma cópia dos dados no celular (atualizada a cada mudança) e, sem
   conexão, abre com ela e avisa de quando ela é. Dá para consultar, filtrar, criar, marcar como pago,

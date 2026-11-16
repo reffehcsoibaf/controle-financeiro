@@ -75,6 +75,12 @@ data class Estado(
     val conflitos: List<Conflito> = emptyList(),
     /** Quando a cópia do celular foi atualizada pela última vez (aaaa-mm-ddThh:mm:ss). */
     val salvoEm: String = "",
+    /** Uma versão do app mais nova que esta, publicada no GitHub; null se não há ou ainda não se verificou. */
+    val atualizacao: NovaVersao? = null,
+    /** Já se verificou se há versão nova (para a tela dizer "você está na mais recente"). */
+    val atualizacaoVerificada: Boolean = false,
+    /** O APK baixado, esperando a tela entregá-lo ao instalador do sistema. */
+    val instalarApk: ArquivoParaAbrir? = null,
 ) {
     /** Diz quando a lista não mostra tudo; null se nada está escondido. */
     val avisoDeFiltro: String?
@@ -102,10 +108,55 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             carregar()
+            verificarAtualizacao(manual = false)
         }
         guardarCopiaSempre()
         sincronizarACadaCincoMinutos()
     }
+
+    // ---- atualização do app ----
+
+    private val github = GitHubApi()
+    private var sequenciaDeApk = 0
+
+    /** Procura uma versão nova no GitHub. Na verificação automática, só fala se achar; na manual, sempre. */
+    fun verificarAtualizacao(manual: Boolean = true) {
+        viewModelScope.launch {
+            try {
+                val nova = withContext(Dispatchers.IO) { github.buscarNovaVersao() }
+                val mais = nova?.takeIf { Versoes.comparar(it.versao, BuildConfig.VERSION_NAME) > 0 }
+                _estado.update {
+                    it.copy(
+                        atualizacao = mais, atualizacaoVerificada = true,
+                        aviso = if (manual) {
+                            if (mais != null) "Há uma versão nova: ${mais.versao}." else "Você está com a versão mais recente."
+                        } else it.aviso,
+                    )
+                }
+            } catch (e: Exception) {
+                if (manual) avisar("Não foi possível verificar agora. Confira a conexão e tente de novo.")
+            }
+        }
+    }
+
+    /** Baixa o APK da versão nova e pede à tela para entregá-lo ao instalador do sistema. */
+    fun baixarAtualizacao() {
+        val nova = _estado.value.atualizacao ?: return
+        trabalhar("Baixando a versão ${nova.versao}. Pode demorar um pouco.") {
+            val pasta = java.io.File(getApplication<Application>().cacheDir, "atualizacao")
+            pasta.deleteRecursively()
+            val arquivo = java.io.File(pasta, "controle-financeiro-${nova.versao}.apk")
+            github.baixar(nova, arquivo)
+            _estado.update {
+                it.copy(
+                    instalarApk = ArquivoParaAbrir(++sequenciaDeApk, arquivo.absolutePath, "application/vnd.android.package-archive"),
+                    aviso = "Download concluído. Abrindo o instalador.",
+                )
+            }
+        }
+    }
+
+    fun apkEntregue() = _estado.update { it.copy(instalarApk = null) }
 
     /** Toda mudança nos dados vai para a cópia do celular, um instante depois, sem travar a tela. */
     @OptIn(FlowPreview::class)

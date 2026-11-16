@@ -4,4 +4,6 @@
     <cache-path name="fotos" path="fotos/" />
     <!-- Documentos baixados para abrir em outro app: limpos quando o app é aberto. -->
     <cache-path name="documentos" path="documentos/" />
+    <!-- O APK da atualização do app, baixado para instalar. -->
+    <cache-path name="atualizacao" path="atualizacao/" />
 </paths>

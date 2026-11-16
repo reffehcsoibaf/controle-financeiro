@@ -89,6 +89,10 @@ object Guia {
             "O app envia o que está esperando ao abrir, a cada 5 minutos e quando você usa o botão Atualizar. Em Mais, Sincronização, você vê a última atualização, as alterações esperando, e pode Sincronizar agora ou descartar uma alteração.",
             "Quando o mesmo lançamento mudou em outro lugar (no site ou no Windows) antes de a sua alteração chegar, o servidor não a aceita e ela vai para Alterações não aceitas, em Sincronização. Para cada uma, escolha Manter a minha alteração, que tenta de novo partindo do que está no servidor, ou Descartar.",
         ),
+        "Atualizar o app" to listOf(
+            "Em Mais, Atualizar o app: o app procura no GitHub uma versão nova. Ao abrir, ele verifica sozinho e avisa no começo da lista se achar. Baixar e instalar baixa o arquivo e abre o instalador do Android.",
+            "Na primeira vez, o Android pede para permitir que este app instale outros apps. Permita nas configurações, volte e toque em Baixar e instalar de novo. Seus dados e sua conta continuam como estão.",
+        ),
         "Sua conta" to listOf(
             "Em Mais, Sair da conta pede confirmação, encerra a sessão e apaga deste celular a cópia dos dados, as alterações ainda não enviadas (o app avisa quantas) e os documentos baixados. Os dados online continuam guardados.",
         ),

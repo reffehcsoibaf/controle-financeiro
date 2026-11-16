@@ -15,6 +15,9 @@ object Config {
 
     const val IDENTIFICACAO = "ControleFinanceiroAndroid/" + BuildConfig.VERSION_NAME
 
+    /** Onde ficam as Releases do app (as do Android têm a tag android-vX.Y.Z). */
+    const val REPOSITORIO_GITHUB = "reffehcsoibaf/controle-financeiro"
+
     /** O servidor limita cada resposta; o programa Windows também lê de 1000 em 1000. */
     const val TAMANHO_PAGINA = 1000
 
