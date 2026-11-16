@@ -172,6 +172,13 @@ export default {
 async function handleFetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Link fixo para baixar a versão mais recente do app Android. As Releases do Android não são
+    // marcadas como "Latest" (essa vaga é do programa Windows), então o Worker procura no GitHub a
+    // mais nova com tag android-v... e redireciona para o APK dela.
+    if (url.pathname === '/baixar/android') {
+      return await baixarAndroid();
+    }
+
     // Só tratamos aqui a rota da API. Qualquer outra URL (o próprio site,
     // imagens, etc.) é devolvida pelos arquivos estáticos normalmente.
     if (url.pathname !== '/api/ler-documento') {
@@ -567,5 +574,40 @@ function extrairJSON(texto) {
     return JSON.parse(limpo);
   } catch (e) {
     return null;
+  }
+}
+
+async function baixarAndroid() {
+  const repo = 'reffehcsoibaf/controle-financeiro';
+  try {
+    const r = await fetch('https://api.github.com/repos/' + repo + '/releases?per_page=30', {
+      headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'ControleFinanceiroSite' },
+      cf: { cacheTtl: 300, cacheEverything: true },
+    });
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    const numeros = (v) => v.split('.').map((n) => parseInt(n, 10) || 0);
+    const maior = (a, b) => {
+      const x = numeros(a), y = numeros(b);
+      for (let i = 0; i < Math.max(x.length, y.length); i++) {
+        const d = (x[i] || 0) - (y[i] || 0);
+        if (d !== 0) return d;
+      }
+      return 0;
+    };
+    let melhor = null;
+    for (const rel of await r.json()) {
+      if (rel.draft || rel.prerelease || !/^android-v\d+(\.\d+)*$/.test(rel.tag_name || '')) continue;
+      const apk = (rel.assets || []).find((a) => /\.apk$/i.test(a.name));
+      if (!apk) continue;
+      const versao = rel.tag_name.replace('android-v', '');
+      if (!melhor || maior(versao, melhor.versao) > 0) melhor = { versao, url: apk.browser_download_url };
+    }
+    if (!melhor) throw new Error('nenhuma versão do Android publicada');
+    return Response.redirect(melhor.url, 302);
+  } catch (e) {
+    return new Response('Não foi possível achar a versão mais recente do app Android agora. Tente de novo em instantes. (' + e.message + ')', {
+      status: 502,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
   }
 }
