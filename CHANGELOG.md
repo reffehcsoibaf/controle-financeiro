@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 2026.11.16.0
+- A versão passa a seguir o padrão por data (ano.mês.dia.dígito), como nos outros projetos. A anterior era a 0.23.0.
+- O app agora é assinado com uma chave de lançamento própria, guardada fora do repositório. Por isso quem
+  tinha a versão 0.x instalada precisa desinstalá-la uma vez antes de instalar esta; daqui em diante as
+  atualizações pelo próprio app funcionam normalmente.
+
 ## 0.23.0
 - "Importar configurações do Windows" voltou para dentro de Elementos dos lançamentos.
 

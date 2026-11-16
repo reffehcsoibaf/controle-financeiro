@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -12,13 +14,31 @@ android {
         applicationId = "br.com.fabioscheffer.controlefinanceiro"
         minSdk = 26
         targetSdk = 35
-        versionCode = 29
-        versionName = "0.23.0"
+        versionCode = 30
+        versionName = "2026.11.16.0"
     }
 
+
+    // A chave de lançamento fica fora do repositório (C:\android\keys). Sem ela, a build de lançamento
+    // não é assinada.
+    val chaves = Properties().apply {
+        val arquivo = file("C:/android/keys/release.properties")
+        if (arquivo.exists()) arquivo.inputStream().use { load(it) }
+    }
+    signingConfigs {
+        if (chaves.isNotEmpty()) {
+            create("lancamento") {
+                storeFile = file(chaves.getProperty("storeFile"))
+                storePassword = chaves.getProperty("storePassword")
+                keyAlias = chaves.getProperty("keyAlias")
+                keyPassword = chaves.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfigs.findByName("lancamento")?.let { signingConfig = it }
         }
     }
     compileOptions {
