@@ -52,28 +52,28 @@ object Guia {
             "A IA preenche o que encontra e o app fala o que foi preenchido. Com 2 ou mais produtos, preenche os itens. Sempre confira antes de salvar: nada é gravado até você salvar.",
             "Nota comprida: depois da primeira foto, use Fotografar mais itens ou Escolher mais itens, que somam os itens aos que já estão.",
             "O arquivo lido é guardado em Documentos e ligado ao lançamento ao salvar. Não vincular o documento desfaz só o vínculo.",
-            "Se você corrigir banco, forma, estabelecimento, categoria, credor ou devedor antes de salvar, o app memoriza, e as correções vão junto nas próximas leituras. Elas ficam em Mais, Correções aprendidas pela IA.",
+            "Se você corrigir banco, forma, estabelecimento, categoria, credor ou devedor antes de salvar, o app memoriza, e as correções vão junto nas próximas leituras. Elas ficam em Configurações, Correções aprendidas pela IA.",
         ),
         "Saldos e limites" to listOf(
-            "Em Mais, Saldos e limites. Mostra cada banco ou cartão, com o saldo ou o limite calculado. Valor negativo é o que passou do saldo ou do limite.",
+            "Em Configurações, Saldos e limites. Mostra cada banco ou cartão, com o saldo ou o limite calculado. Valor negativo é o que passou do saldo ou do limite.",
             "Conta corrente: o saldo conta só o que está pago. Cartão de crédito: o limite conta também o que está pendente, porque costuma ser fatura em aberto.",
             "Ver lançamentos desta conta mostra na lista os lançamentos usados no cálculo.",
         ),
         "Documentos" to listOf(
-            "Em Mais, Documentos, a mesma lista do site, com busca pelo nome e por datas.",
+            "Em Configurações, Documentos, a mesma lista do site, com busca pelo nome e por datas.",
             "Em cada documento: Abrir, Salvar cópia, Analisar com IA, Ir ao lançamento, Vincular, Desvincular e Excluir, depois de confirmar.",
             "Guardar arquivo envia qualquer arquivo do celular, de até 25 MB.",
         ),
         "Listas" to listOf(
-            "Em Mais, Gerenciar listas: adicione, renomeie ou exclua opções de banco, forma, estabelecimento, categoria, credor e devedor.",
+            "Em Configurações, Gerenciar listas: adicione, renomeie ou exclua opções de banco, forma, estabelecimento, categoria, credor e devedor.",
             "Renomear troca o texto em todos os lançamentos que usam a opção, então confira antes. Excluir uma opção não altera os lançamentos antigos. Excluir um banco remove também a configuração dele em Saldos e limites.",
         ),
         "Configurações" to listOf(
-            "Em Mais, Configurações: escolha quais campos aparecem em cada lançamento da lista, a ordem deles, e se o app fala a quantidade e o total ao aplicar um filtro.",
-            "Importar configurações do Windows traz o arquivo de preferências do programa do Windows, para a lista ficar igual.",
+            "Em Configurações, Elementos dos lançamentos: escolha quais campos aparecem em cada lançamento da lista, a ordem deles, e se o app fala a quantidade e o total ao aplicar um filtro.",
+            "Em Configurações, Importar configurações do Windows traz o arquivo de preferências do programa do Windows, para a lista ficar igual.",
         ),
         "Excel" to listOf(
-            "Em Mais, Excel: exportar e importar. Exportar grava em XLSX os lançamentos que aparecem na lista, respeitando os filtros, no mesmo formato do site. Importar lê uma planilha XLSX nesse formato, diz quantos lançamentos são novos e quantos já existem, e só grava depois de você confirmar.",
+            "Em Configurações, Excel: exportar e importar. Exportar grava em XLSX os lançamentos que aparecem na lista, respeitando os filtros, no mesmo formato do site. Importar lê uma planilha XLSX nesse formato, diz quantos lançamentos são novos e quantos já existem, e só grava depois de você confirmar.",
             "A leitura por IA também aceita planilha XLSX.",
         ),
         "Consolidar lançamentos antigos" to listOf(
@@ -81,20 +81,20 @@ object Guia {
             "Em lançamento vindo de documento lido pela IA, a soma dos itens não pode passar do valor lido.",
         ),
         "Lançamentos duplicados" to listOf(
-            "Em Mais, Limpar lançamentos duplicados: o app acha os lançamentos com tudo igual (datas, valor, banco, forma, estabelecimento, descrição, categoria, itens e pagamentos), mostra as cópias e, depois de você confirmar, exclui as cópias. O mais antigo de cada grupo fica.",
+            "Em Configurações, Limpar lançamentos duplicados: o app acha os lançamentos com tudo igual (datas, valor, banco, forma, estabelecimento, descrição, categoria, itens e pagamentos), mostra as cópias e, depois de você confirmar, exclui as cópias. O mais antigo de cada grupo fica.",
         ),
         "Sem internet e sincronização" to listOf(
             "Sem internet, o app abre com os dados guardados neste celular e avisa de quando eles são. Dá para consultar, filtrar, criar lançamentos, marcar como pago ou pendente, editar e excluir. As alterações ficam guardadas e são enviadas quando a conexão voltar.",
             "Precisam de internet: entrar na conta, a leitura por IA, os documentos, pagamento de fatura, consolidar lançamentos antigos, excluir dois lançamentos vinculados, gerenciar listas e importar do Excel. Um lançamento criado sem internet só pode ser alterado depois de enviado.",
-            "O app envia o que está esperando ao abrir, a cada 5 minutos e quando você usa o botão Atualizar. Em Mais, Sincronização, você vê a última atualização, as alterações esperando, e pode Sincronizar agora ou descartar uma alteração.",
+            "O app envia o que está esperando ao abrir, a cada 5 minutos e quando você usa o botão Atualizar. Em Configurações, Sincronização, você vê a última atualização, as alterações esperando, e pode Sincronizar agora ou descartar uma alteração.",
             "Quando o mesmo lançamento mudou em outro lugar (no site ou no Windows) antes de a sua alteração chegar, o servidor não a aceita e ela vai para Alterações não aceitas, em Sincronização. Para cada uma, escolha Manter a minha alteração, que tenta de novo partindo do que está no servidor, ou Descartar.",
         ),
         "Atualizar o app" to listOf(
-            "Em Mais, Atualizar o app: o app procura no GitHub uma versão nova. Ao abrir, ele verifica sozinho e avisa no começo da lista se achar. Baixar e instalar baixa o arquivo e abre o instalador do Android.",
+            "Em Configurações, Atualizar o app: o app procura no GitHub uma versão nova. Ao abrir, ele verifica sozinho e avisa no começo da lista se achar. Baixar e instalar baixa o arquivo e abre o instalador do Android.",
             "Na primeira vez, o Android pede para permitir que este app instale outros apps. Permita nas configurações, volte e toque em Baixar e instalar de novo. Seus dados e sua conta continuam como estão.",
         ),
         "Sua conta" to listOf(
-            "Em Mais, Sair da conta pede confirmação, encerra a sessão e apaga deste celular a cópia dos dados, as alterações ainda não enviadas (o app avisa quantas) e os documentos baixados. Os dados online continuam guardados.",
+            "Em Configurações, Sair da conta pede confirmação, encerra a sessão e apaga deste celular a cópia dos dados, as alterações ainda não enviadas (o app avisa quantas) e os documentos baixados. Os dados online continuam guardados.",
         ),
         "Permissões" to listOf(
             "Quem administra o sistema pode ligar ou desligar a leitura por IA e o envio de documentos da sua conta. Desligada, a função some do app.",

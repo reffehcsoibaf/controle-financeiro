@@ -120,7 +120,7 @@ class DocumentosTest {
 
     private fun abrirLista() {
         abrir()
-        regra.onNodeWithText("Mais").performClick()
+        regra.onNodeWithText("Configurações").performClick()
         regra.onNodeWithText("Documentos").performClick()
     }
 
@@ -132,7 +132,7 @@ class DocumentosTest {
 
     @Test fun semPermissaoOBotaoNaoAparece() {
         abrir(Permissoes(ia = true, documentos = false))
-        regra.onNodeWithText("Mais").performClick()
+        regra.onNodeWithText("Configurações").performClick()
         regra.onNodeWithText("Documentos").assertDoesNotExist()
     }
 

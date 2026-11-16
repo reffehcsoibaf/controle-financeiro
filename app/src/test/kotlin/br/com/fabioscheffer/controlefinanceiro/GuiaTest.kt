@@ -36,7 +36,7 @@ class GuiaTest {
                 ))
             }
         }
-        regra.onNodeWithText("Mais").performClick()
+        regra.onNodeWithText("Configurações").performClick()
         regra.onNode(hasScrollAction()).performScrollToNode(hasText("Guia de uso"))
         regra.onNodeWithText("Guia de uso").performClick()
         regra.onNodeWithText("Primeiros passos").assertIsDisplayed()

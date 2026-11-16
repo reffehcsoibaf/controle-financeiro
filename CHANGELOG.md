@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## 0.21.0
+- A aba "Mais" virou "Configurações". O botão "Configurações" antigo passou a se chamar "Elementos dos
+  lançamentos" (campos, ordem e opções ao filtrar) e "Importar configurações do Windows" ficou solto na aba.
+- Guia de uso e avisos atualizados com os novos nomes.
+
 ## 0.20.0
 - Mais, Atualizar o app: procura no GitHub (Releases com tag android-vX.Y.Z) uma versão mais nova que a
   instalada, mostra as novidades e o tamanho, baixa o APK (conferindo tamanho e SHA-256) e abre o

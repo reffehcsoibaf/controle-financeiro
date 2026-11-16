@@ -177,7 +177,7 @@ class Acoes(
 /** As áreas do app. Só entram na barra as que já existem. */
 enum class Aba(val titulo: String) {
     LANCAMENTOS("Lançamentos"),
-    MAIS("Mais"),
+    MAIS("Configurações"),
 }
 
 @Composable
@@ -324,6 +324,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 { atualizandoApp = true },
                 { guiaAberto = true },
                 modificador,
+                acoes.importarConfiguracoes,
             )
         }
     }
@@ -666,7 +667,13 @@ private fun TelaMais(
     aoAtualizarApp: () -> Unit,
     aoGuia: () -> Unit,
     modificador: Modifier,
+    aoImportarConfiguracoes: (String) -> Unit = {},
 ) {
+    val contexto = LocalContext.current
+    // O seletor de arquivos é a tela do próprio Android; ao escolher, o app lê o arquivo.
+    val seletor = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) aoImportarConfiguracoes(lerArquivoPequeno(contexto, uri).orEmpty())
+    }
     Column(modificador) {
         Aviso(estado.aviso)
         LazyColumn(
@@ -674,13 +681,14 @@ private fun TelaMais(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item { Titulo("Mais", grande = true) }
+            item { Titulo("Configurações", grande = true) }
             item { Titulo("Preferências") }
+            item { Botao("Elementos dos lançamentos", aoConfigurar) }
+            item { BotaoSecundario("Importar configurações do Windows", { seletor.launch(arrayOf("*/*")) }) }
             item { Botao("Saldos e limites", aoContas) }
             if (estado.permissoes.documentos) item { Botao("Documentos", aoDocumentos) }
             item { Botao("Gerenciar listas", aoListas) }
             if (estado.permissoes.ia) item { Botao("Correções aprendidas pela IA", aoCorrecoes) }
-            item { Botao("Configurações", aoConfigurar) }
             item { Botao("Excel: exportar e importar", aoExcel) }
             item { Botao("Sincronização", aoSincronizar) }
             item { Botao("Limpar lançamentos duplicados", aoDuplicados) }
@@ -1309,7 +1317,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                 if (ehFatura) {
                     item {
                         if (cartoes.isEmpty()) {
-                            Text("Para quitar um cartão, configure o cartão em Mais, Saldos e limites.")
+                            Text("Para quitar um cartão, configure o cartão em Configurações, Saldos e limites.")
                         } else {
                             GrupoOpcoes(
                                 "Cartão a quitar",
@@ -1597,16 +1605,11 @@ private fun LinhaLancamento(l: Lancamento, campos: List<CampoConfig>, aoAbrir: (
     HorizontalDivider()
 }
 
-/** Configurações: quais informações de cada lançamento aparecem e em que ordem. */
+/** Elementos dos lançamentos: quais informações de cada lançamento aparecem e em que ordem. */
 @Composable
 private fun TelaConfiguracoes(estado: Estado, acoes: Acoes, aoVoltar: () -> Unit) {
     BackHandler(onBack = aoVoltar)
     val campos = estado.config.campos
-    val contexto = LocalContext.current
-    // O seletor de arquivos é a tela do próprio Android; ao escolher, o app lê o arquivo.
-    val seletor = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) acoes.importarConfiguracoes(lerArquivoPequeno(contexto, uri).orEmpty())
-    }
     Column(
         Modifier
             .fillMaxSize()
@@ -1618,7 +1621,7 @@ private fun TelaConfiguracoes(estado: Estado, acoes: Acoes, aoVoltar: () -> Unit
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item { Titulo("Configurações", grande = true) }
+            item { Titulo("Elementos dos lançamentos", grande = true) }
             item { BotaoSecundario("Voltar", aoVoltar) }
             item { Titulo("Informações de cada lançamento") }
             item {
@@ -1641,11 +1644,6 @@ private fun TelaConfiguracoes(estado: Estado, acoes: Acoes, aoVoltar: () -> Unit
                 OpcaoMarcavel(
                     "Informar o saldo em valores", estado.config.falarTotal, acoes.definirFalarTotal,
                 )
-            }
-            item { Titulo("Importar") }
-            item { Text("Escolha o arquivo de configurações copiado do programa do Windows.") }
-            item {
-                BotaoSecundario("Importar configurações do Windows", { seletor.launch(arrayOf("*/*")) })
             }
             item { Titulo("Padrão") }
             item { BotaoSecundario("Restaurar o padrão", acoes.restaurarPadrao) }

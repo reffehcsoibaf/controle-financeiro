@@ -77,7 +77,7 @@ class ListasTest {
                 )
             }
         }
-        regra.onNodeWithText("Mais").performClick()
+        regra.onNodeWithText("Configurações").performClick()
     }
 
     @Test fun listasMostramAQuantidadeDeOpcoes() {
@@ -132,6 +132,7 @@ class ListasTest {
 
     @Test fun correcoesCarregamEFalamUmaFraseCadaUma() {
         abrirMais()
+        rolarAte("Correções aprendidas pela IA")
         regra.onNodeWithText("Correções aprendidas pela IA").performClick()
         regra.waitForIdle()
         assertEquals(1, carregou)
@@ -145,6 +146,7 @@ class ListasTest {
 
     @Test fun editarCorrecaoEnviaOsCampos() {
         abrirMais()
+        rolarAte("Correções aprendidas pela IA")
         regra.onNodeWithText("Correções aprendidas pela IA").performClick()
         regra.onNode(hasContentDescription("Categoria: onde a IA lia Alimentacao", substring = true)).performClick()
         regra.onNodeWithText("Valor correto").performTextClearance()
@@ -155,6 +157,7 @@ class ListasTest {
 
     @Test fun apagarTodasPedeConfirmacao() {
         abrirMais()
+        rolarAte("Correções aprendidas pela IA")
         regra.onNodeWithText("Correções aprendidas pela IA").performClick()
         regra.onNodeWithText("Apagar todas").performClick()
         assertTrue(!apagouTodas)

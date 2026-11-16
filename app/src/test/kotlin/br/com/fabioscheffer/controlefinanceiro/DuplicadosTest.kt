@@ -72,7 +72,7 @@ class DuplicadosTest {
                 )
             }
         }
-        regra.onNodeWithText("Mais").performClick()
+        regra.onNodeWithText("Configurações").performClick()
         regra.onNode(hasScrollAction()).performScrollToNode(hasText("Limpar lançamentos duplicados"))
         regra.onNodeWithText("Limpar lançamentos duplicados").performClick()
     }

@@ -23,14 +23,14 @@ import androidx.compose.ui.unit.dp
 /** Frase curta para quem abre a lista: diz quando os dados não estão em dia. Vazia se está tudo certo. */
 fun avisoDeSincronizacao(e: Estado): String {
     val partes = ArrayList<String>()
-    e.atualizacao?.let { partes += "Há uma versão nova do app: ${it.versao}. Veja em Mais, Atualizar o app." }
+    e.atualizacao?.let { partes += "Há uma versão nova do app: ${it.versao}. Veja em Configurações, Atualizar o app." }
     if (e.offline) partes += "Sem conexão. Mostrando os dados guardados em ${Offline.dataFalada(e.salvoEm)}."
     if (e.fila.isNotEmpty()) {
         partes += if (e.fila.size == 1) "1 alteração aguarda envio." else "${e.fila.size} alterações aguardam envio."
     }
     if (e.conflitos.isNotEmpty()) {
         partes += (if (e.conflitos.size == 1) "1 alteração não foi aceita pelo servidor" else "${e.conflitos.size} alterações não foram aceitas pelo servidor") +
-            ". Veja em Mais, Sincronização."
+            ". Veja em Configurações, Sincronização."
     }
     return partes.joinToString(" ")
 }

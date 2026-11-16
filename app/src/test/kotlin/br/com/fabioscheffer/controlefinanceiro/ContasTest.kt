@@ -114,7 +114,7 @@ class ContasTest {
                 )
             }
         }
-        regra.onNodeWithText("Mais").performClick()
+        regra.onNodeWithText("Configurações").performClick()
         regra.onNodeWithText("Saldos e limites").performClick()
     }
 
@@ -204,8 +204,8 @@ class ContasTest {
         formulario()
         rolarAte("Categoria")
         regra.onNodeWithText("Categoria").performTextInput("Cartão de crédito")
-        rolarAte("Para quitar um cartão, configure o cartão em Mais, Saldos e limites.")
-        regra.onNodeWithText("Para quitar um cartão, configure o cartão em Mais, Saldos e limites.").assertExists()
+        rolarAte("Para quitar um cartão, configure o cartão em Configurações, Saldos e limites.")
+        regra.onNodeWithText("Para quitar um cartão, configure o cartão em Configurações, Saldos e limites.").assertExists()
     }
 
     @Test fun verLancamentosDaContaVoltaParaALista() {
