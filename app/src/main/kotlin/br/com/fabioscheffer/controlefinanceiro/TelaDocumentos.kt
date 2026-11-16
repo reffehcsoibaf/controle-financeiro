@@ -265,7 +265,7 @@ fun TelaDocumentos(
 }
 
 /** A data digitada como AAAA-MM-DD e o erro, se houver: data que não vale não filtra e é avisada. */
-private fun dataDoFiltro(texto: String, nome: String): Pair<String, String?> = try {
+internal fun dataDoFiltro(texto: String, nome: String): Pair<String, String?> = try {
     Regras.lerData(texto).orEmpty() to null
 } catch (e: IllegalArgumentException) {
     "" to "$nome: data inválida. Digite dia, mês e ano, como 25102026."

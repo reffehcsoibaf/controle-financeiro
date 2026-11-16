@@ -72,6 +72,14 @@ object Guia {
             "Em Mais, Configurações: escolha quais campos aparecem em cada lançamento da lista, a ordem deles, e se o app fala a quantidade e o total ao aplicar um filtro.",
             "Importar configurações do Windows traz o arquivo de preferências do programa do Windows, para a lista ficar igual.",
         ),
+        "Excel" to listOf(
+            "Em Mais, Excel: exportar e importar. Exportar grava em XLSX os lançamentos que aparecem na lista, respeitando os filtros, no mesmo formato do site. Importar lê uma planilha XLSX nesse formato, diz quantos lançamentos são novos e quantos já existem, e só grava depois de você confirmar.",
+            "A leitura por IA também aceita planilha XLSX.",
+        ),
+        "Consolidar lançamentos antigos" to listOf(
+            "Para juntar várias dívidas em um único pagamento. Na área de itens do formulário, use Importar lançamentos como itens, marque os lançamentos e importe. Cada um vira item, guardando a data original. Ao salvar, os documentos deles passam para o novo lançamento e os originais são excluídos.",
+            "Em lançamento vindo de documento lido pela IA, a soma dos itens não pode passar do valor lido.",
+        ),
         "Lançamentos duplicados" to listOf(
             "Em Mais, Limpar lançamentos duplicados: o app acha os lançamentos com tudo igual (datas, valor, banco, forma, estabelecimento, descrição, categoria, itens e pagamentos), mostra as cópias e, depois de você confirmar, exclui as cópias. O mais antigo de cada grupo fica.",
         ),

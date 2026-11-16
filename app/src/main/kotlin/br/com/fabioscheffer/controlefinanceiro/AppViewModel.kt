@@ -60,6 +60,8 @@ data class Estado(
     val paraAbrir: ArquivoParaAbrir? = null,
     /** O que a IA aprendeu com as correções (carregado ao abrir a tela delas), da mais nova à mais velha. */
     val correcoes: List<Correcao> = emptyList(),
+    /** Planilha lida e à espera da confirmação para importar. */
+    val importacao: Importacao? = null,
 ) {
     /** Diz quando a lista não mostra tudo; null se nada está escondido. */
     val avisoDeFiltro: String?
@@ -201,7 +203,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             var falhou = false
             if (guardar && _estado.value.permissoes.documentos && documento.arquivo != null) {
                 try {
-                    guardado = api.guardarDocumento(sessao, documento.nome, documento.mime, documento.arquivo)
+                    guardado = api.guardarDocumento(sessao, documento.nome, documento.mimeGuardado ?: documento.mime, documento.arquivo)
                 } catch (e: SessaoExpirada) {
                     throw e
                 } catch (e: Exception) {
@@ -337,6 +339,70 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     aviso = if (textos.size == 1) "1 texto cadastrado nas listas." else "${textos.size} textos cadastrados nas listas.",
                 )
             }
+        }
+    }
+
+    // ---- Excel ----
+
+    /** Lê a planilha escolhida e mostra quantos lançamentos são novos; só grava em [confirmarImportacao]. */
+    fun lerPlanilha(nome: String, bytes: ByteArray?) {
+        if (bytes == null || bytes.isEmpty()) {
+            avisar("Não foi possível abrir o arquivo.")
+            return
+        }
+        trabalhar("Lendo a planilha.") {
+            val lidos = Planilha.ler(bytes)
+            if (lidos.isEmpty()) throw ErroDocumento("A planilha não tem lançamentos.")
+            val (novos, repetidos) = Planilha.novosERepetidos(lidos, _estado.value.todos)
+            _estado.update {
+                it.copy(
+                    importacao = Importacao(nome, novos, repetidos),
+                    aviso = when {
+                        novos.isEmpty() -> "Nenhum lançamento novo: os ${lidos.size} da planilha já existem."
+                        else -> "${novos.size} lançamentos novos e $repetidos que já existem."
+                    },
+                )
+            }
+        }
+    }
+
+    fun cancelarImportacao() = _estado.update { it.copy(importacao = null, aviso = "") }
+
+    fun confirmarImportacao() {
+        val imp = _estado.value.importacao ?: return
+        if (imp.novos.isEmpty()) {
+            cancelarImportacao()
+            return
+        }
+        trabalhar("Importando ${imp.novos.size} lançamentos. Pode demorar um pouco.") {
+            val sessao = tokenValido()
+            var gravados = 0
+            try {
+                for (d in imp.novos) {
+                    api.criarLancamento(sessao, d, java.util.UUID.randomUUID().toString())
+                    gravados++
+                }
+            } finally {
+                // Mesmo se parar no meio, o que já subiu entra na lista e as opções novas são cadastradas.
+                val existentes = _estado.value.opcoes
+                for ((campo, valores) in Planilha.opcoesDe(imp.novos.take(gravados))) {
+                    for (v in valores) {
+                        if (v !in existentes[campo].orEmpty()) {
+                            try {
+                                api.cadastrarOpcao(sessao, campo, v)
+                            } catch (e: ErroServidor) {
+                                // As opções são um extra: o lançamento já está gravado.
+                            }
+                        }
+                    }
+                }
+                baixar(sessao)
+                _estado.update { it.copy(importacao = null) }
+            }
+            avisar(
+                "${if (gravados == 1) "1 importado" else "$gravados importados"}, " +
+                    "${imp.repetidos} já existia${if (imp.repetidos == 1) "" else "m"}.",
+            )
         }
     }
 
@@ -533,6 +599,41 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Grava as mudanças de um lançamento. Se ele mudou em outro lugar desde que foi lido, nada é
      * gravado: o formulário fecha, a lista é recarregada e o app avisa, em vez de sobrescrever.
      */
+    /** O que a consolidação de lançamentos antigos fez. */
+    private class Consolidacao(val apagados: Set<Long>, val docsMovidos: Set<String>, val falhas: Int) {
+        fun texto(): String = when {
+            apagados.isEmpty() && falhas == 0 -> ""
+            else -> (if (apagados.isEmpty()) "" else if (apagados.size == 1) " 1 lançamento antigo consolidado." else " ${apagados.size} lançamentos antigos consolidados.") +
+                (if (falhas > 0) " $falhas não foram excluídos porque mudaram em outro lugar; confira e exclua à mão se quiser." else "")
+        }
+    }
+
+    /**
+     * Depois de salvar o lançamento novo com os antigos como itens: leva os documentos deles para o novo
+     * e exclui os originais, como o Windows. Se mover um documento falhar, o original fica (nada se perde).
+     */
+    private fun consolidarOriginais(sessao: Sessao, novoId: Long, ids: List<Long>): Consolidacao {
+        val apagados = HashSet<Long>()
+        val movidos = HashSet<String>()
+        var falhas = 0
+        for (oid in ids.distinct().filter { it != novoId }) {
+            val o = _estado.value.todos.firstOrNull { it.id == oid } ?: continue
+            try {
+                val docs = _estado.value.documentos.filter { it.lancamentoId == oid }
+                for (d in docs) {
+                    api.vincularDocumento(sessao, d.id, novoId)
+                    movidos += d.id
+                }
+                if (api.excluirLancamento(sessao, oid, o.updatedAt)) apagados += oid else falhas++
+            } catch (e: SessaoExpirada) {
+                throw e
+            } catch (e: Exception) {
+                falhas++
+            }
+        }
+        return Consolidacao(apagados, movidos, falhas)
+    }
+
     private fun salvarEdicao(id: Long, entrada: EntradaNovo) {
         val original = _estado.value.todos.firstOrNull { it.id == id } ?: return fecharNovo()
         val dados = when (val r = NovoLancamento.validar(entrada)) {
@@ -560,12 +661,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     devedor = dados.devedor, itens = dados.itens, pagamentos = dados.pagamentos,
                     updatedAt = novo, vinculadoId = original.vinculadoId,
                 )
+                val cons = consolidarOriginais(sessao, id, entrada.consolidar)
                 _estado.update { e ->
-                    val lista = e.todos.map { if (it.id == id) editado else it }
-                    val depois = recalcular(e.copy(todos = lista, novoAberto = false, editandoId = null))
+                    val lista = e.todos.filter { it.id !in cons.apagados }.map { if (it.id == id) editado else it }
+                    val depois = recalcular(
+                        e.copy(
+                            todos = lista, novoAberto = false, editandoId = null,
+                            documentos = e.documentos.map { d -> if (d.id in cons.docsMovidos) d.copy(lancamentoId = id) else d },
+                        )
+                    )
                     val aparece = depois.lancamentos.any { it.id == id }
                     depois.copy(
                         aviso = "Lançamento alterado: ${Formatacao.fala(editado, e.config.campos)}." +
+                            cons.texto() +
                             if (aparece) "" else " Ele não aparece na lista por causa dos filtros.",
                     )
                 }
@@ -645,16 +753,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // melhor esforço
                 }
             }
+            val cons = consolidarOriginais(sessao, criados[0].id, entrada.consolidar)
             _estado.update { e ->
                 // O reenvio de um lançamento que já tinha chegado devolve o mesmo id: não duplica na lista.
                 val ids = criados.map { it.id }.toSet()
-                val lista = e.todos.filter { it.id !in ids } + criados
+                val lista = e.todos.filter { it.id !in ids && it.id !in cons.apagados } + criados
                 val depois = recalcular(
                     e.copy(
                         todos = lista, novoAberto = false, uuidNovo = "", leitura = null, extracaoIA = null,
                         documentosLidos = emptyList(),
                         documentos = e.documentos.map { d ->
-                            if (ligados.any { it.id == d.id }) d.copy(lancamentoId = criados[0].id) else d
+                            if (ligados.any { it.id == d.id } || d.id in cons.docsMovidos) d.copy(lancamentoId = criados[0].id) else d
                         },
                     )
                 )
@@ -668,7 +777,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     "${criados.size} parcelas criadas, total ${Formatacao.reaisFalado(Regras.somar(criados.map { it.valor }))}."
                 }
                 depois.copy(
-                    aviso = resumo + (if (naoLigou) " Não foi possível vincular o arquivo ao lançamento; ele continua em Documentos." else "") + when {
+                    aviso = resumo + cons.texto() + (if (naoLigou) " Não foi possível vincular o arquivo ao lançamento; ele continua em Documentos." else "") + when {
                         aparecem == criados.size -> ""
                         aparecem == 0 -> if (criados.size == 1) " Ele não aparece na lista por causa dos filtros." else " Elas não aparecem na lista por causa dos filtros."
                         else -> " Algumas não aparecem na lista por causa dos filtros."

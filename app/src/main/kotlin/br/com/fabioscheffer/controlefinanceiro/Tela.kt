@@ -160,6 +160,9 @@ class Acoes(
     val excluirCorrecao: (Long) -> Unit = {},
     val apagarCorrecoes: () -> Unit = {},
     val limparDuplicados: () -> Unit = {},
+    val lerPlanilha: (nome: String, bytes: ByteArray?) -> Unit = { _, _ -> },
+    val cancelarImportacao: () -> Unit = {},
+    val confirmarImportacao: () -> Unit = {},
 )
 
 /** As áreas do app. Só entram na barra as que já existem. */
@@ -185,6 +188,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     var listasAberto by rememberSaveable { mutableStateOf(false) }
     var correcoesAberto by rememberSaveable { mutableStateOf(false) }
     var guiaAberto by rememberSaveable { mutableStateOf(false) }
+    var excelAberto by rememberSaveable { mutableStateOf(false) }
     var duplicadosAberto by rememberSaveable { mutableStateOf(false) }
     // Se a tela de documentos foi aberta a partir de um lançamento, é ele; senão, nenhum.
     var documentosDoLancamento by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -194,6 +198,10 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
     }
     if (duplicadosAberto) {
         TelaDuplicados(estado, acoes, aoVoltar = { duplicadosAberto = false })
+        return
+    }
+    if (excelAberto) {
+        TelaExcel(estado, acoes, aoVoltar = { excelAberto = false })
         return
     }
     if (guiaAberto) {
@@ -287,6 +295,7 @@ fun Tela(estado: Estado, versao: String, acoes: Acoes) {
                 { listasAberto = true },
                 { correcoesAberto = true },
                 { duplicadosAberto = true },
+                { excelAberto = true },
                 { guiaAberto = true },
                 modificador,
             )
@@ -624,6 +633,7 @@ private fun TelaMais(
     aoListas: () -> Unit,
     aoCorrecoes: () -> Unit,
     aoDuplicados: () -> Unit,
+    aoExcel: () -> Unit,
     aoGuia: () -> Unit,
     modificador: Modifier,
 ) {
@@ -641,6 +651,7 @@ private fun TelaMais(
             item { Botao("Gerenciar listas", aoListas) }
             if (estado.permissoes.ia) item { Botao("Correções aprendidas pela IA", aoCorrecoes) }
             item { Botao("Configurações", aoConfigurar) }
+            item { Botao("Excel: exportar e importar", aoExcel) }
             item { Botao("Limpar lançamentos duplicados", aoDuplicados) }
             item { Botao("Guia de uso", aoGuia) }
             item { Titulo("Conta") }
@@ -811,13 +822,13 @@ private fun ComboCampo(rotulo: String, valor: String, opcoes: List<String>, aoMu
 
 private val SaverItens = Saver<List<EntradaItem>, String>(
     save = { lista ->
-        JSONArray(lista.map { JSONArray(listOf(it.valor, it.categoria, it.descricao, it.dataOriginal)) }).toString()
+        JSONArray(lista.map { JSONArray(listOf(it.valor, it.categoria, it.descricao, it.dataOriginal, it.origemId)) }).toString()
     },
     restore = { texto ->
         val a = JSONArray(texto)
         List(a.length()) { i ->
             val x = a.getJSONArray(i)
-            EntradaItem(x.getString(0), x.getString(1), x.getString(2), x.optString(3))
+            EntradaItem(x.getString(0), x.getString(1), x.getString(2), x.optString(3), x.optLong(4))
         }
     },
 )
@@ -866,7 +877,7 @@ private fun resumoDosItens(itens: List<EntradaItem>): String {
  */
 @Composable
 private fun TelaNovo(estado: Estado, acoes: Acoes) {
-    BackHandler(onBack = acoes.fecharNovo)
+    // (o botão Voltar do formulário é tratado mais abaixo, depois do estado da consolidação)
     // Editando: o formulário começa com o que já está gravado; criando, vazio.
     val emEdicao = estado.editandoId != null
     val inicial = remember {
@@ -904,6 +915,11 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
     var centavosNaPrimeira by rememberSaveable { mutableStateOf(false) }
     // O que acontece só aqui (item adicionado, pagamento removido...) é falado por este aviso.
     var avisoLocal by rememberSaveable { mutableStateOf("") }
+    // Consolidar: a tela de escolher lançamentos antigos toma o lugar do formulário, que continua guardado.
+    var consolidando by rememberSaveable { mutableStateOf(false) }
+    // Se o lançamento veio de um documento, o valor dele: os itens não passam disso. Negativo: sem limite.
+    var valorDocumento by rememberSaveable { mutableStateOf(-1.0) }
+    BackHandler(onBack = { if (consolidando) consolidando = false else acoes.fecharNovo() })
     // Pagamento de fatura: a categoria Cartão de crédito oferece o cartão que recebe a entrada. Com um
     // só cartão configurado, ele já vem escolhido; "Não vincular" cria só este lançamento.
     var cartaoAQuitar by rememberSaveable { mutableStateOf("") }
@@ -917,6 +933,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
         entrada, valor, origem, vencimento, banco, forma, estabelecimento, categoria,
         credor, devedor, descricao, pago, itens, dividir, pagamentos, parcelas, centavosNaPrimeira,
         cartaoAQuitar = if (cartoes.isNotEmpty()) cartaoAQuitar else "",
+        consolidar = itens.map { it.origemId }.filter { it > 0 }.distinct(),
     )
     val salvar = {
         avisoLocal = ""
@@ -931,6 +948,13 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                 LeituraIA.acrescentar(leitura.dados, atual, estado.opcoes)
             } else {
                 LeituraIA.aplicar(leitura.dados, atual, estado.opcoes)
+            }
+            // Os itens não podem passar do valor lido: com 2 ou mais produtos, vale a soma deles; senão o valor total.
+            val ia = leitura.dados
+            val doDocumento = if (ia.itens.size >= 2) ia.itens.sumOf { abs(it.valor) } else abs(ia.valor ?: 0.0)
+            if (doDocumento > 0) {
+                val maisDoQueJaTinha = if (ia.itens.isNotEmpty()) ia.itens.sumOf { abs(it.valor) } else doDocumento
+                valorDocumento = if (leitura.acrescentar && valorDocumento >= 0) valorDocumento + maisDoQueJaTinha else doDocumento
             }
             entrada = r.entrada.entrada
             valor = r.entrada.valor
@@ -983,6 +1007,16 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
         }
         val assinado = lido
         val editando = itemEditando
+        if (valorDocumento >= 0) {
+            val outros = itens.filterIndexed { i, _ -> i != editando }
+                .sumOf { abs(NovoLancamento.valorOuZero(it.valor)) }
+            val limite = maxOf(0.0, valorDocumento - outros)
+            if (abs(assinado) > limite + 0.005) {
+                avisoLocal = "A soma dos itens não pode passar do valor do documento. " +
+                    "Máximo para este item: ${Formatacao.reaisFalado(limite)}."
+                return
+            }
+        }
         val novo = EntradaItem(
             Formatacao.numero(assinado), itemCategoria.trim(), itemDescricao.trim(),
             itens.getOrNull(editando)?.dataOriginal.orEmpty(),
@@ -1071,6 +1105,36 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
     val previa = if (parcelas.isBlank()) null else NovoLancamento.previa(atual)
     val soma = NovoLancamento.somaDosItens(itens)
 
+    // Lançamentos antigos viram itens: os itens deles entram aqui, e os originais saem ao salvar.
+    fun receberConsolidados(escolhidos: List<Lancamento>) {
+        val jaTinha = itens.isNotEmpty()
+        itens = itens + escolhidos.flatMap { Consolidar.itensDe(it) }
+        itensAbertos = true
+        if (!jaTinha) {
+            val negativo = escolhidos.any { it.valor < 0 }
+            val positivo = escolhidos.any { it.valor > 0 }
+            if (negativo != positivo) entrada = positivo
+        }
+        if (credor.isBlank()) escolhidos.mapNotNull { it.credor?.takeIf { c -> c.isNotBlank() } }.distinct()
+            .singleOrNull()?.let { credor = it }
+        if (devedor.isBlank()) escolhidos.mapNotNull { it.devedor?.takeIf { c -> c.isNotBlank() } }.distinct()
+            .singleOrNull()?.let { devedor = it }
+        avisoLocal = (if (escolhidos.size == 1) "1 lançamento importado como itens." else "${escolhidos.size} lançamentos importados como itens.") +
+            " Serão excluídos ao salvar. " + resumoDosItens(itens)
+    }
+    if (consolidando) {
+        TelaConsolidar(
+            estado,
+            excluir = atual.consolidar.toSet() + setOfNotNull(estado.editandoId),
+            aoCancelar = { consolidando = false },
+            aoImportar = { escolhidos ->
+                receberConsolidados(escolhidos)
+                consolidando = false
+            },
+        )
+        return
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -1118,7 +1182,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                         {
                             maisItens = false
                             escolherDocumento.launch(
-                                arrayOf("image/*", "application/pdf", "text/*", "application/xml")
+                                arrayOf("image/*", "application/pdf", "text/*", "application/xml", Documentos.XLSX_MIME)
                             )
                         },
                         habilitado = !estado.ocupado,
@@ -1148,7 +1212,7 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                             {
                                 maisItens = true
                                 escolherDocumento.launch(
-                                    arrayOf("image/*", "application/pdf", "text/*", "application/xml")
+                                    arrayOf("image/*", "application/pdf", "text/*", "application/xml", Documentos.XLSX_MIME)
                                 )
                             },
                             habilitado = !estado.ocupado,
@@ -1253,6 +1317,15 @@ private fun TelaNovo(estado: Estado, acoes: Acoes) {
                 )
             }
             if (itensAbertos) {
+                item { BotaoSecundario("Importar lançamentos como itens", { consolidando = true }, habilitado = !estado.ocupado) }
+                if (atual.consolidar.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Ao salvar, ${if (atual.consolidar.size == 1) "1 lançamento antigo será excluído" else "${atual.consolidar.size} lançamentos antigos serão excluídos"}, " +
+                                "e os documentos deles passam para este.",
+                        )
+                    }
+                }
                 itemsIndexed(itens) { n, i ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(falaDoItem(n + 1, i))
@@ -1570,7 +1643,7 @@ private fun LinhaCampo(c: CampoConfig, posicao: Int, total: Int, acoes: Acoes) {
 
 /** Caixa de seleção com o texto ao lado; a linha inteira é o alvo do toque. */
 @Composable
-private fun OpcaoMarcavel(rotulo: String, marcada: Boolean, aoMudar: (Boolean) -> Unit) {
+internal fun OpcaoMarcavel(rotulo: String, marcada: Boolean, aoMudar: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

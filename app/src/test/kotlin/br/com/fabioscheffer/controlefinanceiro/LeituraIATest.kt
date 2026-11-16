@@ -276,7 +276,8 @@ class LeituraIATest {
         assertEquals("pdf", Documentos.tipoDe("nota.pdf", "application/octet-stream"))
         assertEquals("xml", Documentos.tipoDe("nfe.xml", "text/xml"))
         assertEquals("texto", Documentos.tipoDe("a.txt", null))
-        assertNull(Documentos.tipoDe("planilha.xlsx", "application/vnd.ms-excel"))
+        assertEquals("planilha", Documentos.tipoDe("planilha.xlsx", "application/vnd.ms-excel"))
+        assertNull(Documentos.tipoDe("planilha.xls", "application/vnd.ms-excel"))
     }
 
     // ---- na tela ----

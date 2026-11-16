@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 0.18.0
+- Mais, Excel: Exportar grava em XLSX os lançamentos que aparecem na lista (respeita os filtros), no
+  mesmo formato do site e do Windows. Importar lê uma planilha XLSX nesse formato, diz quantos
+  lançamentos são novos e quantos já existem, e só grava depois de você confirmar. Os textos novos
+  entram nas listas. Planilha no formato antigo (XLS) não é aceita: salve como XLSX.
+- Leitura por IA aceita planilha XLSX (a planilha vai como texto para a IA, como no Windows).
+- Importar lançamentos como itens (na área de itens do formulário): escolha lançamentos antigos, com
+  busca, credor, devedor e datas; eles viram itens do lançamento, com a data original. Ao salvar, os
+  documentos deles passam para o novo e os originais são excluídos.
+- Lançamento vindo de um documento: a soma dos itens não pode passar do valor lido.
+
 ## 0.17.0
 - Mais, Limpar lançamentos duplicados: acha os lançamentos com tudo igual (mesma regra do site e do
   Windows; com itens, a descrição e a categoria não contam), mostra as cópias e só exclui depois de

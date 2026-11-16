@@ -18,15 +18,18 @@ data class DocumentoPronto(
     val nome: String,
     /** O arquivo em si (a imagem já reduzida, se foi o caso), para guardar na nuvem; null se foi só texto copiado. */
     val arquivo: ByteArray? = null,
+    /** O tipo do arquivo guardado, quando difere do que vai para a IA (planilha vira texto). */
+    val mimeGuardado: String? = null,
 )
 
 object Documentos {
     const val LIMITE_BYTES = 15 * 1024 * 1024
+    const val XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     /** Cerca de 12 megapixels: o que uma câmera comum faz, e letra miúda de nota ainda se lê. */
     const val PIXELS_MAXIMOS = 12_000_000L
     private const val IMAGEM_GRANDE = 1_500_000
 
-    const val FORMATOS = "Use imagem, PDF, TXT ou XML."
+    const val FORMATOS = "Use imagem, PDF, TXT, XML ou XLSX."
 
     /** "imagem", "pdf", "xml" ou "texto"; null se o formato não serve. */
     fun tipoDe(nome: String, mime: String?): String? {
@@ -35,6 +38,7 @@ object Documentos {
         return when {
             m.startsWith("image/") || ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic") -> "imagem"
             m == "application/pdf" || ext == "pdf" -> "pdf"
+            ext == "xlsx" || m == XLSX_MIME -> "planilha"
             ext == "xml" || m.endsWith("/xml") || m.endsWith("+xml") -> "xml"
             ext == "txt" || m.startsWith("text/") -> "texto"
             else -> null
@@ -75,6 +79,7 @@ object Documentos {
             }
             "pdf" -> DocumentoPronto("pdf", Base64.encodeToString(bytes, Base64.NO_WRAP), "application/pdf", nome, bytes)
             "xml" -> DocumentoPronto("xml", String(bytes, Charsets.UTF_8), mime ?: "text/xml", nome, bytes)
+            "planilha" -> DocumentoPronto("texto", Planilha.emTexto(bytes), "text/plain", nome, bytes, XLSX_MIME)
             else -> DocumentoPronto("texto", String(bytes, Charsets.UTF_8), mime ?: "text/plain", nome, bytes)
         }
     }

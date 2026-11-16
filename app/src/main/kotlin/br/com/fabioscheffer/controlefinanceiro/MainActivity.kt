@@ -65,6 +65,9 @@ class MainActivity : ComponentActivity() {
             excluirCorrecao = modelo::excluirCorrecao,
             apagarCorrecoes = modelo::apagarCorrecoes,
             limparDuplicados = modelo::limparDuplicados,
+            lerPlanilha = modelo::lerPlanilha,
+            cancelarImportacao = modelo::cancelarImportacao,
+            confirmarImportacao = modelo::confirmarImportacao,
         )
         setContent {
             val estado by modelo.estado.collectAsStateWithLifecycle()

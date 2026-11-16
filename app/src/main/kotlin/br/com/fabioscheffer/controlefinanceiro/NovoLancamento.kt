@@ -10,6 +10,8 @@ data class EntradaItem(
     val descricao: String = "",
     /** Só vem de um item já gravado; a pessoa não digita. Vai junto para não perder a informação. */
     val dataOriginal: String = "",
+    /** De qual lançamento antigo o item veio (consolidação); 0 se não veio de nenhum. Não é gravado. */
+    val origemId: Long = 0,
 )
 
 /** Uma parte do pagamento dividido, ainda como texto. */
@@ -39,6 +41,8 @@ data class EntradaNovo(
     val diferencaNaPrimeira: Boolean = false,
     /** Só no pagamento de fatura (categoria Cartão de crédito): o cartão que recebe a entrada; vazio não vincula. */
     val cartaoAQuitar: String = "",
+    /** Lançamentos antigos importados como itens: são excluídos depois de salvar, e os documentos vêm para este. */
+    val consolidar: List<Long> = emptyList(),
 )
 
 /** O lançamento pronto para gravar: datas em ISO, valor com sinal, textos vazios viram null. */
@@ -74,6 +78,13 @@ sealed interface ResultadoNovo {
 
 /** As mesmas conferências do formulário do programa Windows (formulario.py), na mesma ordem. */
 object NovoLancamento {
+    /** O valor digitado de um item, ou 0 se não for um número. */
+    fun valorOuZero(texto: String): Double = try {
+        Regras.lerValor(texto)
+    } catch (e: IllegalArgumentException) {
+        0.0
+    }
+
     const val MAXIMO_PARCELAS = 360
 
     /** Soma dos itens digitados, ou null se algum valor não for número. */
