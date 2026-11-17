@@ -84,6 +84,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        modelo.primeiroPlano(true)
+    }
+
+    override fun onStop() {
+        modelo.primeiroPlano(false)
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

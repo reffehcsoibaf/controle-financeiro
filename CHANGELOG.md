@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 2026.11.17.0
+- Atualização automática: com o app aberto, a lista é atualizada sozinha a cada 15 segundos (e ao voltar
+  para o app depois de um tempo). É silenciosa: não fala nada, não mexe no foco e não bloqueia botões.
+  Desiste se você estiver no meio de uma ação ou de um formulário, e só avisa quando a conexão volta ou
+  quando o painel liga ou desliga uma função da conta. O botão Atualizar continua valendo.
+
 ## 2026.11.16.0
 - A versão passa a seguir o padrão por data (ano.mês.dia.dígito), como nos outros projetos. A anterior era a 0.23.0.
 - O app agora é assinado com uma chave de lançamento própria, guardada fora do repositório. Por isso quem

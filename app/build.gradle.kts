@@ -14,8 +14,8 @@ android {
         applicationId = "br.com.fabioscheffer.controlefinanceiro"
         minSdk = 26
         targetSdk = 35
-        versionCode = 30
-        versionName = "2026.11.16.0"
+        versionCode = 31
+        versionName = "2026.11.17.0"
     }
 
 

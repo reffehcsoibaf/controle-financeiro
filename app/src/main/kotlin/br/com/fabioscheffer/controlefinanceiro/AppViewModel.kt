@@ -87,6 +87,12 @@ data class Estado(
         get() = Formatacao.avisoDeFiltro(lancamentos.size, todos.size, Regras.temFiltroDaJanela(filtros))
 }
 
+/** De quanto em quanto tempo o app, aberto, atualiza os lançamentos sozinho. */
+private const val INTERVALO_ATUALIZACAO_MS = 15_000L
+
+/** Com envios na fila, a atualização que fala "Carregando" só roda a cada 20 rodadas (5 minutos). */
+private const val RODADAS_PARA_ENVIAR_FILA = 20
+
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val loja = SessaoStore(app)
     private val preferencias = Preferencias(app)
@@ -182,16 +188,112 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Enquanto o app está aberto, tenta enviar o que ficou esperando e atualizar, sem atrapalhar a pessoa. */
+    /** Verdadeiro enquanto a tela do app está visível; a Activity avisa em onStart e onStop. */
+    @Volatile
+    private var emPrimeiroPlano = true
+
+    /** Conta cada ação da pessoa que mexe nos dados; a atualização de fundo desiste se uma começou no meio. */
+    @Volatile
+    private var geracao = 0
+
+    private var ultimaAtualizacaoMs = System.currentTimeMillis()
+
+    @Volatile
+    private var atualizandoAoFundo = false
+
+    /** Chamado quando o app aparece ou some da tela. Ao voltar depois de um tempo, atualiza sem avisar. */
+    fun primeiroPlano(visivel: Boolean) {
+        emPrimeiroPlano = visivel
+        if (visivel && System.currentTimeMillis() - ultimaAtualizacaoMs >= INTERVALO_ATUALIZACAO_MS) atualizarSemAvisar()
+    }
+
+    /** Enquanto o app está aberto, de tempos em tempos envia o que ficou esperando e atualiza os lançamentos. */
     private fun sincronizarACadaCincoMinutos() {
+        var rodadas = 0
         viewModelScope.launch {
             while (true) {
-                delay(5 * 60 * 1000L)
+                delay(INTERVALO_ATUALIZACAO_MS)
+                rodadas++
+                if (!emPrimeiroPlano) continue
                 val e = _estado.value
-                if (e.etapa == Etapa.CONECTADO && !e.ocupado && !e.novoAberto && (e.fila.isNotEmpty() || e.offline)) carregar()
+                if (e.etapa != Etapa.CONECTADO || e.ocupado || e.novoAberto) continue
+                if (e.fila.isNotEmpty()) {
+                    // Enviar a fila fala "Carregando": só a cada 5 minutos, para não repetir o aviso.
+                    if (rodadas % RODADAS_PARA_ENVIAR_FILA == 0) carregar()
+                } else {
+                    atualizarSemAvisar()
+                }
             }
         }
     }
+
+    /**
+     * Traz os dados do servidor sem aviso falado, sem mexer no foco e sem bloquear botões: quem usa o
+     * app não é interrompido. Desiste em silêncio se a pessoa fez algo no meio, se não há conexão ou
+     * se algo deu errado; a próxima rodada tenta de novo. Só avisa se o painel mudou as permissões.
+     */
+    private fun atualizarSemAvisar() {
+        val antes = _estado.value
+        if (antes.etapa != Etapa.CONECTADO || antes.ocupado || antes.novoAberto || antes.fila.isNotEmpty()) return
+        if (atualizandoAoFundo) return
+        atualizandoAoFundo = true
+        val marca = geracao
+        viewModelScope.launch {
+            try {
+                val novo = withContext(Dispatchers.IO) {
+                    val sessao = tokenValido()
+                    val permissoes = api.conferirAcesso(sessao)
+                    val contas = api.baixarContas(sessao)
+                    val todos = api.baixarLancamentos(sessao)
+                    val opcoes = api.baixarOpcoes(sessao)
+                    val documentos = if (permissoes.documentos) {
+                        try {
+                            api.baixarDocumentos(sessao)
+                        } catch (e: ErroServidor) {
+                            null
+                        }
+                    } else {
+                        emptyList()
+                    }
+                    Dados(todos, opcoes, contas, permissoes, documentos)
+                }
+                val agora = _estado.value
+                if (geracao != marca || agora.ocupado || agora.novoAberto || agora.fila.isNotEmpty() || agora.etapa != Etapa.CONECTADO) return@launch
+                ultimaAtualizacaoMs = System.currentTimeMillis()
+                _estado.update {
+                    val lista = Offline.aplicar(novo.todos, it.fila)
+                    val docs = novo.documentos ?: it.documentos
+                    val mudouAlgo = lista != it.todos || novo.opcoes != it.opcoes || novo.contas != it.contas ||
+                        novo.permissoes != it.permissoes || docs != it.documentos || it.offline
+                    if (!mudouAlgo) {
+                        it
+                    } else {
+                        val aviso = (if (it.offline) "Conexão restabelecida. Dados atualizados. " else "") +
+                            avisoDePermissoes(it.permissoes, novo.permissoes).trim()
+                        recalcular(
+                            it.copy(
+                                todos = lista, opcoes = novo.opcoes, contas = novo.contas, permissoes = novo.permissoes,
+                                documentos = docs, offline = false, salvoEm = Offline.agora(),
+                                aviso = aviso.ifEmpty { it.aviso },
+                            ),
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Em segundo plano, qualquer falha fica quieta; o botão Atualizar mostra o motivo.
+            } finally {
+                atualizandoAoFundo = false
+            }
+        }
+    }
+
+    private class Dados(
+        val todos: List<Lancamento>,
+        val opcoes: Map<String, List<String>>,
+        val contas: List<ContaConfig>,
+        val permissoes: Permissoes,
+        val documentos: List<DocumentoGuardado>?,
+    )
 
     private fun estadoInicial(aviso: String = "") = Estado(
         filtros = preferencias.lerFiltros(),
@@ -1268,6 +1370,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val todos = api.baixarLancamentos(sessao)
         val opcoes = api.baixarOpcoes(sessao)
         copiaPronta = true
+        ultimaAtualizacaoMs = System.currentTimeMillis()
         // Os documentos são um extra: se não vierem, o resto do app segue funcionando.
         val documentos = if (permissoes.documentos) {
             try {
@@ -1311,6 +1414,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun trabalhar(mensagem: String, semInternet: (() -> Unit)? = null, bloco: () -> Unit) {
         if (_estado.value.ocupado) return
+        geracao++
         _estado.update { it.copy(ocupado = true, aviso = mensagem) }
         viewModelScope.launch {
             try {
